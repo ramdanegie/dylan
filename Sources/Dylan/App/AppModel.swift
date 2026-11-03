@@ -115,6 +115,7 @@ final class AppModel {
     private let defaults = AppModel.store
     private var tickTimer: Timer?
     private var permissionTimers: [String: Timer] = [:]
+    private var deadShellSince: [Int: Date] = [:]
 
     private init() {
         let d = AppModel.store
@@ -157,9 +158,28 @@ final class AppModel {
 
     func tick(now: Date = Date()) {
         center.tick(now: now)
-        for r in commands.visible(now: now) where center.activities["cmd-\(r.shellPid)"] == nil {
-            center.upsert(commandActivity(r))
+        if features.isEnabled(.commands) {
+            // Terminal tab closed mid-command. A short grace period lets a late `end` (sent in the
+            // background just before the shell exited) still arrive and show the result.
+            for r in commands.running.values {
+                if Self.processAlive(r.shellPid) { deadShellSince[r.shellPid] = nil; continue }
+                let since = deadShellSince[r.shellPid] ?? now
+                deadShellSince[r.shellPid] = since
+                if now.timeIntervalSince(since) >= 3 {
+                    deadShellSince[r.shellPid] = nil
+                    commands.forget(shellPid: r.shellPid)
+                    center.remove(Self.commandKey(r), now: now)
+                }
+            }
+            for r in commands.visible(now: now) where center.activities[Self.commandKey(r)] == nil {
+                center.upsert(commandActivity(r))
+            }
         }
+        // `dylan run` that was killed before it could report.
+        for a in center.activities.values where a.id.hasPrefix("script-run-") && a.state == .running {
+            if let pid = Int(a.id.dropFirst("script-run-".count)), !Self.processAlive(pid) { center.remove(a.id, now: now) }
+        }
+        if !agents.expireStale(now: now).isEmpty { refreshAgentActivity(now: now) }
         if let t = timer, t.isFinished(now: now) { timerFinished(now: now) }
         refreshMeeting(now: now)
         if let until = autoPeekUntil, now >= until {
@@ -206,14 +226,19 @@ final class AppModel {
                                  symbol: "bell.badge", label: TextRules.truncateTail(title, max: 12), value: "",
                                  detail: [title, body].compactMap { $0 }.joined(separator: " · "),
                                  genericDetail: L("generic.notify"), startedAt: now), now: now)
-        case let .shellStart(pid, cmd, cwd, app):
+        case let .shellStart(pid, cmd, cwd, app, seq):
             guard features.isEnabled(.commands) else { break }
-            center.remove("cmd-\(pid)", now: now)
-            commands.start(shellPid: pid, command: cmd, cwd: cwd, app: app, now: now)
-        case let .shellEnd(pid, status):
+            // A new command replaces the shell's running one; results of earlier commands keep their hold time.
+            if let old = commands.running[pid] { center.remove(Self.commandKey(old), now: now) }
+            commands.start(shellPid: pid, command: cmd, cwd: cwd, app: app, seq: seq, now: now)
+        case let .shellEnd(pid, status, seq):
             guard features.isEnabled(.commands) else { break }
-            let key = "cmd-\(pid)"
-            guard let f = commands.end(shellPid: pid, status: status, now: now) else { center.remove(key, now: now); break }
+            guard let running = commands.running[pid] else { _ = commands.end(shellPid: pid, status: status, seq: seq, now: now); break }
+            let key = Self.commandKey(running)
+            guard let f = commands.end(shellPid: pid, status: status, seq: seq, now: now) else {
+                if commands.running[pid] == nil { center.remove(key, now: now) }   // too short to show
+                break
+            }
             let frontmost = f.running.app != nil && NSWorkspace.shared.frontmostApplication?.bundleIdentifier == f.running.app
             guard commands.filter.shouldShowResult(duration: f.duration, terminalFrontmost: frontmost, always: commandResultsAlways)
             else { center.remove(key, now: now); break }
@@ -246,8 +271,19 @@ final class AppModel {
         scheduleTick()
     }
 
+    /// kill(pid, 0): ESRCH means the process is gone; EPERM still means it exists.
+    nonisolated static func processAlive(_ pid: Int) -> Bool {
+        guard pid > 0 else { return false }
+        return kill(pid_t(pid), 0) == 0 || errno == EPERM
+    }
+
+    /// One activity per command (not per shell), so a result survives the next prompt.
+    static func commandKey(_ r: CommandTracker.Running) -> String {
+        "cmd-\(r.shellPid)-\(r.seq ?? Int(r.startedAt.timeIntervalSince1970 * 1000))"
+    }
+
     private func commandActivity(_ r: CommandTracker.Running) -> Activity {
-        Activity(id: "cmd-\(r.shellPid)", kind: .command, priority: .p2, state: .running, symbol: "terminal",
+        Activity(id: Self.commandKey(r), kind: .command, priority: .p2, state: .running, symbol: "terminal",
                  label: TextRules.commandShortName(r.command), value: "", detail: L("command.running", TextRules.commandShortName(r.command)),
                  genericDetail: L("generic.command"), startedAt: r.startedAt)
     }

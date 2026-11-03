@@ -8,8 +8,9 @@ import Testing
         .activityUpdate(id: "deploy", title: nil, subtitle: "migrasi DB", progress: 0.6),
         .activityEnd(id: "deploy", success: true, detail: "v2.4.1 · 3m 10s"),
         .notify(title: "Backup selesai", body: "12 GB"),
-        .shellStart(shellPid: 123, cmd: "npm test", cwd: "/Users/gg/api", app: "com.microsoft.VSCode"),
-        .shellEnd(shellPid: 123, status: 1),
+        .shellStart(shellPid: 123, cmd: "npm test", cwd: "/Users/gg/api", app: "com.microsoft.VSCode", seq: 4),
+        .shellStart(shellPid: 123, cmd: "npm test", cwd: "/Users/gg/api", app: nil, seq: nil),
+        .shellEnd(shellPid: 123, status: 1, seq: 4),
         .hook(source: "claude", env: ["TERM_PROGRAM": "vscode"], payload: .object(["session_id": .string("s")])),
         .permissionAsk(requestId: "r1", source: "claude", env: [:], payload: .object(["n": .number(1)])),
         .shelfAdd(paths: ["/tmp/a.png"]),
@@ -72,7 +73,9 @@ import Testing
 
     @Test func shellInitQuotesPathAndRunsInBackground() {
         let s = ShellInit.zsh(cliPath: "/Applications/My Apps/Dylan.app/Contents/MacOS/dylan")
-        #expect(s.contains("'/Applications/My Apps/Dylan.app/Contents/MacOS/dylan' _shell start"))
+        #expect(s.contains(#"print -rn -- "$1" | '/Applications/My Apps/Dylan.app/Contents/MacOS/dylan' _shell start"#))
+        #expect(!s.contains("--cmd"))   // command text stays out of argv (visible in ps)
+        #expect(s.contains("--seq $_dylan_seq"))
         #expect(s.components(separatedBy: "&!").count == 3)
         #expect(s.contains("add-zsh-hook preexec _dylan_preexec"))
     }

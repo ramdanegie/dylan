@@ -205,10 +205,14 @@ case "_shell":
     guard let sub = args.first else { exit(0) }
     args.removeFirst()
     let pid = Int(option("--shell-pid") ?? "") ?? Int(getppid())
-    if sub == "start", let c = option("--cmd") {
-        send(.shellStart(shellPid: pid, cmd: c, cwd: option("--cwd") ?? "", app: terminalEnv()["__CFBundleIdentifier"]), timeout: 0.2)
+    let seq = Int(option("--seq") ?? "")
+    if sub == "start" {
+        // Command text arrives on stdin (kept out of argv); --cmd is accepted for older shell-init scripts.
+        let c = option("--cmd") ?? String(decoding: FileHandle.standardInput.readData(ofLength: 4096), as: UTF8.self)
+        guard !c.isEmpty else { exit(0) }
+        send(.shellStart(shellPid: pid, cmd: c, cwd: option("--cwd") ?? "", app: terminalEnv()["__CFBundleIdentifier"], seq: seq), timeout: 0.2)
     } else if sub == "end", let s = Int(option("--status") ?? "") {
-        send(.shellEnd(shellPid: pid, status: s), timeout: 0.2)
+        send(.shellEnd(shellPid: pid, status: s, seq: seq), timeout: 0.2)
     }
 case "hook":
     hook(source: args.first ?? "")

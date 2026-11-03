@@ -65,6 +65,14 @@ private let env = ["__CFBundleIdentifier": "com.microsoft.VSCode", "TERM_PROGRAM
         #expect(s.sessions.isEmpty)
     }
 
+    @Test func staleSessionsExpire() throws {
+        var s = AgentSessions()
+        s.apply(try #require(ClaudeHookEvent(payload: try fixture("PreToolUse-Bash"))), env: [:], now: t0, projectName: { _ in "p" })
+        #expect(s.expireStale(now: t0.addingTimeInterval(3600)).isEmpty)
+        #expect(s.expireStale(now: t0.addingTimeInterval(7200)) == ["abc123"])
+        #expect(s.sessions.isEmpty)
+    }
+
     @Test func eventBeforeSessionStartCreatesSession() throws {
         var s = AgentSessions()
         s.apply(try #require(ClaudeHookEvent(payload: try fixture("PreToolUse-Bash"))), env: [:], now: t0, projectName: { _ in "p" })

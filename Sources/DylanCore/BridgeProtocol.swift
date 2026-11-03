@@ -18,8 +18,9 @@ public enum BridgeMessage: Equatable, Sendable {
     case activityUpdate(id: String, title: String?, subtitle: String?, progress: Double?)
     case activityEnd(id: String, success: Bool, detail: String?)
     case notify(title: String, body: String?)
-    case shellStart(shellPid: Int, cmd: String, cwd: String, app: String?)
-    case shellEnd(shellPid: Int, status: Int)
+    /// `seq` increases per command in one shell, so a late `start` after its `end` can be ignored.
+    case shellStart(shellPid: Int, cmd: String, cwd: String, app: String?, seq: Int?)
+    case shellEnd(shellPid: Int, status: Int, seq: Int?)
     case hook(source: String, env: [String: String], payload: JSONValue)
     /// The CLI waits on the same connection for a `PermissionReply`.
     case permissionAsk(requestId: String, source: String, env: [String: String], payload: JSONValue)
@@ -57,7 +58,7 @@ public enum BridgeError: Error, Equatable {
 extension BridgeMessage: Codable {
     private enum K: String, CodingKey {
         case v, type, id, title, subtitle, progress, url, result, detail, body
-        case shellPid, cmd, cwd, app, status, source, env, payload, requestId, paths
+        case shellPid, cmd, cwd, app, status, source, env, payload, requestId, paths, seq
     }
 
     public init(from decoder: Decoder) throws {
@@ -82,10 +83,10 @@ extension BridgeMessage: Codable {
             self = .notify(title: try s(.title), body: try os(.body))
         case "shell.start":
             self = .shellStart(shellPid: try c.decode(Int.self, forKey: .shellPid), cmd: try s(.cmd),
-                               cwd: try s(.cwd), app: try os(.app))
+                               cwd: try s(.cwd), app: try os(.app), seq: try c.decodeIfPresent(Int.self, forKey: .seq))
         case "shell.end":
             self = .shellEnd(shellPid: try c.decode(Int.self, forKey: .shellPid),
-                             status: try c.decode(Int.self, forKey: .status))
+                             status: try c.decode(Int.self, forKey: .status), seq: try c.decodeIfPresent(Int.self, forKey: .seq))
         case "hook":
             self = .hook(source: try s(.source), env: try c.decodeIfPresent([String: String].self, forKey: .env) ?? [:],
                          payload: try c.decodeIfPresent(JSONValue.self, forKey: .payload) ?? .null)
@@ -124,13 +125,13 @@ extension BridgeMessage: Codable {
         case let .notify(title, body):
             try c.encode("notify", forKey: .type)
             try c.encode(title, forKey: .title); try c.encodeIfPresent(body, forKey: .body)
-        case let .shellStart(pid, cmd, cwd, app):
+        case let .shellStart(pid, cmd, cwd, app, seq):
             try c.encode("shell.start", forKey: .type)
             try c.encode(pid, forKey: .shellPid); try c.encode(cmd, forKey: .cmd)
-            try c.encode(cwd, forKey: .cwd); try c.encodeIfPresent(app, forKey: .app)
-        case let .shellEnd(pid, status):
+            try c.encode(cwd, forKey: .cwd); try c.encodeIfPresent(app, forKey: .app); try c.encodeIfPresent(seq, forKey: .seq)
+        case let .shellEnd(pid, status, seq):
             try c.encode("shell.end", forKey: .type)
-            try c.encode(pid, forKey: .shellPid); try c.encode(status, forKey: .status)
+            try c.encode(pid, forKey: .shellPid); try c.encode(status, forKey: .status); try c.encodeIfPresent(seq, forKey: .seq)
         case let .hook(source, env, payload):
             try c.encode("hook", forKey: .type)
             try c.encode(source, forKey: .source); try c.encode(env, forKey: .env); try c.encode(payload, forKey: .payload)

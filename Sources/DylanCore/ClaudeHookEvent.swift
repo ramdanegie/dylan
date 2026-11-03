@@ -161,6 +161,14 @@ public struct AgentSessions: Sendable, Equatable {
         }
     }
 
+    /// Sessions that saw no hook event for `after` (Claude quit without SessionEnd) are dropped.
+    @discardableResult
+    public mutating func expireStale(now: Date, after: TimeInterval = 2 * 3600) -> [String] {
+        let stale = sessions.values.filter { now.timeIntervalSince($0.updatedAt) >= after }.map(\.id)
+        for id in stale { sessions[id] = nil }
+        return stale
+    }
+
     /// Done/failed sessions are shown once; afterwards they go back to idle.
     public mutating func acknowledgeResult(sessionID: String) {
         guard var s = sessions[sessionID] else { return }

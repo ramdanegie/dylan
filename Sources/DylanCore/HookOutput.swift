@@ -20,12 +20,14 @@ public enum HookOutput {
 public enum ShellInit {
     public static func zsh(cliPath: String) -> String {
         let cli = "'" + cliPath.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        // The command text goes through stdin, not argv, so `ps` never shows it (it may contain secrets).
         return """
         # Dylan shell integration (eval "$(dylan shell-init zsh)")
         if [[ -z "$_DYLAN_SHELL_INIT" ]]; then
           _DYLAN_SHELL_INIT=1
-          _dylan_preexec() { _dylan_cmd=1; \(cli) _shell start --shell-pid $$ --cmd "$1" --cwd "$PWD" >/dev/null 2>&1 &! }
-          _dylan_precmd()  { local s=$?; if [[ -n $_dylan_cmd ]]; then \(cli) _shell end --shell-pid $$ --status $s >/dev/null 2>&1 &!; fi; unset _dylan_cmd }
+          typeset -gi _dylan_seq=0
+          _dylan_preexec() { (( _dylan_seq++ )); _dylan_cmd=1; print -rn -- "$1" | \(cli) _shell start --shell-pid $$ --seq $_dylan_seq --cwd "$PWD" >/dev/null 2>&1 &! }
+          _dylan_precmd()  { local s=$?; if [[ -n $_dylan_cmd ]]; then \(cli) _shell end --shell-pid $$ --seq $_dylan_seq --status $s >/dev/null 2>&1 &!; fi; unset _dylan_cmd }
           autoload -Uz add-zsh-hook
           add-zsh-hook preexec _dylan_preexec
           add-zsh-hook precmd  _dylan_precmd

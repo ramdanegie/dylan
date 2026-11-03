@@ -21,6 +21,7 @@ private let t0 = Date(timeIntervalSince1970: 3_000_000)
         ("npm test", "npm test"), ("npm run build --prod", "build"), ("pnpm run lint", "lint"),
         ("cargo build --release", "cargo build"), ("make", "make"), ("ls -la", "ls"),
         ("NODE_ENV=test npm test", "npm test"), ("/usr/local/bin/swift build", "swift build"),
+        ("sleep 4; false", "sleep 4"), ("npm test && npm run build", "npm test"), ("git log | less", "git log"),
     ])
     func commandShortName(_ input: String, _ expected: String) {
         #expect(TextRules.commandShortName(input) == expected)
@@ -71,6 +72,18 @@ private let t0 = Date(timeIntervalSince1970: 3_000_000)
 
         t.start(shellPid: 3, command: "ls", cwd: "/", app: nil, now: t0)
         #expect(t.end(shellPid: 3, status: 0, now: t0.addingTimeInterval(1)) == nil)
+    }
+
+    /// Review finding: preexec and precmd send from separate background processes, so `end` can win the race.
+    @Test func lateStartAfterEndIsIgnored() {
+        var t = CommandTracker()
+        #expect(t.end(shellPid: 7, status: 0, seq: 1, now: t0) == nil)     // end of "cd" arrives first
+        t.start(shellPid: 7, command: "cd src", cwd: "/", app: nil, seq: 1, now: t0)
+        #expect(t.running[7] == nil)                                         // no phantom command
+        t.start(shellPid: 7, command: "npm test", cwd: "/", app: nil, seq: 2, now: t0)
+        #expect(t.end(shellPid: 7, status: 0, seq: 1, now: t0.addingTimeInterval(20)) == nil)  // stale end
+        #expect(t.running[7] != nil)
+        #expect(t.end(shellPid: 7, status: 1, seq: 2, now: t0.addingTimeInterval(20))?.status == 1)
     }
 
     @Test func resultVisibility() {

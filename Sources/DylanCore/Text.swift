@@ -44,7 +44,9 @@ public enum TextRules {
     /// Compact shows the first word plus the sub-command: `npm test`, `cargo build`.
     /// Package-manager scripts show the script name: `npm run build` → `build`.
     public static func commandShortName(_ cmd: String) -> String {
-        let words = Array(singleLine(cmd).split(separator: " ").map(String.init)
+        // Only the first command of a list/pipeline: `sleep 12 && false` → `sleep 12`.
+        let first = singleLine(cmd).components(separatedBy: CharacterSet(charactersIn: ";|&")).first ?? ""
+        let words = Array(first.split(separator: " ").map(String.init)
             .drop { $0.range(of: #"^[A-Za-z_][A-Za-z0-9_]*="#, options: .regularExpression) != nil })  // `FOO=bar cmd`
         guard let first = words.first else { return "" }
         let tool = (first as NSString).lastPathComponent
