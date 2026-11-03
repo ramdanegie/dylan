@@ -324,6 +324,8 @@ struct MediaTab: View {
 struct AgentsTab: View {
     private var model: AppModel { AppModel.shared }
     @StateBox private var showHistory = false
+    /// Read once when the tab opens, not on every render (it parses settings.json).
+    @StateBox private var hooksInstalled = HookSetup.status() == .installed
 
     var body: some View {
         // Plain stack (not ScrollView): the panel height is fixed and lists are capped.
@@ -342,7 +344,7 @@ struct AgentsTab: View {
             Button(L("agents.history")) { showHistory = true }.buttonStyle(.plain).font(DY.font(11)).foregroundStyle(DY.fg2)
         }
         if model.agents.ordered.isEmpty {
-            EmptyCard(symbol: "sparkle", text: HookSetup.status() == .installed ? L("agents.empty") : L("agents.noHooks"))
+            EmptyCard(symbol: "sparkle", text: hooksInstalled ? L("agents.empty") : L("agents.noHooks"))
         }
         ForEach(model.agents.ordered.prefix(model.pendingForDisplay == nil ? 4 : 2)) { s in SessionRow(session: s) }
         ForEach(model.center.ordered.filter { $0.id.hasPrefix("agent-result-") }) { a in

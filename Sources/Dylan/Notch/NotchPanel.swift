@@ -26,6 +26,7 @@ final class NotchController {
     private var hoverWork: DispatchWorkItem?
     private var leaveWork: DispatchWorkItem?
     private var inside = false
+    private var lastState: NotchState = .closed
 
     static func targetScreen() -> NSScreen? {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
@@ -86,7 +87,11 @@ final class NotchController {
         let wnc = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification] {
             wnc.addObserver(forName: name, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated { NotchController.shared.checkFullscreen() }
+                MainActor.assumeIsolated {
+                    NotchController.shared.checkFullscreen()
+                    // ⌘-Tab away from an open notch closes it, so typing goes to the new app.
+                    if AppModel.shared.notchState == .expanded { NotchController.shared.collapse() }
+                }
             }
         }
         wnc.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
@@ -122,13 +127,15 @@ final class NotchController {
         let m = AppModel.shared
         let hidden = m.fullscreen && m.center.urgentIDs.isEmpty && m.notchState != .expanded
         panel?.alphaValue = hidden ? 0 : 1
-        if m.notchState == .expanded {
+        // Take keyboard focus once, when opening; never again on later model changes (FR-3).
+        if m.notchState == .expanded && lastState != .expanded {
             panel?.allowKey = true
             panel?.makeKey()
-        } else if panel?.allowKey == true {
+        } else if m.notchState != .expanded && panel?.allowKey == true {
             panel?.allowKey = false
             panel?.resignKey()
         }
+        lastState = m.notchState
         m.center.setHoldPaused(m.notchState != .closed && inside, now: Date())
         mouseMoved()
     }
@@ -185,10 +192,13 @@ final class NotchController {
               let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
         else { return }
         let size = screen.frame.size
-        AppModel.shared.fullscreen = list.contains { w in
+        // On notched Macs fullscreen content sits below the camera housing: height = screen − safe area.
+        let minHeight = size.height - screen.safeAreaInsets.top
+        let isFullscreen = list.contains { w in
             guard (w[kCGWindowOwnerPID as String] as? pid_t) == pid, (w[kCGWindowLayer as String] as? Int) == 0,
                   let b = w[kCGWindowBounds as String] as? [String: CGFloat] else { return false }
-            return b["Width"] == size.width && b["Height"] == size.height
+            return b["Width"] == size.width && (b["Height"] ?? 0) >= minHeight
         }
+        if AppModel.shared.fullscreen != isFullscreen { AppModel.shared.fullscreen = isFullscreen }
     }
 }

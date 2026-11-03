@@ -161,6 +161,10 @@ public struct AgentSessions: Sendable, Equatable {
         }
     }
 
+    public func hasStale(now: Date, after: TimeInterval = 2 * 3600) -> Bool {
+        sessions.values.contains { now.timeIntervalSince($0.updatedAt) >= after }
+    }
+
     /// Sessions that saw no hook event for `after` (Claude quit without SessionEnd) are dropped.
     @discardableResult
     public mutating func expireStale(now: Date, after: TimeInterval = 2 * 3600) -> [String] {

@@ -76,6 +76,15 @@ public struct ActivityCenter: Sendable {
         }
     }
 
+    /// Non-mutating check, so observers are not notified on every clock tick.
+    public func hasExpired(now: Date) -> Bool {
+        guard holdPausedSince == nil else { return false }
+        return activities.values.contains { a in
+            guard let end = a.endedAt, a.priority != .p0 else { return false }
+            return now.timeIntervalSince(end) >= (a.state == .failure ? config.failureHold : config.successHold)
+        }
+    }
+
     /// Expires results whose hold time is over. Returns the ids that were removed.
     @discardableResult
     public mutating func tick(now: Date) -> [String] {

@@ -157,7 +157,8 @@ final class AppModel {
     }
 
     func tick(now: Date = Date()) {
-        center.tick(now: now)
+        // Mutate observed state only when something changed: every write re-renders the notch.
+        if center.hasExpired(now: now) { center.tick(now: now) }
         if features.isEnabled(.commands) {
             // Terminal tab closed mid-command. A short grace period lets a late `end` (sent in the
             // background just before the shell exited) still arrive and show the result.
@@ -179,10 +180,10 @@ final class AppModel {
         for a in center.activities.values where a.id.hasPrefix("script-run-") && a.state == .running {
             if let pid = Int(a.id.dropFirst("script-run-".count)), !Self.processAlive(pid) { center.remove(a.id, now: now) }
         }
-        if !agents.expireStale(now: now).isEmpty { refreshAgentActivity(now: now) }
+        if agents.hasStale(now: now) { agents.expireStale(now: now); refreshAgentActivity(now: now) }
         if let t = timer, t.isFinished(now: now) { timerFinished(now: now) }
         refreshMeeting(now: now)
-        if let until = autoPeekUntil, now >= until {
+        if let until = autoPeekUntil, now >= until {   // (read-only until it fires)
             autoPeekUntil = nil
             if notchState == .peek { notchState = .compact }
         }
@@ -288,6 +289,11 @@ final class AppModel {
                  genericDetail: L("generic.command"), startedAt: r.startedAt)
     }
 
+    /// Removing a missing id still counts as a write for Observation; skip it.
+    private func removeIfPresent(_ id: String, now: Date) {
+        if center.activities[id] != nil { center.remove(id, now: now) }
+    }
+
     // MARK: Agents (PRD §F3)
 
     private func applyAgentEvent(_ e: ClaudeHookEvent, env: [String: String], now: Date) {
@@ -336,7 +342,7 @@ final class AppModel {
 
     func refreshAgentActivity(now: Date) {
         let active = agents.active
-        guard features.isEnabled(.agents), let first = active.first else { center.remove("agents", now: now); return }
+        guard features.isEnabled(.agents), let first = active.first else { removeIfPresent("agents", now: now); return }
         var a = Activity(id: "agents", kind: .agent, priority: .p2, state: .running, symbol: "sparkle", label: "",
                          startedAt: first.promptStartedAt ?? first.updatedAt, updatedAt: now)
         let permissions = active.filter { isNeedsPermission($0.status) }
@@ -368,7 +374,7 @@ final class AppModel {
                 a.detail = L("agent.waiting") + " · " + first.project
                 a.genericDetail = L("agent.waiting")
             default:
-                center.remove("agents", now: now); return
+                removeIfPresent("agents", now: now); return
             }
             a.url = first.id
         }
@@ -525,16 +531,21 @@ final class AppModel {
 
     func refreshMeeting(now: Date = Date()) {
         guard features.isEnabled(.meeting), let (e, phase) = MeetingSchedule.current(meetings, now: now, dismissed: dismissedMeetings) else {
-            center.remove("meeting", now: now); return
+            removeIfPresent("meeting", now: now); return
         }
         let wasImminent = center.activities["meeting"]?.priority == .p0
-        let a = Activity(id: "meeting", kind: .meeting, priority: phase == .imminent ? .p0 : .p1,
+        var a = Activity(id: "meeting", kind: .meeting, priority: phase == .imminent ? .p0 : .p1,
                          state: phase == .imminent ? .needsAction : .info, symbol: "calendar",
                          label: TextRules.truncateTail(e.title, max: 10), value: DurationFormat.countdown(e.start.timeIntervalSince(now)),
                          detail: phase == .imminent ? L("meeting.imminent", e.title)
                                                      : L("meeting.soon", e.title, Int((e.start.timeIntervalSince(now) / 60).rounded(.up))),
                          genericDetail: L("generic.meeting"), url: (e.link?.appURL ?? e.link?.url)?.absoluteString,
                          startedAt: e.start.addingTimeInterval(-MeetingSchedule.soonWindow), updatedAt: now)
+        // Called every tick: only write when something visible changed, so the notch does not re-render each second.
+        if let old = center.activities["meeting"] {
+            a.updatedAt = old.updatedAt
+            if old == a { return }
+        }
         center.upsert(a)
         if phase == .imminent && !wasImminent { triggerP0(now: now) }
     }
@@ -565,15 +576,17 @@ final class AppModel {
     private func refreshTimerActivity(now: Date) {
         guard let t = timer, features.isEnabled(.timer) else { return }
         let label = t.phase == .timer ? L("timer.timer") : (t.phase == .focus ? L("timer.focus") : L("timer.break"))
-        center.upsert(Activity(id: "timer", kind: .timer, priority: .p2, state: .running, symbol: "timer", label: label,
-                               value: DurationFormat.running(t.remaining(now: now)), detail: label,
-                               progress: t.progress(now: now), startedAt: center.activities["timer"]?.startedAt ?? now,
-                               updatedAt: center.activities["timer"]?.updatedAt ?? now))
+        let a = Activity(id: "timer", kind: .timer, priority: .p2, state: .running, symbol: "timer", label: label,
+                         value: DurationFormat.running(t.remaining(now: now)), detail: label,
+                         progress: (t.progress(now: now) * 100).rounded() / 100,
+                         startedAt: center.activities["timer"]?.startedAt ?? now,
+                         updatedAt: center.activities["timer"]?.updatedAt ?? now)
+        if center.activities["timer"] != a { center.upsert(a) }
     }
 
     private func timerFinished(now: Date) {
         guard let t = timer else { return }
-        center.remove("timer", now: now)
+        removeIfPresent("timer", now: now)
         let msg = t.phase == .focus ? L("timer.focusDone") : (t.phase == .timer ? L("timer.done") : L("timer.breakDone"))
         center.post(Activity(id: "timer-done-\(now.timeIntervalSince1970)", kind: .timer, priority: .p1, state: .success,
                              symbol: "timer", label: L("timer.timer"), detail: msg, startedAt: now), now: now)
@@ -619,7 +632,7 @@ final class AppModel {
         media = m
         if artworkChanged { mediaAccent = DY.accent(m?.artwork) }
         let now = Date()
-        guard features.isEnabled(.media), let m, m.isPlaying else { center.remove("media", now: now); return }
+        guard features.isEnabled(.media), let m, m.isPlaying else { removeIfPresent("media", now: now); return }
         center.upsert(Activity(id: "media", kind: .media, priority: .p3, state: .ambient, symbol: "music.note",
                                label: m.title, value: "", detail: "\(m.title) · \(m.artist)", startedAt: now,
                                updatedAt: center.activities["media"]?.updatedAt ?? now))

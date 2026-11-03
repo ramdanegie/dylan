@@ -43,6 +43,7 @@ private func act(_ id: String, _ p: Priority, _ state: ActivityState = .running,
         c.finish("bad", success: false, now: t0)
         #expect(c.activities["ok"]?.priority == .p1)
         #expect(c.tick(now: t0.addingTimeInterval(4.9)).isEmpty)
+        #expect(!c.hasExpired(now: t0.addingTimeInterval(4.9)) && c.hasExpired(now: t0.addingTimeInterval(5)))
         #expect(c.tick(now: t0.addingTimeInterval(5)) == ["ok"])
         #expect(c.tick(now: t0.addingTimeInterval(7.9)).isEmpty)
         #expect(c.tick(now: t0.addingTimeInterval(8)) == ["bad"])
