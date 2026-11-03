@@ -22,6 +22,9 @@ import Testing
                                                    body: "FaceTime Audio", actionNames: ["Name:Decline", "Name:Accept"]))
         #expect(call.isCall && call.acceptAction == "Accept" && call.declineAction == "Decline")
         #expect(NotificationBanner(id: "3", description: "X", title: "", subtitle: nil, body: "", actionNames: []) == nil)
+        let invite = try #require(NotificationBanner(id: "4", description: "Calendar, Sprint review, Today 14.00", title: "Sprint review", subtitle: nil,
+                                                     body: "Today 14.00", actionNames: ["Name:Accept", "Name:Decline"]))
+        #expect(!invite.isCall)   // not a phone call: allow-list applies, no P0
     }
 
     @Test func allowList() throws {

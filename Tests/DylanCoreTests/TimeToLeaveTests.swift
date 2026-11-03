@@ -28,4 +28,10 @@ import Testing
         #expect(!TimeToLeave.shouldAlert(now: now.addingTimeInterval(15 * 60), start: start, travel: 30 * 60, alreadyAlerted: true))
         #expect(!TimeToLeave.shouldAlert(now: start, start: start, travel: 30 * 60, alreadyAlerted: false))
     }
+
+    @Test func plausibleRoutesOnly() {
+        #expect(TimeToLeave.isPlausible(travel: 25 * 60, distanceMeters: 12_000))
+        #expect(!TimeToLeave.isPlausible(travel: 9 * 3600, distanceMeters: 600_000))   // "Lt. 3" matched another city
+        #expect(!TimeToLeave.isPlausible(travel: 20, distanceMeters: 50))              // already there
+    }
 }

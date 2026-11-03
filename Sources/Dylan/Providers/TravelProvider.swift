@@ -94,7 +94,7 @@ final class TravelProvider: NSObject {
         req.destination = MKMapItem(placemark: MKPlacemark(coordinate: to))
         req.transportType = .automobile
         MKDirections(request: req).calculateETA { @Sendable r, _ in
-            guard let t = r?.expectedTravelTime else { return }
+            guard let t = r?.expectedTravelTime, TimeToLeave.isPlausible(travel: t, distanceMeters: r?.distance ?? 0) else { return }
             Task { @MainActor in
                 TravelProvider.shared.travel[id] = t
                 TravelProvider.shared.arm(id)

@@ -21,6 +21,11 @@ public enum TimeToLeave {
             .sorted { $0.start < $1.start }
     }
 
+    /// A free-text place ("Lt. 3", "Room 4.01") can geocode to another city: such a route is not news.
+    public static func isPlausible(travel: TimeInterval, distanceMeters: Double) -> Bool {
+        travel > 60 && travel <= 3 * 3600 && distanceMeters > 0 && distanceMeters <= 250_000
+    }
+
     public static func leaveAt(start: Date, travel: TimeInterval) -> Date { start.addingTimeInterval(-travel - buffer) }
 
     /// Alert once, from the leave time until the event starts.

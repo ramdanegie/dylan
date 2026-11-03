@@ -13,7 +13,10 @@ public struct NotificationBanner: Equatable, Sendable {
     public var actions: [String]
 
     public var canReply: Bool { actions.contains { Self.replyNames.contains($0.lowercased()) } }
-    public var isCall: Bool { acceptAction != nil && declineAction != nil }
+    /// Accept/Decline from a calling app; a Calendar invite or a friend request also has those actions.
+    public var isCall: Bool { acceptAction != nil && declineAction != nil && Self.callingApps.contains(app.lowercased()) }
+    static let callingApps: Set<String> = ["facetime", "phone", "telepon", "whatsapp", "telegram", "zoom", "zoom.us", "microsoft teams",
+                                           "skype", "slack", "discord", "signal", "messenger", "line"]
     public var acceptAction: String? { actions.first { Self.acceptNames.contains($0.lowercased()) } }
     public var declineAction: String? { actions.first { Self.declineNames.contains($0.lowercased()) } }
     public var replyAction: String? { actions.first { Self.replyNames.contains($0.lowercased()) } }

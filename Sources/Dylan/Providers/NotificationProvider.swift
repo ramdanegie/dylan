@@ -15,6 +15,7 @@ final class NotificationProvider {
     private var banners: [String: (banner: NotificationBanner, element: AXUIElement)] = [:]
     private var scanWork: DispatchWorkItem?
     private var launchObserver: NSObjectProtocol?
+    private var retrying = false
     /// Messages per app within the grouping window ("WhatsApp · 3 messages").
     private var groups: [String: (count: Int, last: Date)] = [:]
 
@@ -22,9 +23,14 @@ final class NotificationProvider {
         guard observer == nil else { return }
         guard AXIsProcessTrusted(), let app = NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundleID).first else {
             watchLaunch()
-            // Accessibility may be granted later in System Settings: look again in 10 s.
+            // Accessibility may be granted later in System Settings: look again in 10 s (one retry loop only).
+            guard !retrying else { return }
+            retrying = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                MainActor.assumeIsolated { if AppModel.shared.features.isEnabled(.notifications) { NotificationProvider.shared.start() } }
+                MainActor.assumeIsolated {
+                    NotificationProvider.shared.retrying = false
+                    if AppModel.shared.features.isEnabled(.notifications) { NotificationProvider.shared.start() }
+                }
             }
             return
         }
