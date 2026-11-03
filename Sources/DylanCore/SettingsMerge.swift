@@ -59,7 +59,8 @@ public enum HookInstaller {
         for e in events {
             for h in dylanHooks(in: hooks[e.name]) {
                 found += 1
-                if h == command { exact += 1 }
+                // Hooks written before paths were always quoted still point at the same CLI.
+                if h == command || h.replacingOccurrences(of: "'", with: "") == command.replacingOccurrences(of: "'", with: "") { exact += 1 }
             }
         }
         if found == 0 { return .notInstalled }

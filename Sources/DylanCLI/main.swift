@@ -15,18 +15,18 @@ func stderr(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8))
 
 func usage() -> Never {
     print("""
-    dylan \(version) — Live Activity API untuk notch Dylan
+    dylan \(version) — Live Activity API for the Dylan notch
 
       dylan activity start <id> --title <t> [--subtitle <s>] [--progress 0..1] [--url <u>]
       dylan activity update <id> [--title <t>] [--subtitle <s>] [--progress 0..1]
       dylan activity end <id> --success | --failure [--detail <d>]
-      dylan notify <judul> [isi]
-      dylan run -- <perintah…>          jalankan sebagai aktivitas; exit code diteruskan
-      dylan shell-init zsh              cetak integrasi zsh
-      dylan hook claude                 dipanggil oleh hook Claude Code
-      dylan doctor                      cek app, socket, hook, dan shell integration
-      dylan debug emit <file.json>      kirim payload hook palsu (untuk uji)
-      dylan debug state                 cetak aktivitas yang sedang tampil (JSON)
+      dylan notify <title> [body]
+      dylan run -- <command…>           run as an activity; passes the exit code through
+      dylan shell-init zsh              print the zsh integration
+      dylan hook claude                 called by Claude Code hooks
+      dylan doctor                      check the app, socket, hooks and shell integration
+      dylan debug emit <file.json>      send a fake hook payload (testing)
+      dylan debug state                 print the activities on screen (JSON)
     """)
     exit(0)
 }
@@ -65,7 +65,7 @@ func send(_ m: BridgeMessage, timeout: TimeInterval = 0.5) -> Bool {
 }
 
 func sendOrWarn(_ m: BridgeMessage) {
-    if !send(m) { stderr("dylan: app Dylan tidak berjalan; pesan diabaikan") }
+    if !send(m) { stderr("dylan: the Dylan app is not running; message ignored") }
 }
 
 func terminalEnv() -> [String: String] {
@@ -110,7 +110,7 @@ func hook(source: String) -> Never {
 // MARK: run
 
 func run(_ command: [String]) -> Never {
-    guard !command.isEmpty else { stderr("dylan run: tidak ada perintah"); exit(64) }
+    guard !command.isEmpty else { stderr("dylan run: no command given"); exit(64) }
     let id = "run-\(getpid())"
     let title = TextRules.commandShortName(command.joined(separator: " "))
     let start = Date()
@@ -121,7 +121,7 @@ func run(_ command: [String]) -> Never {
     defer { cargs.forEach { free($0) } }
     let rc = posix_spawnp(&pid, command[0], nil, nil, cargs, environ)
     guard rc == 0 else {
-        send(.activityEnd(id: id, success: false, detail: "tidak bisa dijalankan"))
+        send(.activityEnd(id: id, success: false, detail: "could not start"))
         stderr("dylan run: \(command[0]): \(String(cString: strerror(rc)))")
         exit(127)
     }
@@ -147,23 +147,24 @@ func doctor() -> Never {
             reply = try? JSONDecoder().decode(PingReply.self, from: l)
         }
     }
-    line(reply != nil, reply.map { "App Dylan berjalan (v\($0.version), profil \($0.profile))" } ?? "App Dylan tidak berjalan")
+    line(reply != nil, reply.map { "Dylan app is running (v\($0.version), \($0.profile) profile)" } ?? "Dylan app is not running")
     var st = stat()
     let sockOK = stat(socketPath, &st) == 0 && (st.st_mode & 0o777) == 0o600
-    line(sockOK, "Socket \(TextRules.abbreviatePath(socketPath)) \(sockOK ? "(0600)" : "tidak ada / izin salah")")
+    line(sockOK, "Socket \(TextRules.abbreviatePath(socketPath)) \(sockOK ? "(0600)" : "missing or wrong permissions")")
 
     let me = selfPath()
     line(true, "CLI: \(me)")
     let settings = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/settings.json")
     let status = (try? HookInstaller.status(try? Data(contentsOf: settings), command: HookInstaller.command(cliPath: me))) ?? .notInstalled
     switch status {
-    case .installed: line(true, "Hook Claude Code terpasang (8 event)")
-    case .needsUpdate: line(false, "Hook Claude Code perlu diperbarui (app dipindah?) — buka Settings → Agents")
-    case .notInstalled: line(false, "Hook Claude Code belum terpasang (opsional, Mode Developer)")
+    case .installed: line(true, "Claude Code hooks installed (8 events)")
+    case .needsUpdate: line(false, "Claude Code hooks need an update (app moved?) — open Settings → Agents")
+    case .notInstalled: line(false, "Claude Code hooks not installed (optional, Developer profile)")
     }
     let zshrc = (try? String(contentsOf: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".zshrc"), encoding: .utf8)) ?? ""
-    line(zshrc.contains("dylan shell-init"), zshrc.contains("dylan shell-init") ? "Shell integration ada di ~/.zshrc"
-         : "Shell integration belum ada (opsional): eval \"$(dylan shell-init zsh)\"")
+    let hasInit = zshrc.contains("shell-init zsh")
+    line(hasInit, hasInit ? "Shell integration found in ~/.zshrc"
+         : "Shell integration not set up (optional): Settings → Terminal → Add to ~/.zshrc")
     exit(0)
 }
 
@@ -179,7 +180,7 @@ case "activity":
     args.removeFirst(2)
     switch sub {
     case "start":
-        guard let title = option("--title") else { stderr("dylan activity start: --title wajib"); exit(64) }
+        guard let title = option("--title") else { stderr("dylan activity start: --title is required"); exit(64) }
         sendOrWarn(.activityStart(id: id, title: title, subtitle: option("--subtitle"),
                                   progress: parseProgress(option("--progress")), url: option("--url")))
     case "update":
@@ -187,7 +188,7 @@ case "activity":
                                    progress: parseProgress(option("--progress"))))
     case "end":
         let ok = flag("--success"), fail = flag("--failure")
-        guard ok != fail else { stderr("dylan activity end: pilih --success atau --failure"); exit(64) }
+        guard ok != fail else { stderr("dylan activity end: pass --success or --failure"); exit(64) }
         sendOrWarn(.activityEnd(id: id, success: ok, detail: option("--detail")))
     default: usage()
     }
@@ -198,7 +199,7 @@ case "run":
     if args.first == "--" { args.removeFirst() }
     run(args)
 case "shell-init":
-    guard args.first == "zsh" else { stderr("dylan shell-init: saat ini hanya zsh"); exit(64) }
+    guard args.first == "zsh" else { stderr("dylan shell-init: only zsh is supported for now"); exit(64) }
     print(ShellInit.zsh(cliPath: selfPath()), terminator: "")
 case "_shell":
     // Called in the background by the zsh hooks; never prints.
@@ -219,7 +220,7 @@ case "hook":
 case "doctor":
     doctor()
 case "debug" where args.first == "state":
-    guard let fd = try? UnixSocket.connect(path: socketPath, timeout: 0.5) else { stderr("dylan: app Dylan tidak berjalan"); exit(0) }
+    guard let fd = try? UnixSocket.connect(path: socketPath, timeout: 0.5) else { stderr("dylan: the Dylan app is not running"); exit(0) }
     defer { close(fd) }
     if (try? UnixSocket.write(fd, try BridgeMessage.debugState.encodedLine())) != nil, let l = try? UnixSocket.readLine(fd) {
         FileHandle.standardOutput.write(l + Data([0x0A]))

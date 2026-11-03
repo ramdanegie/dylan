@@ -49,6 +49,11 @@ private func obj(_ d: Data) throws -> [String: Any] {
         #expect(twice.json == once.json)
     }
 
+    @Test func unquotedLegacyHooksCountAsInstalled() throws {
+        let legacy = try HookInstaller.install(into: nil, command: "/Applications/Dylan.app/Contents/MacOS/dylan hook claude")
+        #expect(try HookInstaller.status(legacy.json, command: cmd) == .installed)
+    }
+
     @Test func appMovedUpdatesPath() throws {
         let old = try HookInstaller.install(into: nil, command: HookInstaller.command(cliPath: "/tmp/Dylan.app/Contents/MacOS/dylan"))
         #expect(try HookInstaller.status(old.json, command: cmd) == .needsUpdate)
