@@ -10,9 +10,8 @@ final class OtherPlayersProvider {
     static let shared = OtherPlayersProvider()
     static let vlcID = "org.videolan.vlc"
     private var timer: Timer?
-    private var lastBrowser: String?
-    /// Tab titles are read off the main thread, at most every 10 s while the same browser keeps playing.
-    private var lastTabQuery = Date.distantPast
+    /// Tab titles are read off the main thread, at most every 10 s per browser.
+    private var lastTabQuery: [String: Date] = [:]
     private var querying = false
 
     func start() {
@@ -31,44 +30,63 @@ final class OtherPlayersProvider {
 
     private func poll() {
         let m = AppModel.shared
-        guard m.features.isEnabled(.otherPlayers), m.features.isEnabled(.media) else { return }
-        // Spotify and Music have their own events and win.
-        if let s = m.media?.source, s == .spotify || s == .music, m.media?.isPlaying == true { return }
+        guard m.features.isEnabled(.otherPlayers), m.features.isEnabled(.media), !Self.fullPlayerPlaying else { return }
         let candidates = Set(BrowserMedia.browsers.keys).union([Self.vlcID])
-        let running = NSWorkspace.shared.runningApplications.filter { candidates.contains($0.bundleIdentifier ?? "") }
-        guard !running.isEmpty else { clearIfOurs(); return }
-        // VLC has a proper scripting dictionary: ask it directly.
-        if running.contains(where: { $0.bundleIdentifier == Self.vlcID }) {
+        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)).intersection(candidates)
+        // The app behind the current item quit.
+        if let cur = m.media, cur.source == .browser || cur.source == .vlc, let id = cur.appBundleID, !running.contains(id) { clearIfOurs() }
+        guard !running.isEmpty else { return }
+        let playing = Set(AudioTap.processes().filter(\.playing).compactMap(\.app.bundleIdentifier))
+        let browser = BrowserMedia.browsers.keys.sorted().first { running.contains($0) && playing.contains($0) }
+        // VLC only when it is the one making sound, or it is already shown and no browser plays.
+        if running.contains(Self.vlcID), playing.contains(Self.vlcID) || (m.media?.source == .vlc && browser == nil) {
             query(BrowserMedia.vlcScript, app: Self.vlcID) { out in
-                guard let v = out.flatMap(BrowserMedia.parseVLC) else { return }
+                guard let out else { return }   // timeout: keep what is shown
+                guard let v = BrowserMedia.parseVLC(out) else {
+                    if AppModel.shared.media?.source == .vlc { OtherPlayersProvider.shared.clearIfOurs() }   // stopped, playlist cleared
+                    return
+                }
                 OtherPlayersProvider.shared.publish(MediaState(source: .vlc, title: v.title, artist: "VLC", album: "", isPlaying: v.playing,
                                                                position: v.position, duration: v.duration, positionAt: Date(),
                                                                artwork: nil, artworkKey: "vlc:" + v.title, appBundleID: Self.vlcID))
             }
             return
         }
-        // Browsers: only the one producing sound, and only then is AppleScript used.
-        let playing = Set(AudioTap.processes().filter(\.playing).compactMap(\.app.bundleIdentifier))
-        guard let browser = running.first(where: { playing.contains($0.bundleIdentifier ?? "") && BrowserMedia.browsers[$0.bundleIdentifier ?? ""] != nil }),
-              let id = browser.bundleIdentifier else {
-            // Paused: keep the last item, shown as paused.
+        guard let id = browser else {
+            // Nothing plays: a browser item stays, shown as paused (its app is still running, checked above).
             if var cur = m.media, cur.source == .browser, cur.isPlaying { cur.isPlaying = false; publish(cur) }
-            else if m.media?.source == .vlc { clearIfOurs() }   // VLC quit
             return
         }
-        if var cur = m.media, cur.source == .browser, cur.appBundleID == id, Date().timeIntervalSince(lastTabQuery) < 10 {
-            if !cur.isPlaying { cur.isPlaying = true; publish(cur) }
+        // At most one tab listing per browser every 10 s, whatever the last answer was (a Meet call, a game).
+        if let last = lastTabQuery[id], Date().timeIntervalSince(last) < 10 {
+            if var cur = m.media, cur.source == .browser, cur.appBundleID == id, !cur.isPlaying { cur.isPlaying = true; publish(cur) }
             return
         }
-        lastTabQuery = Date()
-        lastBrowser = id
+        lastTabQuery[id] = Date()
         query(BrowserMedia.tabsScript(bundleID: id), app: id) { out in
-            guard let item = out.flatMap({ BrowserMedia.pick(BrowserMedia.parseTabs($0)) }) else { return }
+            guard let out else { return }
+            guard let item = BrowserMedia.pick(BrowserMedia.parseTabs(out)) else {
+                // The media tab is gone while the browser still makes sound (a call): drop the old title.
+                if AppModel.shared.media?.source == .browser, AppModel.shared.media?.appBundleID == id { OtherPlayersProvider.shared.clearIfOurs() }
+                return
+            }
             OtherPlayersProvider.shared.publish(MediaState(
                 source: .browser, title: item.title, artist: item.artist.isEmpty ? "\(item.site) · \(BrowserMedia.browsers[id] ?? "")" : item.artist,
                 album: item.artist.isEmpty ? "" : item.site, isPlaying: true, position: 0, duration: 0, positionAt: Date(),
                 artwork: nil, artworkKey: "web:" + item.title, appBundleID: id))
         }
+    }
+
+    /// Spotify or Music playing: they have their own events and always win.
+    static var fullPlayerPlaying: Bool {
+        guard let m = AppModel.shared.media else { return false }
+        return m.hasFullControls && m.isPlaying
+    }
+
+    private func publish(_ s: MediaState) {
+        // Re-checked here: a query result can arrive seconds after Spotify started.
+        guard !Self.fullPlayerPlaying, AppModel.shared.media != s else { return }
+        AppModel.shared.mediaChanged(s)
     }
 
     /// osascript in the background: a browser with hundreds of tabs must not stall the notch. Never prompts
@@ -89,10 +107,6 @@ final class OtherPlayersProvider {
     private func canAutomate(_ app: String) -> Bool {
         let target = NSAppleEventDescriptor(bundleIdentifier: app)
         return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
-    }
-
-    private func publish(_ s: MediaState) {
-        if AppModel.shared.media != s { AppModel.shared.mediaChanged(s) }
     }
 
     private func clearIfOurs() {
@@ -132,6 +146,8 @@ final class OtherPlayersProvider {
         } else {
             // NX_KEYTYPE_PLAY 16, NEXT 17, PREVIOUS 18: macOS sends them to the Now Playing app (the browser tab).
             guard let key = ["playpause": 16, "next": 17, "previous": 18][action] else { return }
+            // Posting events needs permission; the user's click is the moment to ask, instead of failing silently.
+            guard CGPreflightPostEventAccess() else { _ = CGRequestPostEventAccess(); return }
             Self.mediaKey(key)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MainActor.assumeIsolated { OtherPlayersProvider.shared.poll() } }

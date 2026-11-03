@@ -344,6 +344,8 @@ extension PrivacyProvider {
         var cf: Unmanaged<CFString>?
         var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         guard AudioObjectGetPropertyData(p, &addr, 0, nil, &size, &cf) == noErr, let raw = cf?.takeRetainedValue() as String? else { return nil }
+        // shortcut: WebKit's GPU process is shared by Safari, Mail and other web views; public API cannot tell
+        // them apart, so it counts as Safari. Upgrade if Core Audio ever reports the responsible app.
         let id = raw.hasPrefix("com.apple.WebKit") ? "com.apple.Safari"
             : (raw.range(of: #"\.helper.*$"#, options: [.regularExpression, .caseInsensitive]).map { String(raw[..<$0.lowerBound]) } ?? raw)
         return NSRunningApplication.runningApplications(withBundleIdentifier: id).first

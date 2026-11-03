@@ -354,8 +354,10 @@ struct PeekRow: View {
                 SwiftUI.Text(model.presentationMode ? m.title : "\(m.title) · \(m.artist)")
                     .font(DY.font(12.5, .regular)).foregroundStyle(DY.fg).lineLimit(1)
                 Spacer(minLength: 4)
-                TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                    ValueText(text: DurationFormat.running(m.livePosition(ctx.date)), color: DY.fg2)
+                if m.duration > 0 {
+                    TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                        ValueText(text: DurationFormat.running(m.livePosition(ctx.date)), color: DY.fg2)
+                    }
                 }
                 MediaButtons(size: 12)
             } else {

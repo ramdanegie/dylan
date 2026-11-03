@@ -156,9 +156,10 @@ struct NowPlayingCard: View {
                             .font(DY.font(11.5, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
                     }
                 }
+                if m.duration > 0 {   // browser tabs have no known length (FR-11)
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     VStack(spacing: 3) {
-                        ProgressBar(progress: m.duration > 0 ? m.livePosition(ctx.date) / m.duration : 0, color: model.mediaAccent)
+                        ProgressBar(progress: m.livePosition(ctx.date) / m.duration, color: model.mediaAccent)
                             .frame(height: 3)
                         HStack {
                             ValueText(text: DurationFormat.running(m.livePosition(ctx.date)), color: DY.fg2)
@@ -167,6 +168,7 @@ struct NowPlayingCard: View {
                         }
                         .font(.system(size: 10))
                     }
+                }
                 }
                 MediaButtons(size: 13).frame(maxWidth: .infinity)
             }

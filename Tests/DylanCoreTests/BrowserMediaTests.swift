@@ -29,4 +29,14 @@ import Testing
         #expect(v?.playing == true && v?.title == "Film Keluarga" && v?.duration == 5400 && v?.position == 61)
         #expect(BrowserMedia.parseVLC("") == nil)
     }
+
+    @Test func navigationPagesAreNotMedia() {
+        #expect(BrowserMedia.item(title: "YouTube Music", url: "https://music.youtube.com/") == nil)
+        #expect(BrowserMedia.item(title: "Apple Music - Web Player", url: "https://music.apple.com/us/browse") == nil)
+        #expect(BrowserMedia.item(title: "Stream", url: "https://soundcloud.com/feed") == nil)
+        #expect(BrowserMedia.item(title: "Browse - Twitch", url: "https://www.twitch.tv/directory") == nil)
+        #expect(BrowserMedia.item(title: "Lagu - Apple Music", url: "https://music.apple.com/id/album/x/123")?.title == "Lagu")
+        #expect(BrowserMedia.parseVLC("false\tLive at 10.30\t0\t0")?.title == "Live at 10.30")
+        #expect(BrowserMedia.parseVLC("true\tKonser.MP4\t60\t1")?.title == "Konser")
+    }
 }

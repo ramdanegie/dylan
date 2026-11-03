@@ -20,21 +20,31 @@ public enum BrowserMedia {
         return nil
     }
 
+    /// Page titles that are a site's own name or navigation, not something playing.
+    static let notMedia: Set<String> = ["youtube", "youtube music", "soundcloud", "stream", "discover", "feed", "home", "library",
+                                        "twitch", "browse", "following", "apple music", "apple music - web player", "netflix", "spotify"]
+
     static func item(title raw: String, url: String) -> Item? {
-        guard let host = URL(string: url)?.host?.lowercased() else { return nil }
+        guard let found = parse(title: raw, url: url), !notMedia.contains(found.title.lowercased()) else { return nil }
+        return found
+    }
+
+    private static func parse(title raw: String, url: String) -> Item? {
+        guard let u = URL(string: url), let host = u.host?.lowercased() else { return nil }
+        let path = u.path.split(separator: "/")
         // Unread counts some sites put in front: "(3) Title".
         var title = raw.replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
         func strip(_ suffix: String) { if title.hasSuffix(suffix) { title = String(title.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces) } }
         switch true {
-        case host == "music.youtube.com":
+        case host == "music.youtube.com" && url.contains("/watch"):
             strip("- YouTube Music")
             return title.isEmpty ? nil : Item(title: title, artist: "", site: "YouTube Music")
         case host.hasSuffix("youtube.com") && (url.contains("/watch") || url.contains("/shorts/") || url.contains("/live")),
              host == "youtu.be":
             strip("- YouTube")
             return title.isEmpty ? nil : Item(title: title, artist: "", site: "YouTube")
-        case host.hasSuffix("soundcloud.com"):
+        case host.hasSuffix("soundcloud.com") && path.count >= 2:   // /artist/track, not /discover or /stream
             strip("| Listen online for free on SoundCloud"); strip("| SoundCloud")
             if title.hasPrefix("Stream ") { title = String(title.dropFirst(7)) }
             if let r = title.range(of: " by ", options: .backwards) {
@@ -47,12 +57,12 @@ public enum BrowserMedia {
             let parts = title.components(separatedBy: " • ")
             guard parts.count >= 2 else { return nil }
             return Item(title: parts[0], artist: parts[1], site: "Spotify Web")
-        case host.hasSuffix("twitch.tv"):
+        case host.hasSuffix("twitch.tv") && path.count == 1 && !["directory", "videos", "search"].contains(String(path[0])):
             strip("- Twitch")
             return title.isEmpty || title == "Twitch" ? nil : Item(title: title, artist: "", site: "Twitch")
         case host.hasSuffix("netflix.com") && url.contains("/watch"):
             return Item(title: title.isEmpty ? "Netflix" : title, artist: "", site: "Netflix")
-        case host == "music.apple.com":
+        case host == "music.apple.com" && path.contains(where: { ["song", "album", "playlist", "station"].contains(String($0)) }):
             strip("- Apple Music")
             return title.isEmpty ? nil : Item(title: title, artist: "", site: "Apple Music Web")
         default:
@@ -91,12 +101,15 @@ public enum BrowserMedia {
     end tell
     """
 
+    static let mediaExtensions: Set<String> = ["mp3", "mp4", "m4a", "m4v", "mkv", "mov", "avi", "webm", "flac", "wav", "ogg", "opus",
+                                               "aac", "wmv", "mpg", "mpeg", "ts", "3gp"]
+
     public static func parseVLC(_ out: String) -> (playing: Bool, title: String, duration: Double, position: Double)? {
         let p = out.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
         guard p.count == 4, !p[1].isEmpty else { return nil }
-        // Strip the file extension VLC keeps in the item name.
-        let name = (p[1] as NSString).pathExtension.count <= 4 && !(p[1] as NSString).pathExtension.isEmpty
-            ? (p[1] as NSString).deletingPathExtension : p[1]
+        // Strip only a media file extension VLC keeps in the item name ("Live at 10.30" stays whole).
+        let ext = (p[1] as NSString).pathExtension.lowercased()
+        let name = mediaExtensions.contains(ext) ? (p[1] as NSString).deletingPathExtension : p[1]
         return (p[0] == "true", name, Double(p[2]) ?? 0, Double(p[3]) ?? 0)
     }
 }

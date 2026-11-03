@@ -61,7 +61,7 @@ final class MediaProvider {
     // MARK: Events
 
     private func spotifyChanged(_ info: PlayerInfo) {
-        guard info.state != "Stopped" else { AppModel.shared.mediaChanged(nil); return }
+        guard info.state != "Stopped" else { if AppModel.shared.media?.source == .spotify { AppModel.shared.mediaChanged(nil) }; return }
         var m = MediaState(source: .spotify, title: info.name, artist: info.artist, album: info.album,
                            isPlaying: info.state == "Playing", position: info.position,
                            duration: info.durationMS / 1000, positionAt: Date())
@@ -75,7 +75,7 @@ final class MediaProvider {
     }
 
     private func musicChanged(_ info: PlayerInfo) {
-        guard info.state != "Stopped" else { AppModel.shared.mediaChanged(nil); return }
+        guard info.state != "Stopped" else { if AppModel.shared.media?.source == .music { AppModel.shared.mediaChanged(nil) }; return }
         // Position is not in the notification; ask once when allowed, otherwise show what we have.
         if canQuery(Self.musicID) { refreshMusic(); return }
         var m = MediaState(source: .music, title: info.name, artist: info.artist, album: info.album,
