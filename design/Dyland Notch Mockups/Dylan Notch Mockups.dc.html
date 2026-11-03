@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#E9E8E4;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font-family:inherit}
+a{color:#1d1d1f}a:hover{color:#000}
+@keyframes dy-spin{to{transform:rotate(360deg)}}
+@keyframes dy-eq{0%{transform:scaleY(.3)}100%{transform:scaleY(1)}}
+@keyframes dy-pulse0{0%{box-shadow:0 0 0 0 rgba(255,214,10,.6)}100%{box-shadow:0 0 0 16px rgba(255,214,10,0)}}
+@keyframes dy-pulse1{0%{box-shadow:0 0 0 0 rgba(255,214,10,.6)}100%{box-shadow:0 0 0 16px rgba(255,214,10,0)}}
+</style>
+</helmet>
+<section style="padding:64px; display:flex; flex-direction:column; gap:56px; width:1900px; color:#1d1d1f">
+
+<div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px">
+  <div style="display:flex; flex-direction:column; gap:8px">
+    <div style="font-size:13px; font-weight:600; color:#5f5f64; letter-spacing:.02em">DYLAN · DESIGN BRIEF §3.5 LANGKAH 1</div>
+    <div style="font-size:40px; font-weight:700; letter-spacing:-.02em">Mockup notch — D2–D9 &amp; D14</div>
+    <div style="font-size:15px; color:#5f5f64; max-width:1100px; text-wrap:pretty">Profil Developer (PRD 1.1). Agent, command, dan CI hanya muncul bila Mode Developer aktif; layar untuk semua orang ada di <a href="Dylan Everyday.dc.html">Everyday</a>. Prioritas baru: baterai 10% = P0; HUD &amp; indikator privasi = overlay di luar slot Duo. Tab prototipe disederhanakan; tab bar final (ikon) ada di Everyday &amp; Panels. MacBook Pro 14", skala 1:1 pt. Bentuk selalu #000 dan tumbuh dari notch. Warna hanya untuk status. Ukuran notch dihitung dari safe area saat runtime; 200 × 32 pt di sini hanya acuan.</div>
+  </div>
+</div>
+
+<div style="display:flex; gap:40px; align-items:flex-start">
+  <div style="display:flex; flex-direction:column; gap:12px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D7–D9</span><span style="font-size:17px; font-weight:650">Prototipe — Compact → Peek → Expanded (Home · Agents)</span></div>
+    <div onClick="{{ onBoard }}" style="position:relative; width:1512px; height:520px; border-radius:14px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.34 0.03 262)); box-shadow:0 20px 60px rgba(0,0,0,.18)">
+      <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 18px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500">
+        <div style="display:flex; gap:20px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>Selection</span><span>View</span><span>Go</span><span>Run</span><span>Terminal</span><span>Window</span><span>Help</span></div>
+        <div style="display:flex; gap:18px"><span>100%</span><span>Wi-Fi</span><span>Sel 3 Nov  09.41</span></div>
+      </div>
+      <div onMouseEnter="{{ onEnter }}" onMouseLeave="{{ onLeave }}" onClick="{{ onIsland }}" style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:{{ iw }}px; height:{{ ih }}px; border-radius:0 0 {{ ir }}px {{ ir }}px; background:#000; transition:{{ trans }}; animation:{{ pulse }}; z-index:2; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+        <div style="position:absolute; inset:0; overflow:hidden; border-radius:inherit">
+
+          <div style="position:absolute; top:0; left:50%; width:392px; margin-left:-196px; height:32px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; opacity:{{ lc.o }}; filter:blur({{ lc.b }}px); pointer-events:{{ lc.pe }}; transition:opacity .14s ease, filter .14s ease">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; min-width:0">
+              <sc-if value="{{ permOff }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px">✦</span>{{ spin }}<span>{{ a1 }}</span></sc-if>
+              <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:#FFD60A">✦</span><span style="color:#FFD60A; font-weight:600">Izin</span><span style="min-width:15px; height:15px; border-radius:8px; background:rgba(255,255,255,.16); font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center">2</span></sc-if>
+            </div>
+            <div></div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:7px; padding-right:12px">{{ eq }}<span style="width:20px; height:20px; border-radius:5px; background:repeating-linear-gradient(135deg, #48484a 0 3px, #2c2c2e 3px 6px)"></span></div>
+          </div>
+
+          <div style="position:absolute; top:0; left:50%; width:372px; margin-left:-186px; height:76px; opacity:{{ lp.o }}; filter:blur({{ lp.b }}px); pointer-events:{{ lp.pe }}; transition:opacity .14s ease, filter .14s ease">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; gap:6px; padding-left:14px">
+                <sc-if value="{{ permOff }}" hint-placeholder-val="{{ true }}"><span>✦</span>{{ spin }}</sc-if>
+                <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}"><span style="color:#FFD60A">✦</span><span style="color:#FFD60A; font-weight:600">Izin</span></sc-if>
+              </div>
+              <div></div>
+              <div style="display:flex; justify-content:flex-end; padding-right:14px; color:rgba(255,255,255,.55)">
+                <sc-if value="{{ permOff }}" hint-placeholder-val="{{ true }}"><span>{{ a1 }}</span></sc-if>
+                <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}"><span>{{ permLeft }} dtk</span></sc-if>
+              </div>
+            </div>
+            <sc-if value="{{ permOff }}" hint-placeholder-val="{{ true }}">
+              <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+                <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px">Claude mengedit <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">AuthService.swift</span><span style="color:rgba(255,255,255,.55)"> · api-gateway</span></div>
+                <button style="height:24px; padding:0 10px; border-radius:12px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">Buka</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}">
+              <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:6px">
+                <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px"><span style="color:#FFD60A">Bash</span> npm install zod</div>
+                <button onClick="{{ deny }}" style="height:24px; padding:0 10px; border-radius:12px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">Tolak</button>
+                <button onClick="{{ allow }}" style="height:24px; padding:0 10px; border-radius:12px; border:none; background:#FFD60A; color:#000; font-size:11.5px; font-weight:650; cursor:pointer" style-hover="background:#FFE24D">Izinkan</button>
+                <button onClick="{{ passthru }}" style="height:24px; padding:0 10px; border-radius:12px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">Terminal</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="position:absolute; top:0; left:50%; width:640px; margin-left:-320px; height:312px; opacity:{{ le.o }}; filter:blur({{ le.b }}px); pointer-events:{{ le.pe }}; transition:opacity .14s ease, filter .14s ease">
+            <div style="height:32px; display:grid; grid-template-columns:220px 200px 220px; align-items:center">
+              <div style="display:flex; gap:4px; padding-left:16px">
+                <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="2">
+                  <button onClick="{{ tb.on }}" style="height:22px; padding:0 10px; border-radius:11px; border:none; background:{{ tb.bg }}; color:{{ tb.fg }}; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px">{{ tb.label }}<sc-if value="{{ tb.dot }}" hint-placeholder-val="{{ false }}"><span style="width:6px; height:6px; border-radius:3px; background:#FFD60A"></span></sc-if></button>
+                </sc-for>
+              </div>
+              <div></div>
+              <div style="display:flex; justify-content:flex-end; gap:14px; padding-right:18px; font-size:12px; color:rgba(255,255,255,.55)"><span>Riwayat</span><span>Pengaturan</span></div>
+            </div>
+
+            <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:10px 16px 14px; display:flex; flex-direction:column; gap:10px">
+                <div style="display:grid; grid-template-columns:196px minmax(0,1fr) 150px; gap:10px; height:176px">
+                  <div style="background:rgba(255,255,255,.06); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:12px">
+                    <div style="display:flex; gap:10px; align-items:center">
+                      <div style="width:52px; height:52px; border-radius:10px; flex:none; background:repeating-linear-gradient(135deg, #48484a 0 4px, #2c2c2e 4px 8px)"></div>
+                      <div style="min-width:0; display:flex; flex-direction:column; gap:3px">
+                        <div style="font-size:13px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Sore di Kemang</div>
+                        <div style="font-size:12px; color:rgba(255,255,255,.55)">Arsa · Spotify</div>
+                      </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:5px">
+                      <div style="height:4px; border-radius:2px; background:rgba(255,255,255,.18); overflow:hidden"><div style="height:100%; width:{{ np.pct }}%; background:rgba(255,255,255,.85); border-radius:2px"></div></div>
+                      <div style="display:flex; justify-content:space-between; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:10.5px; color:rgba(255,255,255,.55)"><span>{{ np.pos }}</span><span>3:58</span></div>
+                    </div>
+                    <div style="display:flex; justify-content:center; gap:14px; align-items:center; color:#fff">
+                      <button style="width:30px; height:30px; border-radius:15px; border:none; background:transparent; color:#fff; font-size:11px; letter-spacing:-2px; cursor:pointer" style-hover="background:rgba(255,255,255,.1)">◀◀</button>
+                      <button style="width:34px; height:34px; border-radius:17px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:12px; letter-spacing:-1px; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">❚❚</button>
+                      <button style="width:30px; height:30px; border-radius:15px; border:none; background:transparent; color:#fff; font-size:11px; letter-spacing:-2px; cursor:pointer" style-hover="background:rgba(255,255,255,.1)">▶▶</button>
+                    </div>
+                  </div>
+                  <div style="background:rgba(255,255,255,.06); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; min-width:0">
+                    <div style="font-size:11.5px; color:rgba(255,255,255,.55)">Hari ini · Sel 3 Nov</div>
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px">
+                        <div style="font-size:15px; font-weight:650; color:#fff">Standup</div>
+                        <div style="font-size:12px; color:rgba(255,255,255,.55)"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px">10.00–10.15</span> · Zoom</div>
+                        <div style="font-size:12px; color:#0A84FF; font-weight:600">mulai 18 menit lagi</div>
+                      </div>
+                      <button style="height:28px; padding:0 14px; border-radius:14px; border:none; background:#fff; color:#000; font-size:12.5px; font-weight:650; cursor:pointer" style-hover="background:#e5e5e5">Join</button>
+                    </div>
+                    <div style="height:1px; background:rgba(255,255,255,.08)"></div>
+                    <div style="display:flex; flex-direction:column; gap:7px; font-size:12px">
+                      <div style="display:flex; gap:10px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:rgba(255,255,255,.55); flex:none; padding-top:1px">13.00</span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Review PR telekonsul</span></div>
+                      <div style="display:flex; gap:10px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:rgba(255,255,255,.55); flex:none; padding-top:1px">16.30</span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">1:1 dengan Rani</span></div>
+                    </div>
+                  </div>
+                  <div style="background:rgba(255,255,255,.06); border-radius:16px; padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px">
+                    <div style="align-self:stretch; display:flex; justify-content:space-between; font-size:11.5px; color:rgba(255,255,255,.55)"><span>Pomodoro</span><span>2/4</span></div>
+                    <div style="width:84px; height:84px; border-radius:50%; background:conic-gradient(rgba(255,255,255,.9) 0 {{ pomo.deg }}deg, rgba(255,255,255,.14) 0); display:flex; align-items:center; justify-content:center">
+                      <div style="width:76px; height:76px; border-radius:50%; background:#151516; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px">
+                        <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:16px; font-weight:600; color:#fff">{{ pomo.rem }}</span>
+                        <span style="font-size:10.5px; color:rgba(255,255,255,.55)">Fokus</span>
+                      </div>
+                    </div>
+                    <div style="display:flex; gap:6px">
+                      <button style="height:24px; padding:0 10px; border-radius:12px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; cursor:pointer">Jeda</button>
+                      <button style="height:24px; padding:0 10px; border-radius:12px; border:none; background:transparent; color:rgba(255,255,255,.7); font-size:11.5px; font-weight:600; cursor:pointer">Reset</button>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; height:28px; min-width:0">
+                  <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ tabAgents }}" style="flex:none; height:28px; padding:0 12px; border-radius:14px; background:rgba(255,214,10,.14); color:#FFD60A; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; cursor:pointer"><span>✦</span>web-admin butuh izin</div>
+                  </sc-if>
+                  <div style="min-width:0; flex:0 1 auto; height:28px; padding:0 12px; border-radius:14px; background:rgba(255,255,255,.08); display:flex; align-items:center; gap:7px; font-size:12px">{{ spin }}<span style="font-weight:600; flex:none">api-gateway</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:rgba(255,255,255,.55); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0">Edit AuthService.swift</span><span style="flex:none">{{ a1 }}</span></div>
+                  <div style="flex:none; height:28px; padding:0 12px; border-radius:14px; background:rgba(255,255,255,.08); display:flex; align-items:center; gap:7px; font-size:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; font-weight:700">&gt;_</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px">npm test</span><span>{{ cmd }}</span></div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isAgents }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 16px 14px; display:flex; flex-direction:column; gap:10px">
+                <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}">
+                  <div style="height:84px; box-sizing:border-box; border-radius:16px; background:rgba(255,214,10,.09); border:1px solid rgba(255,214,10,.32); padding:11px 12px 11px 14px; display:flex; flex-direction:column; gap:9px">
+                    <div style="display:flex; align-items:center; gap:8px">
+                      <span style="color:#FFD60A">✦</span>
+                      <span style="font-size:13px; font-weight:650; color:#fff">Claude butuh izin</span>
+                      <span style="font-size:12px; color:rgba(255,255,255,.55)">web-admin · Zed</span>
+                      <span style="margin-left:auto; font-size:11.5px; color:rgba(255,255,255,.55)">dilepas ke terminal dalam <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace">{{ permLeft }}</span> dtk</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px">
+                      <div style="flex:1; min-width:0; height:30px; border-radius:8px; background:rgba(0,0,0,.45); padding:0 10px; display:flex; align-items:center; gap:10px; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; white-space:nowrap; overflow:hidden"><span style="color:#FFD60A">Bash</span><span style="color:#fff">npm install zod</span></div>
+                      <button onClick="{{ deny }}" style="height:28px; padding:0 12px; border-radius:14px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:12px; font-weight:600; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">Tolak</button>
+                      <button onClick="{{ allow }}" style="height:28px; padding:0 14px; border-radius:14px; border:none; background:#FFD60A; color:#000; font-size:12px; font-weight:650; cursor:pointer" style-hover="background:#FFE24D">Izinkan</button>
+                      <button onClick="{{ passthru }}" style="height:28px; padding:0 12px; border-radius:14px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:12px; font-weight:600; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">Buka terminal</button>
+                    </div>
+                  </div>
+                </sc-if>
+                <div style="display:flex; flex-direction:column">
+                  <div style="font-size:11.5px; color:rgba(255,255,255,.55); height:20px">Sesi aktif · 3</div>
+                  <div style="height:40px; display:grid; grid-template-columns:22px minmax(0,1fr) 230px 56px; gap:8px; align-items:center; border-bottom:1px solid rgba(255,255,255,.08)">
+                    <div style="display:flex; justify-content:center">{{ spin }}</div>
+                    <div style="display:flex; align-items:baseline; gap:8px; min-width:0"><span style="font-size:13px; font-weight:600; color:#fff">api-gateway</span><span style="font-size:11.5px; color:rgba(255,255,255,.55)">VS Code</span></div>
+                    <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:rgba(255,255,255,.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Edit · AuthService.swift</div>
+                    <div style="text-align:right; font-size:12px">{{ a1 }}</div>
+                  </div>
+                  <div style="height:40px; display:grid; grid-template-columns:22px minmax(0,1fr) 230px 56px; gap:8px; align-items:center; border-bottom:1px solid rgba(255,255,255,.08)">
+                    <div style="display:flex; justify-content:center">
+                      <sc-if value="{{ perm }}" hint-placeholder-val="{{ false }}"><span style="width:8px; height:8px; border-radius:4px; background:#FFD60A"></span></sc-if>
+                      <sc-if value="{{ permOff }}" hint-placeholder-val="{{ true }}">{{ spin }}</sc-if>
+                    </div>
+                    <div style="display:flex; align-items:baseline; gap:8px; min-width:0"><span style="font-size:13px; font-weight:600; color:#fff">web-admin</span><span style="font-size:11.5px; color:rgba(255,255,255,.55)">Zed</span></div>
+                    <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:{{ a2c }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ a2t }}</div>
+                    <div style="text-align:right; font-size:12px">{{ a2 }}</div>
+                  </div>
+                  <div style="height:58px; display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:8px; align-items:center">
+                    <div style="display:flex; justify-content:center; color:#30D158; font-weight:700; font-size:13px">✓</div>
+                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0">
+                      <div style="display:flex; align-items:baseline; gap:8px"><span style="font-size:13px; font-weight:600; color:#fff">telekonsul-ios</span><span style="font-size:11.5px; color:rgba(255,255,255,.55)">Terminal</span><span style="font-size:12px">Selesai · 4m 12s</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px"><span style="color:#30D158">+120</span> <span style="color:#FF453A">−8</span></span></div>
+                      <div style="font-size:12px; color:rgba(255,255,255,.55); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Menambahkan refresh token di AuthService beserta test-nya.</div>
+                    </div>
+                    <button style="height:26px; padding:0 12px; border-radius:13px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:12px; font-weight:600; cursor:pointer" style-hover="background:rgba(255,255,255,.2)">Buka project</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+        </div>
+      </div>
+      <div style="position:absolute; left:24px; bottom:20px; font-size:12px; color:rgba(255,255,255,.75)">Arahkan kursor ke notch → Peek · klik → Expanded · Esc atau klik di luar → tutup</div>
+    </div>
+  </div>
+
+  <div style="width:340px; display:flex; flex-direction:column; gap:28px; padding-top:40px">
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <div style="font-size:13px; font-weight:650">State</div>
+      <div style="display:flex; gap:4px; padding:3px; border-radius:10px; background:rgba(0,0,0,.07)">
+        <sc-for list="{{ segs }}" as="s" hint-placeholder-count="4">
+          <button onClick="{{ s.on }}" style="flex:1; height:30px; border-radius:8px; border:none; background:{{ s.bg }}; color:#1d1d1f; font-size:12.5px; font-weight:600; cursor:pointer; box-shadow:{{ s.sh }}">{{ s.label }}</button>
+        </sc-for>
+      </div>
+      <button onClick="{{ simPerm }}" style="height:34px; border-radius:10px; border:1px solid rgba(0,0,0,.14); background:#fff; color:#1d1d1f; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px" style-hover="background:#f6f6f4"><span style="width:8px; height:8px; border-radius:4px; background:#E0A800"></span>Simulasikan permintaan izin (P0)</button>
+      <div style="font-size:12px; color:#5f5f64; line-height:1.5; text-wrap:pretty">P0 memicu satu pulse, Peek otomatis 4 dtk, lalu tetap di Compact sampai dijawab. Tidak dijawab 30 dtk → dilepas ke terminal.</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-size:13px; font-weight:650">Ukuran &amp; radius bawah</div>
+      <div style="display:grid; grid-template-columns:80px 1fr; row-gap:6px; font-size:12.5px">
+        <span style="color:#5f5f64">Closed</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">= notch · r 9</span>
+        <span style="color:#5f5f64">Compact</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">392 × 32 · telinga 96 · r 12</span>
+        <span style="color:#5f5f64">Peek</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">372 × 76 (32 + 44) · r 18</span>
+        <span style="color:#5f5f64">Expanded</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">640 × 218–312 · r 30</span>
+        <span style="color:#5f5f64">Bahu atas</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">fillet cekung 8 pt</span>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-size:13px; font-weight:650">Warna status</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px"><span style="width:22px; height:22px; border-radius:6px; background:#000; display:flex; align-items:center; justify-content:center"><span style="width:10px; height:10px; border-radius:5px; background:rgba(255,255,255,.85)"></span></span>Berjalan · 85%</div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px"><span style="width:22px; height:22px; border-radius:6px; background:#000; display:flex; align-items:center; justify-content:center"><span style="width:10px; height:10px; border-radius:5px; background:#30D158"></span></span>Sukses</div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px"><span style="width:22px; height:22px; border-radius:6px; background:#000; display:flex; align-items:center; justify-content:center"><span style="width:10px; height:10px; border-radius:5px; background:#FF453A"></span></span>Gagal</div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px"><span style="width:22px; height:22px; border-radius:6px; background:#000; display:flex; align-items:center; justify-content:center"><span style="width:10px; height:10px; border-radius:5px; background:#FFD60A"></span></span>Butuh tindakan</div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px"><span style="width:22px; height:22px; border-radius:6px; background:#000; display:flex; align-items:center; justify-content:center"><span style="width:10px; height:10px; border-radius:5px; background:#0A84FF"></span></span>Info</div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px"><span style="width:22px; height:22px; border-radius:6px; background:#000; display:flex; align-items:center; justify-content:center"><span style="width:10px; height:10px; border-radius:5px; background:rgba(255,255,255,.55)"></span></span>Sekunder · 55%</div>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:6px">
+      <div style="font-size:13px; font-weight:650">Gerak</div>
+      <div style="font-size:12.5px; line-height:1.55; color:#3a3a3c; text-wrap:pretty">Ukuran: spring response 0,35 · damping 0,8 (≈ cubic-bezier .3, 1.15, .45, 1 · 420 ms). Konten: fade + blur 120–140 ms. Reduce Motion: ukuran ease 200 ms, spinner &amp; equalizer diam.</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:920px 920px; gap:40px 60px; align-items:start">
+  <div style="display:flex; flex-direction:column; gap:44px">
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D2</span><span style="font-size:17px; font-weight:650">Closed</span></div>
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Tanpa aktivitas</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">= notch persis</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:200px; height:32px; background:#000; border-radius:0 0 9px 9px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D3</span><span style="font-size:17px; font-weight:650">Compact — agent</span></div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Bekerja</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · tool + file</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; min-width:0"><span>✦</span>{{ spin }}<span>Edit</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">AuthService.swift</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Butuh izin</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P0 · amber + 1 pulse</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500; box-shadow:0 0 0 2px rgba(255,214,10,.35), 0 4px 18px rgba(255,214,10,.25)" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="color:#FFD60A">✦</span><span style="color:#FFD60A; font-weight:600">Izin</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">npm i zod</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Menunggu input</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · info</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:7px; padding-left:12px"><span>✦</span><span style="width:7px; height:7px; border-radius:4px; background:#0A84FF"></span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#0A84FF; font-weight:600">Menunggu</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Selesai</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · 5 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="color:#30D158; font-weight:700; font-size:13px">✓</span><span>Selesai</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#30D158; font-weight:600">4m 12s</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Gagal</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · 8 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="color:#FF453A; font-weight:700">✕</span><span>Error</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#FF453A; font-weight:600">2m 03s</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Multi-sesi</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">3 agent · 1 izin</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="color:#FFD60A">✦</span>{{ spin }}<span style="min-width:16px; height:16px; border-radius:8px; background:rgba(255,255,255,.16); font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center">3</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#FFD60A; font-weight:600">1 izin</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D4</span><span style="font-size:17px; font-weight:650">Compact — command</span></div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Berjalan</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · muncul &gt; 10 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; min-width:0; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px"><span style="font-weight:700">&gt;_</span><span style="white-space:nowrap">npm test</span></div><div></div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:6px; padding-right:12px">{{ spin }}<span>1:23</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Sukses</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · 5 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px"><span style="color:#30D158; font-weight:700; font-size:13px">✓</span><span>build</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#30D158; font-weight:600">48s</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Gagal</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · 8 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px"><span style="color:#FF453A; font-weight:700; font-size:12px">✕</span><span>npm test</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#FF453A; font-weight:600">exit 1</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D6</span><span style="font-size:17px; font-weight:650">Duo — satu aktivitas per telinga</span></div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Agent + musik</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · P3</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span>✦</span>{{ spin }}<span>2:41</span></div><div></div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:7px; padding-right:12px">{{ eq }}<span style="width:20px; height:20px; border-radius:5px; background:repeating-linear-gradient(135deg, #48484a 0 3px, #2c2c2e 3px 6px)"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Command + meeting</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · P1</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; font-weight:700">&gt;_</span>{{ spin }}<span>1:23</span></div><div></div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:6px; padding-right:12px; color:#0A84FF"><span style="width:12px; height:12px; border-radius:3px; border:1.5px solid currentColor; border-top-width:3.5px; box-sizing:border-box"></span><span style="font-weight:600">5m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D14</span><span style="font-size:17px; font-weight:650">Mode Presentasi</span></div>
+      <div style="font-size:12.5px; color:#5f5f64; max-width:760px; margin-left:160px; text-wrap:pretty">Nama file, perintah, dan judul meeting diganti teks generik. Peek otomatis mati kecuali P0 (tanpa detail). Indikator <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace">eye.slash</span> abu 55%: terlihat olehmu, tidak mencolok bagi penonton.</div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Agent</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">file disembunyikan</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:7px; padding-left:12px"><span style="position:relative; width:14px; height:9px; border:1.4px solid rgba(255,255,255,.55); border-radius:50%; box-sizing:border-box; flex:none" style-after="content:''; position:absolute; left:50%; top:50%; width:17px; height:1.4px; background:rgba(255,255,255,.55); transform:translate(-50%,-50%) rotate(-35deg); box-shadow:0 0 0 1px #000"></span><span>✦</span>{{ spin }}</div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span>Bekerja</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Command</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">perintah disembunyikan</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:7px; padding-left:12px"><span style="position:relative; width:14px; height:9px; border:1.4px solid rgba(255,255,255,.55); border-radius:50%; box-sizing:border-box; flex:none" style-after="content:''; position:absolute; left:50%; top:50%; width:17px; height:1.4px; background:rgba(255,255,255,.55); transform:translate(-50%,-50%) rotate(-35deg); box-shadow:0 0 0 1px #000"></span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; font-weight:700">&gt;_</span></div><div></div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:6px; padding-right:12px">{{ spin }}<span>1:23</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">P0 izin</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">dilepas ke terminal</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; gap:7px; padding-left:14px"><span style="position:relative; width:14px; height:9px; border:1.4px solid rgba(255,255,255,.55); border-radius:50%; box-sizing:border-box; flex:none" style-after="content:''; position:absolute; left:50%; top:50%; width:17px; height:1.4px; background:rgba(255,255,255,.55); transform:translate(-50%,-50%) rotate(-35deg); box-shadow:0 0 0 1px #000"></span><span style="color:#FFD60A">✦</span></div><div></div><div></div>
+            </div>
+            <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+              <div style="flex:1; min-width:0; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Claude butuh izin · <span style="color:rgba(255,255,255,.55)">jawab di terminal</span></div>
+              <button style="height:24px; padding:0 10px; border-radius:12px; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600">Buka terminal</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Saat dinyalakan</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · 2 dtk</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; padding-left:14px"><span style="position:relative; width:14px; height:9px; border:1.4px solid rgba(255,255,255,.85); border-radius:50%; box-sizing:border-box; flex:none" style-after="content:''; position:absolute; left:50%; top:50%; width:17px; height:1.4px; background:rgba(255,255,255,.85); transform:translate(-50%,-50%) rotate(-35deg); box-shadow:0 0 0 1px #000"></span></div><div></div><div></div>
+            </div>
+            <div style="height:44px; padding:0 14px; display:flex; align-items:center; gap:8px">
+              <div style="flex:1; min-width:0; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Mode Presentasi aktif · <span style="color:rgba(255,255,255,.55)">detail disembunyikan</span></div>
+              <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:rgba(255,255,255,.55)">⌃⌥⌘H</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:44px">
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D5</span><span style="font-size:17px; font-weight:650">Compact — lainnya</span></div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Now Playing</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P3 · ambient</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; padding-left:10px"><span style="width:20px; height:20px; border-radius:5px; background:repeating-linear-gradient(135deg, #48484a 0 3px, #2c2c2e 3px 6px)"></span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:14px">{{ eq }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Meeting · 10m</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · info</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; min-width:0"><span style="width:12px; height:12px; border-radius:3px; border:1.5px solid #0A84FF; border-top-width:3.5px; box-sizing:border-box; flex:none"></span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Standup</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#0A84FF; font-weight:600">10m</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Meeting · 1m</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P0 · Join</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; min-width:0"><span style="width:12px; height:12px; border-radius:3px; border:1.5px solid #FFD60A; border-top-width:3.5px; box-sizing:border-box; flex:none"></span><span style="color:#FFD60A; font-weight:600">0:58</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:6px"><span style="height:22px; padding:0 11px; border-radius:11px; background:#FFD60A; color:#000; font-size:11.5px; font-weight:700; display:flex; align-items:center">Join</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Timer</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · ring + mm:ss</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="width:14px; height:14px; border-radius:50%; background:conic-gradient(rgba(255,255,255,.9) 0 62%, rgba(255,255,255,.2) 0); display:flex; align-items:center; justify-content:center"><span style="width:9px; height:9px; border-radius:50%; background:#000"></span></span><span>Fokus</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">18:42</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Port siap</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · klik = buka</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:7px; padding-left:12px"><span style="width:7px; height:7px; border-radius:4px; background:#30D158"></span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">:5173</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px; min-width:0"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">web-admin</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">CI berjalan</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · v1.2</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px">{{ spin }}<span style="font-weight:700; font-size:11px; letter-spacing:.04em">CI</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">feat/login</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">CI gagal</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P1 · 8 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="color:#FF453A; font-weight:700">✕</span><span style="font-weight:700; font-size:11px; letter-spacing:.04em">CI</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#FF453A">build</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Script</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P2 · dylan activity</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:12px; min-width:0"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">deploy</span></div><div></div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:7px; padding-right:12px"><span style="width:40px; height:4px; border-radius:2px; background:rgba(255,255,255,.2); overflow:hidden; display:flex"><span style="width:60%; background:rgba(255,255,255,.9)"></span></span><span>60%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Charging</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P3 · 3 dtk</span></div>
+        <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="display:flex; align-items:center; gap:7px; padding-left:12px"><span style="width:22px; height:11px; border-radius:3px; border:1.3px solid rgba(255,255,255,.55); box-sizing:border-box; padding:1.5px; display:flex"><span style="width:80%; border-radius:1px; background:#30D158"></span></span><span style="color:#30D158; font-weight:700">ϟ</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:12px"><span style="color:#30D158; font-weight:600">82%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D7</span><span style="font-size:17px; font-weight:650">Peek — 1 baris detail + 1–3 aksi</span></div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Butuh izin</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P0 · auto 4 dtk</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; gap:6px; padding-left:14px"><span style="color:#FFD60A">✦</span><span style="color:#FFD60A; font-weight:600">Izin</span></div><div></div>
+              <div style="display:flex; justify-content:flex-end; padding-right:14px; color:rgba(255,255,255,.55)">web-admin</div>
+            </div>
+            <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:6px">
+              <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px"><span style="color:#FFD60A">Bash</span> npm install zod</div>
+              <span style="height:24px; padding:0 10px; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; display:flex; align-items:center">Tolak</span>
+              <span style="height:24px; padding:0 10px; border-radius:12px; background:#FFD60A; color:#000; font-size:11.5px; font-weight:650; display:flex; align-items:center">Izinkan</span>
+              <span style="height:24px; padding:0 10px; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; display:flex; align-items:center">Terminal</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Agent bekerja</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">hover · P2</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; gap:6px; padding-left:14px"><span>✦</span>{{ spin }}</div><div></div>
+              <div style="display:flex; justify-content:flex-end; padding-right:14px; color:rgba(255,255,255,.55)">2:41</div>
+            </div>
+            <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+              <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px">Claude mengedit <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">AuthService.swift</span><span style="color:rgba(255,255,255,.55)"> · api-gateway</span></div>
+              <span style="height:24px; padding:0 10px; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; display:flex; align-items:center">Buka</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Command gagal</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">hover · P1</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; gap:6px; padding-left:14px"><span style="color:#FF453A; font-weight:700">✕</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; font-weight:700">&gt;_</span></div><div></div>
+              <div style="display:flex; justify-content:flex-end; padding-right:14px; color:#FF453A; font-weight:600">exit 1</div>
+            </div>
+            <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+              <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">npm test</span> gagal<span style="color:rgba(255,255,255,.55)"> · 2m 13s · api-gateway</span></div>
+              <span style="height:24px; padding:0 10px; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; display:flex; align-items:center">Terminal</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Meeting mulai</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">P0 · auto 4 dtk</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; gap:6px; padding-left:14px"><span style="width:12px; height:12px; border-radius:3px; border:1.5px solid #FFD60A; border-top-width:3.5px; box-sizing:border-box"></span><span style="color:#FFD60A; font-weight:600">Meeting</span></div><div></div>
+              <div style="display:flex; justify-content:flex-end; padding-right:14px; color:#FFD60A; font-weight:600">0:58</div>
+            </div>
+            <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+              <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px">Standup mulai 1 menit lagi<span style="color:rgba(255,255,255,.55)"> · Zoom</span></div>
+              <span style="height:24px; padding:0 14px; border-radius:12px; background:#FFD60A; color:#000; font-size:11.5px; font-weight:700; display:flex; align-items:center">Join</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:140px 760px; gap:20px; align-items:center">
+        <div style="display:flex; flex-direction:column; gap:3px"><span style="font-size:13px; font-weight:600">Now Playing</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">hover · P3</span></div>
+        <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+          <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Code</span><span>File</span><span>Edit</span><span>View</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.41</span></div></div>
+          <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+            <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+              <div style="display:flex; align-items:center; padding-left:12px"><span style="width:20px; height:20px; border-radius:5px; background:repeating-linear-gradient(135deg, #48484a 0 3px, #2c2c2e 3px 6px)"></span></div><div></div>
+              <div style="display:flex; justify-content:flex-end; padding-right:16px">{{ eq }}</div>
+            </div>
+            <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+              <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px">Sore di Kemang<span style="color:rgba(255,255,255,.55)"> · Arsa</span></div>
+              <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:rgba(255,255,255,.55)">1:42</span>
+              <span style="width:26px; height:26px; border-radius:13px; color:#fff; font-size:10px; letter-spacing:-2px; display:flex; align-items:center; justify-content:center">◀◀</span>
+              <span style="width:28px; height:28px; border-radius:14px; background:rgba(255,255,255,.12); color:#fff; font-size:11px; letter-spacing:-1px; display:flex; align-items:center; justify-content:center">❚❚</span>
+              <span style="width:26px; height:26px; border-radius:13px; color:#fff; font-size:10px; letter-spacing:-2px; display:flex; align-items:center; justify-content:center">▶▶</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;closed&quot;,&quot;compact&quot;,&quot;peek&quot;,&quot;expanded&quot;],&quot;default&quot;:&quot;expanded&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototipe&quot;},&quot;hoverDelay&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:150,&quot;min&quot;:0,&quot;max&quot;:600,&quot;step&quot;:10,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Prototipe&quot;},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Prototipe&quot;}}">
+class Component extends DCLogic {
+  state = { mode: null, tab: 'home', perm: false, permAt: 0, t: 0, pulseN: 0 };
+  componentDidMount() {
+    this.iv = setInterval(() => this.setState(s => {
+      const n = { t: s.t + 1 };
+      if (s.perm && s.t + 1 - s.permAt >= 30) { n.perm = false; if ((s.mode ?? this.props.startState) === 'peek') n.mode = 'compact'; }
+      return n;
+    }), 1000);
+    this.onKey = e => { if (e.key === 'Escape') this.go('compact'); };
+    document.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() {
+    clearInterval(this.iv); clearTimeout(this.ht); clearTimeout(this.at);
+    document.removeEventListener('keydown', this.onKey);
+  }
+  cur() { return this.state.mode ?? this.props.startState ?? 'expanded'; }
+  go(m, extra) { clearTimeout(this.ht); this.setState({ mode: m, ...(extra || {}) }); }
+  resolve(e) {
+    e && e.stopPropagation();
+    this.setState({ perm: false });
+    if (this.cur() === 'peek') this.go('compact');
+  }
+  renderVals() {
+    const { t, perm, permAt, tab, pulseN } = this.state;
+    const mode = this.cur();
+    const rm = !!this.props.reduceMotion;
+    const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+    const d = { closed: [200, 32, 9], compact: [392, 32, 12], peek: [372, 76, 18], expanded: [640, tab === 'home' ? 270 : (perm ? 312 : 218), 30] }[mode];
+    const lay = k => ({ o: mode === k ? 1 : 0, b: mode === k ? 0 : 6, pe: mode === k ? 'auto' : 'none' });
+    const ease = 'cubic-bezier(.3,1.15,.45,1)';
+    const trans = rm ? 'width .2s ease, height .2s ease, border-radius .2s ease' : `width .42s ${ease}, height .42s ${ease}, border-radius .42s ${ease}`;
+
+    const spin = React.createElement('span', { style: { width: 11, height: 11, borderRadius: '50%', border: '1.6px solid rgba(255,255,255,.22)', borderTopColor: 'rgba(255,255,255,.9)', boxSizing: 'border-box', display: 'inline-block', flex: 'none', animation: rm ? 'none' : 'dy-spin .9s linear infinite' } });
+    const eq = React.createElement('span', { style: { display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 12, flex: 'none' } },
+      [0, 1, 2, 3].map(i => React.createElement('span', { key: i, style: { width: 2.5, height: 12, borderRadius: 2, background: 'rgba(255,255,255,.85)', transformOrigin: 'bottom', transform: rm ? `scaleY(${[.5, .9, .6, .75][i]})` : undefined, animation: rm ? 'none' : `dy-eq ${[.9, .7, 1.1, .8][i]}s ease-in-out ${i * .12}s infinite alternate` } })));
+
+    const pos = (102 + t) % 238;
+    const rem = Math.max(0, 1122 - t);
+    const segs = [['closed', 'Closed'], ['compact', 'Compact'], ['peek', 'Peek'], ['expanded', 'Expanded']].map(([k, label]) => ({
+      label, bg: mode === k ? '#fff' : 'transparent', sh: mode === k ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
+      on: e => { e.stopPropagation(); this.go(k); }
+    }));
+    const tabs = [['home', 'Home', false], ['agents', 'Agents', perm]].map(([k, label, dot]) => ({
+      label, dot, bg: tab === k ? 'rgba(255,255,255,.14)' : 'transparent', fg: tab === k ? '#fff' : 'rgba(255,255,255,.55)',
+      on: e => { e.stopPropagation(); this.setState({ tab: k }); }
+    }));
+
+    return {
+      iw: d[0], ih: d[1], ir: d[2], trans,
+      pulse: perm && !rm ? `dy-pulse${pulseN % 2} 1.4s ease-out 1` : 'none',
+      lc: lay('compact'), lp: lay('peek'), le: lay('expanded'),
+      spin, eq, perm, permOff: !perm,
+      permLeft: perm ? Math.max(0, 30 - (t - permAt)) : 0,
+      isHome: tab === 'home', isAgents: tab === 'agents',
+      a1: fmt(161 + t), a2: fmt(12 + t), cmd: fmt(83 + t),
+      a2t: perm ? 'Butuh izin · Bash' : 'Bash · npm install zod',
+      a2c: perm ? '#FFD60A' : 'rgba(255,255,255,.7)',
+      np: { pos: fmt(pos), pct: (pos / 238 * 100).toFixed(1) },
+      pomo: { rem: fmt(rem), deg: ((1500 - rem) / 1500 * 360).toFixed(1) },
+      segs, tabs,
+      onEnter: () => {
+        const m = this.cur(); clearTimeout(this.ht);
+        if (m === 'compact' || m === 'closed') this.ht = setTimeout(() => this.go('peek'), this.props.hoverDelay ?? 150);
+      },
+      onLeave: () => {
+        clearTimeout(this.ht);
+        if (this.cur() === 'peek') this.ht = setTimeout(() => this.go('compact'), 300);
+      },
+      onIsland: e => { e.stopPropagation(); if (this.cur() !== 'expanded') this.go('expanded'); },
+      onBoard: () => { const m = this.cur(); if (m === 'expanded' || m === 'peek') this.go('compact'); },
+      tabAgents: e => { e.stopPropagation(); this.setState({ tab: 'agents' }); },
+      simPerm: e => {
+        e.stopPropagation(); clearTimeout(this.at);
+        this.go('peek', { perm: true, permAt: this.state.t, pulseN: pulseN + 1 });
+        this.at = setTimeout(() => { if (this.cur() === 'peek') this.go('compact'); }, 4000);
+      },
+      allow: e => this.resolve(e),
+      deny: e => this.resolve(e),
+      passthru: e => this.resolve(e)
+    };
+  }
+}
+</script>
+</body>
+</html>

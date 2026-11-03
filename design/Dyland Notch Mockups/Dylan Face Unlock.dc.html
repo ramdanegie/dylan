@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#E9E8E4;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:#1d1d1f}a:hover{color:#000}
+</style>
+</helmet>
+<section style="padding:64px; display:flex; flex-direction:column; gap:64px; width:2180px; color:#1d1d1f">
+
+<div style="display:flex; flex-direction:column; gap:8px">
+  <div style="font-size:13px; font-weight:600; color:#5f5f64; letter-spacing:.02em">DYLAN · v2.0 EKSPERIMENTAL · HANYA BILA SPIKE T5.0 = GO</div>
+  <div style="font-size:40px; font-weight:700; letter-spacing:-.02em">Face Unlock — D19–D21</div>
+  <div style="font-size:15px; color:#5f5f64; max-width:900px; text-wrap:pretty">Opt-in, mati secara default. Nada copy jujur soal batasan: ini pengenalan wajah 2D, lebih lemah dari Touch ID maupun password. Lihat juga <a href="Dylan Notch Mockups.dc.html">Notch Mockups</a> · <a href="Dylan Panels - Settings.dc.html">Panels &amp; Settings</a> · <a href="Dylan Spec - Handoff.dc.html">Spec &amp; Handoff</a>.</div>
+</div>
+
+<div style="display:flex; flex-direction:column; gap:14px">
+  <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D19</span><span style="font-size:17px; font-weight:650">Pendaftaran wajah — 4 langkah</span></div>
+  <div style="display:grid; grid-template-columns:repeat(4, 500px); gap:20px">
+
+    <div style="height:560px; border-radius:14px; background:#FBFBFA; box-shadow:0 0 0 .5px rgba(0,0,0,.16), 0 24px 60px rgba(0,0,0,.14); display:flex; flex-direction:column; overflow:hidden">
+      <div style="display:flex; gap:8px; padding:14px 16px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div>
+      <div style="flex:1; padding:6px 34px 0; display:flex; flex-direction:column; gap:16px">
+        <span style="align-self:flex-start; height:22px; padding:0 9px; border-radius:11px; background:#FFF4CC; color:#7A5A00; font-size:11.5px; font-weight:700; display:flex; align-items:center">EKSPERIMENTAL</span>
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <div style="font-size:26px; font-weight:700; letter-spacing:-.01em">Ini bukan Face ID</div>
+          <div style="font-size:14px; line-height:1.5; color:#3a3a3c; text-wrap:pretty">Mac tidak punya kamera 3D. Wajah di video bisa membuka Mac-mu. Pakai hanya di tempat tepercaya; di tempat umum, pakai Touch ID.</div>
+        </div>
+        <div style="border-radius:12px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.12); display:grid; grid-template-columns:1fr 1fr">
+          <div style="padding:12px 14px; display:flex; flex-direction:column; gap:6px; border-right:.5px solid rgba(0,0,0,.1)"><span style="font-size:12px; font-weight:700; color:#1a7f37">Cocok</span><span style="font-size:12.5px; line-height:1.45; color:#3a3a3c">Rumah, atau meja kantor yang selalu kamu tempati</span></div>
+          <div style="padding:12px 14px; display:flex; flex-direction:column; gap:6px"><span style="font-size:12px; font-weight:700; color:#C9302C">Jangan</span><span style="font-size:12.5px; line-height:1.45; color:#3a3a3c">Kafe, coworking, atau saat Mac berisi data pasien dan ditinggal</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#3a3a3c">
+          <div>Yang disimpan: embedding wajah (bukan foto) dan password login, keduanya di Keychain.</div>
+          <div>Tidak pernah bisa: login pertama setelah restart atau logout.</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:auto; margin-bottom:6px"><span style="width:16px; height:16px; border-radius:4px; background:#0A6CFF; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center">✓</span>Saya paham risikonya</div>
+      </div>
+      <div style="padding:16px 24px; display:flex; align-items:center; justify-content:space-between; border-top:.5px solid rgba(0,0,0,.08)">
+        <div style="display:flex; gap:6px"><span style="width:18px; height:6px; border-radius:3px; background:#1d1d1f"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span></div>
+        <div style="display:flex; gap:8px"><span style="height:30px; padding:0 14px; border-radius:8px; color:#3a3a3c; font-size:13px; font-weight:500; display:flex; align-items:center">Batal</span><span style="height:30px; padding:0 18px; border-radius:8px; background:#0A6CFF; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center">Lanjut</span></div>
+      </div>
+    </div>
+
+    <div style="height:560px; border-radius:14px; background:#FBFBFA; box-shadow:0 0 0 .5px rgba(0,0,0,.16), 0 24px 60px rgba(0,0,0,.14); display:flex; flex-direction:column; overflow:hidden">
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px"><div style="display:flex; gap:8px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div><span style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:#1a7f37; font-weight:600"><span style="width:7px; height:7px; border-radius:4px; background:#30B350"></span>Kamera aktif</span></div>
+      <div style="flex:1; padding:0 34px; display:flex; flex-direction:column; align-items:center; gap:18px">
+        <div style="font-size:13px; font-weight:600; color:#5f5f64; align-self:flex-start">Langkah 2 dari 4</div>
+        <div style="width:250px; height:250px; border-radius:50%; background:conic-gradient(#30B350 0 {{ ring }}deg, #DAD9D5 0); display:flex; align-items:center; justify-content:center; position:relative">
+          <div style="position:absolute; inset:0; border-radius:50%; background:repeating-conic-gradient(transparent 0 4deg, #FBFBFA 4deg 6deg)"></div>
+          <div style="position:relative; width:222px; height:222px; border-radius:50%; background:repeating-linear-gradient(135deg, #D6D5D1 0 8px, #E4E3DF 8px 16px); display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 6px #FBFBFA"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64; text-align:center; line-height:1.5">preview kamera<br>tidak disimpan</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center">
+          <div style="font-size:20px; font-weight:700">Gerakkan kepala perlahan memutar</div>
+          <div style="font-size:13px; color:#5f5f64"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace">{{ frames }}</span>/20 frame · pastikan hanya satu wajah di kamera</div>
+        </div>
+      </div>
+      <div style="padding:16px 24px; display:flex; align-items:center; justify-content:space-between; border-top:.5px solid rgba(0,0,0,.08)">
+        <div style="display:flex; gap:6px"><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:18px; height:6px; border-radius:3px; background:#1d1d1f"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span></div>
+        <span style="height:30px; padding:0 14px; border-radius:8px; color:#3a3a3c; font-size:13px; font-weight:500; display:flex; align-items:center">Batal</span>
+      </div>
+    </div>
+
+    <div style="height:560px; border-radius:14px; background:#FBFBFA; box-shadow:0 0 0 .5px rgba(0,0,0,.16), 0 24px 60px rgba(0,0,0,.14); display:flex; flex-direction:column; overflow:hidden">
+      <div style="display:flex; gap:8px; padding:14px 16px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div>
+      <div style="flex:1; padding:6px 34px 0; display:flex; flex-direction:column; gap:18px">
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <div style="font-size:13px; font-weight:600; color:#5f5f64">Langkah 3 dari 4</div>
+          <div style="font-size:24px; font-weight:700; letter-spacing:-.01em">Password login Mac</div>
+          <div style="font-size:14px; line-height:1.5; color:#3a3a3c; text-wrap:pretty">Dylan mengetikkan password ini ke lock screen setelah wajahmu cocok. Disimpan di Keychain, hanya bisa dibaca Dylan. Tidak pernah ditampilkan, dikirim, atau ditulis ke log.</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <span style="font-size:12.5px; font-weight:600">Password</span>
+          <div style="height:34px; border-radius:7px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.22), 0 0 0 3.5px rgba(10,108,255,.3); padding:0 10px; display:flex; align-items:center; font-size:15px; letter-spacing:3px; color:#1d1d1f">••••••••••<span style="width:1.5px; height:16px; background:#0A6CFF; margin-left:2px"></span></div>
+          <span style="font-size:12px; color:#5f5f64">Bila password diganti, percobaan berikutnya gagal sekali lalu fitur dimatikan dan Dylan meminta password baru.</span>
+        </div>
+      </div>
+      <div style="padding:16px 24px; display:flex; align-items:center; justify-content:space-between; border-top:.5px solid rgba(0,0,0,.08)">
+        <div style="display:flex; gap:6px"><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:18px; height:6px; border-radius:3px; background:#1d1d1f"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span></div>
+        <div style="display:flex; gap:8px"><span style="height:30px; padding:0 14px; border-radius:8px; color:#3a3a3c; font-size:13px; font-weight:500; display:flex; align-items:center">Kembali</span><span style="height:30px; padding:0 18px; border-radius:8px; background:#0A6CFF; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center">Simpan</span></div>
+      </div>
+    </div>
+
+    <div style="height:560px; border-radius:14px; background:#FBFBFA; box-shadow:0 0 0 .5px rgba(0,0,0,.16), 0 24px 60px rgba(0,0,0,.14); display:flex; flex-direction:column; overflow:hidden">
+      <div style="display:flex; gap:8px; padding:14px 16px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div>
+      <div style="flex:1; padding:6px 34px 0; display:flex; flex-direction:column; gap:18px">
+        <span style="width:52px; height:52px; border-radius:26px; background:#30B350; color:#fff; font-size:26px; font-weight:700; display:flex; align-items:center; justify-content:center">✓</span>
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <div style="font-size:24px; font-weight:700; letter-spacing:-.01em">Face Unlock siap</div>
+          <div style="font-size:14px; line-height:1.5; color:#3a3a3c; text-wrap:pretty">Saat layar menyala lagi, kamera aktif maksimal 8 detik. Lampu hijau kamera menyala selama itu.</div>
+        </div>
+        <div style="border-radius:12px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.12)">
+          <div style="min-height:38px; padding:0 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.1); font-size:13px"><span>Terkunci kurang dari</span><span style="color:#5f5f64">60 menit</span></div>
+          <div style="min-height:38px; padding:0 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.1); font-size:13px"><span>Percobaan per sesi kunci</span><span style="color:#5f5f64">1</span></div>
+          <div style="min-height:38px; padding:0 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.1); font-size:13px"><span>Wajah di kamera</span><span style="color:#5f5f64">tepat 1</span></div>
+          <div style="min-height:38px; padding:0 14px; display:flex; align-items:center; justify-content:space-between; font-size:13px"><span>Mode Presentasi</span><span style="color:#5f5f64">Face Unlock mati</span></div>
+        </div>
+      </div>
+      <div style="padding:16px 24px; display:flex; align-items:center; justify-content:space-between; border-top:.5px solid rgba(0,0,0,.08)">
+        <div style="display:flex; gap:6px"><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:6px; height:6px; border-radius:3px; background:#C9C8C4"></span><span style="width:18px; height:6px; border-radius:3px; background:#1d1d1f"></span></div>
+        <div style="display:flex; gap:8px"><span style="height:30px; padding:0 14px; border-radius:8px; color:#3a3a3c; font-size:13px; font-weight:500; display:flex; align-items:center">Selesai</span><span style="height:30px; padding:0 18px; border-radius:8px; background:#0A6CFF; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center">Coba kunci sekarang</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1100px 900px; gap:60px; align-items:start">
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D20</span><span style="font-size:17px; font-weight:650">Settings — Face Unlock &amp; riwayat</span></div>
+    <div style="height:640px; border-radius:12px; overflow:hidden; display:grid; grid-template-columns:220px minmax(0,1fr); background:#F6F5F3; box-shadow:0 0 0 .5px rgba(0,0,0,.18), 0 24px 60px rgba(0,0,0,.18); color:#1d1d1f; font-size:13px">
+      <div style="background:#ECEBE8; padding:14px 10px; display:flex; flex-direction:column; gap:2px; border-right:.5px solid rgba(0,0,0,.1)">
+        <div style="display:flex; gap:8px; padding:0 6px 18px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Umum</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Tampilan</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Live Activity</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Agents</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Terminal</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Clipboard</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Integrasi</div>
+        <div style="height:28px; padding:0 10px; border-radius:6px; display:flex; align-items:center; background:rgba(0,0,0,.09); font-weight:600">Face Unlock</div>
+        <div style="height:28px; padding:0 10px; display:flex; align-items:center">Tentang</div>
+      </div>
+      <div style="padding:22px 28px; display:flex; flex-direction:column; gap:16px; overflow:hidden">
+        <div style="display:flex; align-items:center; gap:10px"><span style="font-size:20px; font-weight:700">Face Unlock</span><span style="height:20px; padding:0 8px; border-radius:10px; background:#FFF4CC; color:#7A5A00; font-size:11px; font-weight:700; display:flex; align-items:center">EKSPERIMENTAL</span></div>
+        <div style="border-radius:10px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1)">
+          <div style="min-height:52px; padding:8px 14px; display:flex; align-items:center; gap:16px; border-bottom:.5px solid rgba(0,0,0,.1)"><div style="flex:1; display:flex; flex-direction:column; gap:2px"><span>Buka kunci dengan wajah</span><span style="font-size:12px; color:#5f5f64">Lebih lemah dari Touch ID. Pakai hanya di tempat tepercaya.</span></div><span style="width:32px; height:19px; border-radius:10px; background:#0A6CFF; position:relative; flex:none"><span style="position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:8px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></span></div>
+          <div style="min-height:44px; padding:8px 14px; display:flex; align-items:center; gap:12px; border-bottom:.5px solid rgba(0,0,0,.1)"><span style="flex:1">Hanya bila terkunci kurang dari</span><span style="height:24px; border-radius:6px; box-shadow:0 0 0 .5px rgba(0,0,0,.2); display:flex; align-items:center; font-size:12.5px"><span style="padding:0 10px">60 menit</span><span style="width:20px; height:24px; border-left:.5px solid rgba(0,0,0,.15); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:7px; line-height:9px; color:#5f5f64">▲<br>▼</span></span></div>
+          <div style="min-height:52px; padding:8px 14px; display:flex; align-items:center; gap:16px; border-bottom:.5px solid rgba(0,0,0,.1)"><div style="flex:1; display:flex; flex-direction:column; gap:2px"><span>Hanya di Wi-Fi tepercaya</span><span style="font-size:12px; color:#5f5f64">Rumah-5G · Kantor-Telekonsul</span></div><span style="height:24px; padding:0 12px; border-radius:6px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.2); font-size:12.5px; display:flex; align-items:center">Atur…</span><span style="width:32px; height:19px; border-radius:10px; background:#0A6CFF; position:relative; flex:none"><span style="position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:8px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></span></div>
+          <div style="min-height:52px; padding:8px 14px; display:flex; align-items:center; gap:12px"><div style="flex:1; display:flex; flex-direction:column; gap:2px"><span>Liveness</span><span style="font-size:12px; color:#5f5f64">Menolak foto, tidak menolak video.</span></div><span style="display:flex; padding:2px; border-radius:7px; background:#E6E5E2; font-size:12px"><span style="height:20px; padding:0 10px; border-radius:5px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.12); display:flex; align-items:center">Kedip atau gerak kepala</span><span style="height:20px; padding:0 10px; display:flex; align-items:center; color:#3a3a3c">Keduanya</span></span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#5f5f64; padding:0 4px"><span>Riwayat · 50 kejadian terakhir · tanpa foto</span><span style="font-weight:500">Skor ambang 0,86</span></div>
+          <div style="border-radius:10px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1)">
+            <div style="height:34px; padding:0 14px; display:grid; grid-template-columns:150px minmax(0,1fr) 60px; align-items:center; border-bottom:.5px solid rgba(0,0,0,.1)"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">Sel 3 Nov 09.12</span><span style="color:#1a7f37; font-weight:600">Dibuka</span><span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">0,93</span></div>
+            <div style="height:34px; padding:0 14px; display:grid; grid-template-columns:150px minmax(0,1fr) 60px; align-items:center; border-bottom:.5px solid rgba(0,0,0,.1)"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">Sen 2 Nov 15.47</span><span>Ditolak · 2 wajah di kamera</span><span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">—</span></div>
+            <div style="height:34px; padding:0 14px; display:grid; grid-template-columns:150px minmax(0,1fr) 60px; align-items:center; border-bottom:.5px solid rgba(0,0,0,.1)"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">Sen 2 Nov 13.05</span><span>Ditolak · terkunci 74 menit</span><span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">—</span></div>
+            <div style="height:34px; padding:0 14px; display:grid; grid-template-columns:150px minmax(0,1fr) 60px; align-items:center; border-bottom:.5px solid rgba(0,0,0,.1)"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">Sen 2 Nov 11.30</span><span>Ditolak · liveness tidak terdeteksi</span><span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">0,90</span></div>
+            <div style="height:34px; padding:0 14px; display:grid; grid-template-columns:150px minmax(0,1fr) 60px; align-items:center"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; color:#5f5f64">Sen 2 Nov 08.58</span><span style="color:#C9302C; font-weight:600">Password ditolak · fitur dimatikan</span><span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">0,94</span></div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end"><span style="height:26px; padding:0 12px; border-radius:6px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 1px 1px rgba(0,0,0,.06); font-size:12.5px; display:flex; align-items:center">Daftar ulang wajah…</span><span style="height:26px; padding:0 12px; border-radius:6px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 1px 1px rgba(0,0,0,.06); font-size:12.5px; display:flex; align-items:center; color:#C9302C">Hapus data wajah…</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D21</span><span style="font-size:17px; font-weight:650">Notch — setelah Face Unlock</span></div>
+
+    <div style="display:flex; flex-direction:column; gap:6px">
+      <div style="font-size:13px; font-weight:600">Berhasil · Compact <span style="font-weight:400; color:#5f5f64">· P1 · 5 dtk</span></div>
+      <div style="position:relative; height:60px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+        <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Finder</span><span>File</span><span>Edit</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.12</span></div></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+          <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="position:relative; width:14px; height:14px; border-radius:4px; border:1.5px solid #30D158; box-sizing:border-box; flex:none"><span style="position:absolute; top:3px; left:2.5px; width:2px; height:2px; border-radius:1px; background:#30D158; box-shadow:4px 0 0 #30D158"></span><span style="position:absolute; bottom:2.5px; left:3px; width:5px; height:2px; border-bottom:1.3px solid #30D158; border-radius:0 0 3px 3px"></span></span><span style="color:#30D158; font-weight:600">Wajah</span></div><div></div>
+          <div style="display:flex; justify-content:flex-end; padding-right:12px"><span>09.12</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:6px">
+      <div style="font-size:13px; font-weight:600">Berhasil · Peek otomatis</div>
+      <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+        <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Finder</span><span>File</span><span>Edit</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sel 3 Nov  09.12</span></div></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:372px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+          <div style="height:32px; display:grid; grid-template-columns:86px 200px 86px; align-items:center">
+            <div style="display:flex; align-items:center; padding-left:14px"><span style="position:relative; width:14px; height:14px; border-radius:4px; border:1.5px solid #30D158; box-sizing:border-box"><span style="position:absolute; top:3px; left:2.5px; width:2px; height:2px; border-radius:1px; background:#30D158; box-shadow:4px 0 0 #30D158"></span><span style="position:absolute; bottom:2.5px; left:3px; width:5px; height:2px; border-bottom:1.3px solid #30D158; border-radius:0 0 3px 3px"></span></span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:14px; color:rgba(255,255,255,.55)">skor 0,93</div>
+          </div>
+          <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:8px">
+            <div style="flex:1; min-width:0; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Dibuka dengan wajah<span style="color:rgba(255,255,255,.55)"> · 09.12 · terkunci 18 menit</span></div>
+            <span style="height:24px; padding:0 10px; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; display:flex; align-items:center">Riwayat</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:6px">
+      <div style="font-size:13px; font-weight:600">Gagal · fitur dimatikan <span style="font-weight:400; color:#5f5f64">· P1 · 8 dtk</span></div>
+      <div style="position:relative; height:100px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+        <div style="position:absolute; top:0; left:0; right:0; height:32px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.16); color:rgba(255,255,255,.92); font-size:13px; font-weight:500"><div style="display:flex; gap:18px"><span style="font-weight:700">Finder</span><span>File</span><span>Edit</span></div><div style="display:flex; gap:16px"><span>100%</span><span>Sen 2 Nov  08.58</span></div></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:420px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+          <div style="height:32px; display:grid; grid-template-columns:110px 200px 110px; align-items:center">
+            <div style="display:flex; align-items:center; gap:6px; padding-left:14px"><span style="color:#FF453A; font-weight:700">✕</span><span style="color:#FF453A; font-weight:600">Wajah</span></div><div></div>
+            <div style="display:flex; justify-content:flex-end; padding-right:14px; color:#FF453A; font-weight:600">Dimatikan</div>
+          </div>
+          <div style="height:44px; padding:0 14px; display:flex; align-items:center">
+            <div style="flex:1; min-width:0; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Face Unlock dimatikan.<span style="color:rgba(255,255,255,.55)"> Buka kunci manual sekali untuk mengaktifkannya lagi.</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#5f5f64; text-wrap:pretty">Peek ini 420 pt (di atas 372) karena kalimatnya wajib utuh; tetap di bawah batas Expanded.</div>
+    </div>
+  </div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { t: 0 };
+  componentDidMount() { this.iv = setInterval(() => this.setState(s => ({ t: s.t + 1 })), 400); }
+  componentWillUnmount() { clearInterval(this.iv); }
+  renderVals() {
+    const f = this.state.t % 26;
+    const frames = Math.min(20, f);
+    return { frames, ring: (frames / 20 * 360).toFixed(1) };
+  }
+}
+</script>
+</body>
+</html>
