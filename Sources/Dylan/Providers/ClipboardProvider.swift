@@ -14,6 +14,8 @@ final class ClipboardProvider {
     private var timer: Timer?
     private var lastChange = NSPasteboard.general.changeCount
     private var saveWork: DispatchWorkItem?
+    /// Serial: a save already running finishes before Clear deletes the file, never after.
+    private let io = DispatchQueue(label: "dylan.clipboard.io", qos: .utility)
     var ignoredApps: Set<String> = SecretDetector.defaultIgnoredApps
 
     static var fileURL: URL {
@@ -114,7 +116,9 @@ final class ClipboardProvider {
     func clearAll() {
         history.items.removeAll()
         images.removeAll()
-        try? FileManager.default.removeItem(at: Self.fileURL)
+        saveWork?.cancel(); saveWork = nil
+        let url = Self.fileURL
+        io.async { @Sendable in try? FileManager.default.removeItem(at: url) }
         AppModel.shared.clipboardChanged()
     }
 
@@ -133,7 +137,7 @@ final class ClipboardProvider {
             chmod(url.path, 0o600)
         }
         saveWork = w
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: w)
+        io.asyncAfter(deadline: .now() + 1, execute: w)
     }
 
     private func load() {
