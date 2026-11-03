@@ -10,25 +10,26 @@ Buat software engineer, Dylan punya **Mode Developer**: pantau agent AI, perinta
 
 ## Fitur untuk semua orang
 
-- **Musik:** kontrol penuh Spotify & Apple Music (shuffle, repeat, volume, love), putar playlist favorit sekali klik, lirik tersinkron, media dari browser (YouTube dll.), pilih output audio.
+- **Musik:** kontrol penuh Spotify & Apple Music (shuffle, repeat, volume, love), putar playlist favorit sekali klik, lirik tersinkron, pilih output audio, volume per app, equalizer yang mengikuti musik, akun Spotify opsional (simpan lagu, playlist, lagu berikutnya). Media dari browser (YouTube dll.) menyusul.
 - **Discord:** siapa yang sedang bicara di voice, mute/deafen/keluar, DM & mention, langsung dari notch.
-- **Notifikasi & pesan:** notifikasi app di notch, balas iMessage cepat, panggilan masuk, kontrol mute/kamera saat meeting.
+- **Notifikasi & pesan:** notifikasi app di notch, balas lewat banner, panggilan masuk Terima/Tolak, kontrol mic/kamera/share untuk Zoom, Teams, dan Meet.
 - **Perangkat:** HUD volume/brightness, animasi charging, baterai AirPods, indikator kamera/mikrofon, Focus.
-- **Produktivitas:** countdown meeting + tombol Join, reminder, timer/Pomodoro, shelf file + AirDrop, clipboard, color picker, keep awake, cuaca, progres download.
-- **Mode Presentasi:** sembunyikan isi sensitif saat screen share.
+- **Produktivitas:** countdown meeting + tombol Join, "waktunya berangkat" ke meeting di lokasi fisik, reminder, timer/Pomodoro, shelf file + AirDrop, clipboard, color picker, keep awake, cuaca, progres download, widget lock screen (eksperimental).
+- **Mode Presentasi:** sembunyikan isi sensitif saat screen share, bisa menyala otomatis saat kamu share layar (eksperimental).
 - **Bahasa Indonesia & English:** pilih di Settings, atau ikuti bahasa sistem.
 
 ## Fitur untuk engineer (Mode Developer)
 
-- **Agent AI:** status Claude Code (tool & file yang sedang dikerjakan), notifikasi saat agent butuh izin atau selesai, lengkap dengan durasi dan `+x −y` baris. Izin bisa dijawab langsung dari notch. Codex CLI menyusul.
+- **Agent AI:** status Claude Code (tool & file yang sedang dikerjakan), notifikasi saat agent butuh izin atau selesai, lengkap dengan durasi dan `+x −y` baris. Izin bisa dijawab langsung dari notch. Codex CLI, Cursor, dan OpenCode juga tampil.
 - **Command tracker:** `npm test`, build, migrasi, deploy. Notch memberi tahu saat selesai/gagal, lengkap dengan durasi dan exit code.
 - **Live Activity API:** script apa pun bisa menampilkan progres di notch lewat CLI `dylan` (contoh di bawah).
 - **Dev server & port:** port mana dipakai project apa, buka di browser, atau matikan.
 - **GitHub:** status GitHub Actions di branch yang sedang dikerjakan dan jumlah PR yang menunggu review-mu.
 - **Clipboard developer:** decode JWT, pretty-print JSON, Unix timestamp ↔ tanggal, Base64, UUID, hash. Token dan password otomatis disamarkan dan tidak pernah disimpan ke disk.
 - **Stats + alert:** CPU, memori, jaringan; peringatan saat proses seperti `node` atau `docker` nyangkut memakan CPU.
-- **Script widget, Docker, terminal di notch, MCP server** untuk Claude Code.
+- **Script widget, Docker, terminal cepat di notch (⌃⌥T), MCP server** untuk Claude Code.
 - **Touch ID untuk `sudo`.**
+- **Face Unlock (eksperimental):** buka kunci dengan wajah, dengan tantangan acak dan batas ala Apple. Bukan Face ID; lihat `docs/face-unlock.md`.
 
 ## Live Activity API
 
