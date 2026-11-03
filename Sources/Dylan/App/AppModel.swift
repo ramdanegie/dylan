@@ -126,6 +126,7 @@ final class AppModel {
     var clipboardRevision = 0
     @ObservationIgnored var focusClipboardSearch = false
     var clearClipboardOnQuit: Bool { didSet { defaults.set(clearClipboardOnQuit, forKey: "clearClipboardOnQuit") } }
+    var quickPlay: [QuickPlayItem] { didSet { save(quickPlay, "quickPlay") } }
     var screenshotsToShelf: Bool {
         didSet { defaults.set(screenshotsToShelf, forKey: "screenshotsToShelf"); ShelfProvider.shared.restartScreenshotWatch() }
     }
@@ -157,6 +158,7 @@ final class AppModel {
         colorHistory = d.stringArray(forKey: "colorHistory") ?? []
         clearClipboardOnQuit = d.bool(forKey: "clearClipboardOnQuit")
         screenshotsToShelf = d.object(forKey: "screenshotsToShelf") as? Bool ?? true
+        quickPlay = d.data(forKey: "quickPlay").flatMap { try? JSONDecoder().decode([QuickPlayItem].self, from: $0) } ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
         center.config.maxSlots = duo ? 2 : 1
@@ -766,6 +768,7 @@ final class AppModel {
         let artworkChanged = m?.artworkKey != media?.artworkKey || (media?.artwork == nil && m?.artwork != nil)
         media = m
         if artworkChanged { mediaAccent = DY.accent(m?.artwork) }
+        LyricsProvider.shared.trackChanged(m)
         let now = Date()
         guard features.isEnabled(.media), let m, m.isPlaying else { removeIfPresent("media", now: now); return }
         center.upsert(Activity(id: "media", kind: .media, priority: .p3, state: .ambient, symbol: "music.note",

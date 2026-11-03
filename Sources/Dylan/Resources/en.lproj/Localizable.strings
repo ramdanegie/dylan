@@ -520,3 +520,14 @@
 "shelf.openEditor" = "Open in editor";
 "shelf.remove" = "Remove from shelf";
 "shelf.screenshots" = "New screenshots go to the shelf";
+"feature.lyrics" = "Synced lyrics";
+"feature.lyrics.hint" = "Sends the song's title, artist, album and duration to LRCLIB";
+"media.love" = "Favourite";
+"media.output" = "Audio output";
+"media.quickPlay" = "Quick play";
+"media.quickPlayEmpty" = "Paste a Spotify playlist link in Settings → Media to play it from here";
+"media.quickPlayLink" = "Spotify link (playlist, album)";
+"media.quickPlayName" = "Name";
+"media.quickPlayAdd" = "Add";
+"media.playlist" = "Playlist";
+"media.quickPlayHint" = "Click in the notch: Spotify opens in the background if needed, then the playlist plays.";

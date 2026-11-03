@@ -72,7 +72,9 @@ struct SettingsView: View {
         case .general: GeneralSettings()
         case .appearance: AppearanceSettings()
         case .liveActivity: LiveActivitySettings()
-        case .media: FeatureToggles(features: [.media, .meeting, .timer])
+        case .media:
+            FeatureToggles(features: [.media, .lyrics, .meeting, .timer])
+            QuickPlaySettings()
         case .devices:
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake])
             KeepAwakeSettings()
@@ -164,6 +166,36 @@ struct FeatureToggles: View {
         }
         if features.contains(.meeting), CalendarProvider.shared.status != .fullAccess {
             Section { Button(L("button.allowCalendar")) { CalendarProvider.shared.start(requestAccess: true) } }
+        }
+    }
+}
+
+struct QuickPlaySettings: View {
+    @StateBox private var link = ""
+    @StateBox private var name = ""
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        Section(L("media.quickPlay")) {
+            ForEach(model.quickPlay) { item in
+                HStack {
+                    SwiftUI.Text(item.name)
+                    SwiftUI.Text(item.uri).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(L("shelf.remove")) { model.quickPlay.removeAll { $0 == item } }
+                }
+            }
+            HStack {
+                TextField(L("media.quickPlayLink"), text: $link)
+                TextField(L("media.quickPlayName"), text: $name).frame(width: 140)
+                Button(L("media.quickPlayAdd")) {
+                    guard let uri = SpotifyLink.uri(from: link) else { return }
+                    let label = name.trimmingCharacters(in: .whitespaces)
+                    model.quickPlay.append(QuickPlayItem(uri: uri, name: label.isEmpty ? L("media.playlist") : label))
+                    link = ""; name = ""
+                }
+                .disabled(SpotifyLink.uri(from: link) == nil)
+            }
+            SwiftUI.Text(L("media.quickPlayHint")).font(.caption).foregroundStyle(.secondary)
         }
     }
 }

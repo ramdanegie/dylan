@@ -291,6 +291,7 @@ struct BatteryLine: View {
 struct MediaTab: View {
     private var model: AppModel { AppModel.shared }
     @StateBox private var scrub: Double?
+    @StateBox private var showOutputs = false
 
     var body: some View {
         if let m = model.media {
@@ -322,8 +323,22 @@ struct MediaTab: View {
                         toggle("shuffle", on: m.shuffle, label: L("media.shuffle")) { MediaProvider.shared.toggleShuffle() }
                         MediaButtons(size: 16)
                         toggle("repeat", on: m.repeating, label: L("media.repeat")) { MediaProvider.shared.toggleRepeat() }
+                        if MediaProvider.shared.canLove {
+                            toggle("heart.fill", on: false, label: L("media.love")) { MediaProvider.shared.toggleLove() }
+                        }
+                        Button { AudioOutputProvider.shared.refresh(); showOutputs.toggle() } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "airplayaudio").font(.system(size: 12))
+                                SwiftUI.Text(AudioOutputProvider.shared.currentName ?? L("media.output")).font(DY.font(11)).lineLimit(1)
+                                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+                            }
+                            .foregroundStyle(DY.fg2)
+                        }
+                        .buttonStyle(.plain).accessibilityLabel(L("media.output"))
                     }
                     .frame(maxWidth: .infinity)
+                    if showOutputs { OutputList { showOutputs = false } }
+                    else if let lyrics = LyricsProvider.shared.lyrics { LyricsBlock(lyrics: lyrics, media: m) }
                     if let v = m.volume {
                         HStack(spacing: 8) {
                             Image(systemName: "speaker.fill").font(.system(size: 10)).foregroundStyle(DY.fg2)
@@ -336,7 +351,11 @@ struct MediaTab: View {
                 }
             }
         } else {
-            EmptyCard(symbol: "music.note", text: L("media.empty")).frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(spacing: 10) {
+                EmptyCard(symbol: "music.note", text: L("media.empty"))
+                QuickPlayRow()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -346,6 +365,77 @@ struct MediaTab: View {
                 .frame(width: 26, height: 26).contentShape(Rectangle())
         }
         .buttonStyle(PressScale()).accessibilityLabel(label).accessibilityValue(on ? L("a11y.on") : L("a11y.off"))
+    }
+}
+
+/// Three lyric lines, active one in the middle (design D23/M10). Hidden when nothing was found.
+struct LyricsBlock: View {
+    var lyrics: Lyrics
+    var media: MediaState
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
+            let i = lyrics.index(at: media.livePosition(ctx.date))
+            VStack(alignment: .leading, spacing: 3) {
+                if lyrics.synced {
+                    line(i.flatMap { $0 > 0 ? lyrics.lines[$0 - 1].text : nil }, active: false)
+                    line(i.map { lyrics.lines[$0].text } ?? "♪", active: true)
+                    line(lyrics.lines[safe: (i ?? -1) + 1]?.text, active: false)
+                } else {
+                    ForEach(Array(lyrics.lines.prefix(3).enumerated()), id: \.offset) { _, l in line(l.text, active: false) }
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: i)
+        }
+        .accessibilityElement(children: .combine)
+    }
+    private func line(_ s: String?, active: Bool) -> some View {
+        SwiftUI.Text(s ?? " ").font(active ? DY.font(13.5, .semibold) : DY.font(11.5, .regular))
+            .foregroundStyle(active ? model.mediaAccent : Color.white.opacity(0.4)).lineLimit(1)
+    }
+}
+
+extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
+}
+
+struct OutputList: View {
+    var done: () -> Void
+    private var audio: AudioOutputProvider { AudioOutputProvider.shared }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(audio.devices) { d in
+                Button { audio.select(d); done() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: d.symbol).frame(width: 16)
+                        SwiftUI.Text(d.name).font(DY.font(12, .regular)).lineLimit(1)
+                        Spacer()
+                        if d.id == audio.current { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)) }
+                    }
+                    .foregroundStyle(.white).padding(.horizontal, 8).frame(height: 22).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(6)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.08)))
+    }
+}
+
+/// Pinned Spotify playlists; adding happens in Settings → Media.
+struct QuickPlayRow: View {
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        if model.quickPlay.isEmpty {
+            SwiftUI.Text(L("media.quickPlayEmpty")).font(DY.font(11, .regular)).foregroundStyle(DY.fg2)
+        } else {
+            HStack(spacing: 6) {
+                SwiftUI.Text(L("media.quickPlay")).font(DY.font(11, .semibold)).foregroundStyle(DY.fg2)
+                ForEach(model.quickPlay.prefix(4)) { item in
+                    NotchButton(title: item.name) { MediaProvider.shared.play(item) }
+                }
+            }
+        }
     }
 }
 

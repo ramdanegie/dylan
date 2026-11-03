@@ -184,6 +184,30 @@ final class MediaProvider {
     }
 
     func playPause() { control("playpause") }
+
+    /// Quick play (FR-60). The URI was validated by `SpotifyLink`, so it is safe inside the script.
+    /// Opens Spotify in the background first when it is not running.
+    func play(_ item: QuickPlayItem) {
+        guard SpotifyLink.uri(from: item.uri) == item.uri else { return }
+        let script = "tell application id \"\(Self.spotifyID)\" to play track \"\(item.uri)\""
+        if isRunning(Self.spotifyID) { _ = run(script, app: Self.spotifyID, userInitiated: true); return }
+        guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.spotifyID) else { return }
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = false
+        NSWorkspace.shared.openApplication(at: app, configuration: config) { _, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2.5))
+                _ = MediaProvider.shared.run(script, app: Self.spotifyID, userInitiated: true)
+            }
+        }
+    }
+
+    /// Apple Music only: Spotify has no AppleScript for saving songs (that needs the Web API, FR-64).
+    var canLove: Bool { AppModel.shared.media?.source == .music }
+    func toggleLove() {
+        guard canLove else { return }
+        control("set favorited of current track to not (favorited of current track)")
+    }
     func next() { control("next track") }
     func previous() { control("previous track") }
 
@@ -217,7 +241,7 @@ final class MediaProvider {
 
     /// NSAppleScript runs on the main thread, so every script gets a 2 s Apple-event timeout:
     /// a hung Spotify must not freeze the notch or the socket (permission hooks wait on it).
-    private func run(_ source: String, app: String, userInitiated: Bool = false) -> String? {
+    fileprivate func run(_ source: String, app: String, userInitiated: Bool = false) -> String? {
         guard userInitiated ? isRunning(app) : canQuery(app) else { return nil }
         var err: NSDictionary?
         let r = NSAppleScript(source: "with timeout of 2 seconds\n\(source)\nend timeout")?.executeAndReturnError(&err)

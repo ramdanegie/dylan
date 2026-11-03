@@ -520,3 +520,14 @@
 "shelf.openEditor" = "Buka di editor";
 "shelf.remove" = "Hapus dari shelf";
 "shelf.screenshots" = "Screenshot baru otomatis masuk shelf";
+"feature.lyrics" = "Lirik tersinkron";
+"feature.lyrics.hint" = "Mengirim judul, artis, album, dan durasi lagu ke LRCLIB";
+"media.love" = "Favorit";
+"media.output" = "Output audio";
+"media.quickPlay" = "Putar cepat";
+"media.quickPlayEmpty" = "Tempel link playlist Spotify di Settings → Media untuk memutarnya dari sini";
+"media.quickPlayLink" = "Link Spotify (playlist, album)";
+"media.quickPlayName" = "Nama";
+"media.quickPlayAdd" = "Tambah";
+"media.playlist" = "Playlist";
+"media.quickPlayHint" = "Klik di notch: Spotify dibuka di latar bila belum berjalan, lalu playlist diputar.";
