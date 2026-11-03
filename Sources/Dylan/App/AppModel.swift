@@ -24,7 +24,8 @@ enum Tab: String, CaseIterable, Identifiable {
 }
 
 struct MediaState: Equatable {
-    enum Source: String { case spotify, music }
+    /// browser and vlc come from OtherPlayersProvider (FR-11): no seek, shuffle, repeat or volume there.
+    enum Source: String { case spotify, music, browser, vlc }
     var source: Source
     var title: String
     var artist: String
@@ -38,6 +39,29 @@ struct MediaState: Equatable {
     var shuffle = false
     var repeating = false
     var volume: Int?
+    /// The app playing (for browser/VLC sources; Spotify and Music are known from the source).
+    var appBundleID: String?
+
+    var sourceName: String {
+        switch source {
+        case .spotify: return "Spotify"
+        case .music: return "Apple Music"
+        case .vlc: return "VLC"
+        case .browser: return appBundleID.flatMap { BrowserMedia.browsers[$0] } ?? "Browser"
+        }
+    }
+
+    var playerBundleID: String? {
+        switch source {
+        case .spotify: return "com.spotify.client"
+        case .music: return "com.apple.Music"
+        case .vlc: return "org.videolan.vlc"
+        case .browser: return appBundleID
+        }
+    }
+
+    /// Seek, shuffle, repeat and volume exist only for Spotify and Music.
+    var hasFullControls: Bool { source == .spotify || source == .music }
 
     func livePosition(_ now: Date) -> TimeInterval {
         guard isPlaying else { return position }

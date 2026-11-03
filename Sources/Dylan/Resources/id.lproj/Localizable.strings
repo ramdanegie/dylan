@@ -756,3 +756,6 @@
 "faceUnlock.step.lookRight" = "lihat ke kanan";
 "faceUnlock.step.lookUp" = "lihat ke atas";
 "faceUnlock.step.blink" = "kedip";
+"feature.otherPlayers" = "Pemutar lain (YouTube, SoundCloud, VLC…)";
+"feature.otherPlayers.hint" = "Tab browser yang sedang bersuara dan VLC; tiap browser minta izin Automation sekali";
+"otherPlayers.allow" = "Izinkan browser & VLC sekarang";

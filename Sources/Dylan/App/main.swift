@@ -58,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func refreshProviders() {
         let f = AppModel.shared.features
         f.isEnabled(.media) ? MediaProvider.shared.start() : MediaProvider.shared.stop()
+        f.isEnabled(.media) && f.isEnabled(.otherPlayers) ? OtherPlayersProvider.shared.start() : OtherPlayersProvider.shared.stop()
         f.isEnabled(.meeting) ? CalendarProvider.shared.start(requestAccess: false) : CalendarProvider.shared.stop()
         f.isEnabled(.battery) ? BatteryProvider.shared.start() : BatteryProvider.shared.stop()
         f.isEnabled(.bluetooth) ? BluetoothProvider.shared.start() : BluetoothProvider.shared.stop()

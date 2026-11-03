@@ -756,3 +756,6 @@
 "faceUnlock.step.lookRight" = "look right";
 "faceUnlock.step.lookUp" = "look up";
 "faceUnlock.step.blink" = "blink";
+"feature.otherPlayers" = "Other players (YouTube, SoundCloud, VLC…)";
+"feature.otherPlayers.hint" = "The browser tab making sound, and VLC; each browser asks for Automation once";
+"otherPlayers.allow" = "Allow browsers & VLC now";

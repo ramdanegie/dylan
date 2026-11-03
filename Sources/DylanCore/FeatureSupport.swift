@@ -75,7 +75,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("language", .notch, [18], .v1_0, built: true),
         // Media
         .init("nowPlaying", .media, [11], .v1_0, built: true),
-        .init("otherPlayers", .media, [11], .v1_0, req: true),
+        .init("otherPlayers", .media, [11], .v1_0, built: true, req: true),
         .init("controls", .media, [60], .v1_0, built: true),
         .init("quickPlay", .media, [60], .v1_0, built: true),
         .init("lyrics", .media, [62], .v1_1, built: true, req: true),

@@ -71,7 +71,7 @@ import Testing
         #expect(byID["focus"]?.status(macOSMajor: 27) == .available)
         #expect(byID["autoPresentation"]?.status(macOSMajor: 27) == .experimental)
         #expect(byID["themes"]?.status(macOSMajor: 25) == .available)       // glass part simply off below 26
-        #expect(byID["otherPlayers"]?.status(macOSMajor: 27) == .soon)      // unfinished v1.0 scope
+        #expect(byID["otherPlayers"]?.status(macOSMajor: 27) == .available)
         #expect(byID["terminal"]?.status(macOSMajor: 27) == .available)
         #expect(byID["weather"]?.status(macOSMajor: 27) == .available)
     }

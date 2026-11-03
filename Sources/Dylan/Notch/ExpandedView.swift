@@ -152,7 +152,7 @@ struct NowPlayingCard: View {
                     Artwork(image: m.artwork, size: 52)
                     VStack(alignment: .leading, spacing: 2) {
                         SwiftUI.Text(m.title).font(DY.font(13, .semibold)).foregroundStyle(.white).lineLimit(1)
-                        SwiftUI.Text("\(m.artist) · \(m.source == .spotify ? "Spotify" : "Music")")
+                        SwiftUI.Text("\(m.artist) · \(m.sourceName)")
                             .font(DY.font(11.5, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
                     }
                 }
@@ -438,7 +438,7 @@ struct MediaTab: View {
                     .shadow(color: model.mediaAccent.opacity(0.45), radius: 24)
                 VStack(alignment: .leading, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
-                        SwiftUI.Text(m.source == .spotify ? "Spotify" : "Apple Music").font(DY.font(11, .semibold)).foregroundStyle(DY.fg2)
+                        SwiftUI.Text(m.sourceName).font(DY.font(11, .semibold)).foregroundStyle(DY.fg2)
                         SwiftUI.Text(m.title).font(DY.font(17, .semibold)).foregroundStyle(.white).lineLimit(1)
                         SwiftUI.Text("\(m.artist) · \(m.album)").font(DY.font(12.5, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
                         if m.source == .spotify, let n = SpotifyAccount.shared.next {
@@ -446,13 +446,16 @@ struct MediaTab: View {
                                 .font(DY.font(11, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
                         }
                     }
+                    // A browser tab has no known length: no timeline (FR-11).
+                    if m.duration > 0 {
                     TimelineView(.periodic(from: .now, by: 1)) { ctx in
                         let pos = scrub ?? m.livePosition(ctx.date)
                         VStack(spacing: 4) {
-                            ScrubBar(fraction: m.duration > 0 ? pos / m.duration : 0, color: model.mediaAccent,
+                            ScrubBar(fraction: pos / m.duration, color: model.mediaAccent,
                                      label: L("media.position")) { f, done in
                                 scrub = f * m.duration
-                                if done { MediaProvider.shared.seek(to: f * m.duration); scrub = nil }
+                                if done, m.hasFullControls { MediaProvider.shared.seek(to: f * m.duration) }
+                                if done { scrub = nil }
                             }
                             HStack {
                                 ValueText(text: DurationFormat.running(pos), color: DY.fg2)
@@ -461,10 +464,11 @@ struct MediaTab: View {
                             }
                         }
                     }
+                    }
                     HStack(spacing: 18) {
-                        toggle("shuffle", on: m.shuffle, label: L("media.shuffle")) { MediaProvider.shared.toggleShuffle() }
+                        if m.hasFullControls { toggle("shuffle", on: m.shuffle, label: L("media.shuffle")) { MediaProvider.shared.toggleShuffle() } }
                         MediaButtons(size: 16)
-                        toggle("repeat", on: m.repeating, label: L("media.repeat")) { MediaProvider.shared.toggleRepeat() }
+                        if m.hasFullControls { toggle("repeat", on: m.repeating, label: L("media.repeat")) { MediaProvider.shared.toggleRepeat() } }
                         if MediaProvider.shared.canLove {
                             toggle("heart.fill", on: MediaProvider.shared.loved, label: L("media.love")) { MediaProvider.shared.toggleLove() }
                         }

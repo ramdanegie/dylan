@@ -74,7 +74,10 @@ struct SettingsView: View {
         case .appearance: AppearanceSettings()
         case .liveActivity: LiveActivitySettings()
         case .media:
-            FeatureToggles(features: [.media, .lyrics, .visualizer, .appVolume, .meeting, .timeToLeave, .reminders, .timer])
+            FeatureToggles(features: [.media, .otherPlayers, .lyrics, .visualizer, .appVolume, .meeting, .timeToLeave, .reminders, .timer])
+            if model.features.isEnabled(.otherPlayers) {
+                Section { Button(L("otherPlayers.allow")) { OtherPlayersProvider.shared.requestAccess() } }
+            }
             QuickPlaySettings()
         case .devices:
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .focus, .keepAwake, .hud])

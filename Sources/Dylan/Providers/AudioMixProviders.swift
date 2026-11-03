@@ -24,7 +24,7 @@ final class VisualizerProvider {
     func update() {
         let m = AppModel.shared
         guard m.features.isEnabled(.visualizer), let media = m.media, media.isPlaying,
-              let app = NSRunningApplication.runningApplications(withBundleIdentifier: media.source == .spotify ? "com.spotify.client" : "com.apple.Music").first
+              let id = media.playerBundleID, let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first
         else { stop(); return }
         guard tap?.pid != app.processIdentifier else { return }
         stop()

@@ -171,6 +171,7 @@ final class MediaProvider {
         switch AppModel.shared.media?.source {
         case .spotify: return Self.spotifyID
         case .music: return Self.musicID
+        case .browser, .vlc: return nil
         case nil: return isRunning(Self.spotifyID) ? Self.spotifyID : (isRunning(Self.musicID) ? Self.musicID : nil)
         }
     }
@@ -178,6 +179,11 @@ final class MediaProvider {
     /// User-initiated, so it may show the Automation prompt once. Never sends to an app that is not
     /// running (`tell application` would launch it).
     private func control(_ command: String) {
+        if let s = AppModel.shared.media?.source, s == .browser || s == .vlc {
+            let action = ["playpause": "playpause", "next track": "next", "previous track": "previous"][command]
+            if let action { OtherPlayersProvider.shared.control(action) }
+            return
+        }
         guard let id = appID else { return }
         _ = run("tell application id \"\(id)\" to \(command)", app: id, userInitiated: true)
         if id == Self.musicID, canQuery(id) { refreshMusic() }
@@ -208,7 +214,7 @@ final class MediaProvider {
         switch AppModel.shared.media?.source {
         case .music: return true
         case .spotify: return SpotifyAccount.shared.savedCurrent != nil
-        case nil: return false
+        case .browser, .vlc, nil: return false
         }
     }
     var loved: Bool { AppModel.shared.media?.source == .spotify && SpotifyAccount.shared.savedCurrent == true }
@@ -221,6 +227,7 @@ final class MediaProvider {
     func previous() { control("previous track") }
 
     func seek(to seconds: TimeInterval) {
+        guard AppModel.shared.media?.hasFullControls != false else { return }
         control("set player position to \(Int(seconds))")
         if var m = AppModel.shared.media { m.position = seconds; m.positionAt = Date(); AppModel.shared.mediaChanged(m) }
     }
