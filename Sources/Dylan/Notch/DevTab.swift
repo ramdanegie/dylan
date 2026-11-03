@@ -19,7 +19,9 @@ struct DevTab: View {
             }
             ForEach(ports.servers.prefix(6)) { s in
                 HStack(spacing: 10) {
-                    SwiftUI.Text(verbatim: ":" + String(s.listener.port))   // no digit grouping.font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(.white)
+                    // verbatim + String(): no digit grouping (":3000", not ":3,000").
+                    SwiftUI.Text(verbatim: ":" + String(s.listener.port))
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(.white)
                         .frame(width: 54, alignment: .leading)
                     SwiftUI.Text(s.listener.command).font(DY.mono).foregroundStyle(DY.fg2).frame(width: 60, alignment: .leading).lineLimit(1)
                     SwiftUI.Text(model.presentationMode ? "" : (s.project ?? "")).font(DY.font(12, .regular)).foregroundStyle(DY.fg).lineLimit(1)
