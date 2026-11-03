@@ -269,7 +269,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | Keamanan | Socket hanya bisa diakses user sendiri (0600). Dylan tidak menjalankan perintah yang datang lewat socket. Edit file config selalu dengan backup |
 | Aksesibilitas | Label VoiceOver di semua kontrol; navigasi keyboard di Expanded; kontras teks ≥ 4,5:1 |
 | Kompatibilitas | macOS 15+, diuji di macOS 27, Apple Silicon (Intel tidak ditargetkan) |
-| Bahasa | UI Bahasa Indonesia dan English (FR-18), lengkap di v1.0. Semua string di String Catalog (`Localizable.xcstrings`); tidak ada teks UI yang di-hard-code. Format tanggal, jam, durasi, dan angka mengikuti bahasa terpilih. Bahasa lain bisa ditambah tanpa mengubah kode |
+| Bahasa | UI Bahasa Indonesia dan English (FR-18), lengkap di v1.0. Semua string di `Localizable.strings` per bahasa (`id.lproj`, `en.lproj`; String Catalog butuh `xcstringstool` yang hanya ada di Xcode); tidak ada teks UI yang di-hard-code, dan unit test memastikan kedua bahasa punya key dan argumen yang sama. Format tanggal, jam, durasi, dan angka mengikuti bahasa terpilih. Bahasa lain bisa ditambah tanpa mengubah kode |
 | Face Unlock (v2.0) | Layar menyala → terbuka ≤ 2 s; kamera hanya aktif ≤ 8 s per percobaan (lampu hijau kamera menyala selama itu); 0 dari 20 percobaan pakai foto wajahmu berhasil membuka; embedding tidak pernah keluar dari Mac |
 
 ## 1.9 Metrik Sukses (pemakaian pribadi, 2 minggu)
@@ -473,7 +473,7 @@ dylan-mac/
 │   │   ├── Bridge/            # SocketServer
 │   │   ├── Providers/         # Media, Lyrics, Discord, Notifications, Calendar, Reminders, Timer, Battery, Bluetooth, HUD, Privacy, Focus, Clipboard, Shelf, ColorPicker, KeepAwake, Weather, Downloads, Stats, LockScreen, FaceUnlock; [Dev] Agents, Commands, Ports, GitHub, Scripts, Docker
 │   │   └── UI/                # tab, komponen, theme
-│   └── dylan/                 # executable CLI, dibundel ke Dylan.app/Contents/MacOS/dylan
+│   └── DylanCLI/              # executable CLI, dibundel ke Dylan.app/Contents/Helpers/dylan
 └── Tests/
     ├── DylanCoreTests/
     └── Fixtures/              # payload hook asli dari spike T0.4
@@ -861,19 +861,19 @@ Protokol dan perintah ada di §2.6.
 | `dylan hook claude` / `dylan hook codex` | Dipanggil oleh hook agent |
 | `dylan doctor` | Cek app jalan, socket, hook terpasang, versi `claude`, izin |
 
-**Hook Claude Code yang dipasang** (digabung ke `~/.claude/settings.json`; `<APP>` = path absolut `Dylan.app`, ditulis literal saat pemasangan):
+**Hook Claude Code yang dipasang** (digabung ke `~/.claude/settings.json`; `<APP>` = path absolut `Dylan.app`, ditulis literal saat pemasangan; CLI ada di `Contents/Helpers` karena `Contents/MacOS/Dylan` dan `…/dylan` adalah nama yang sama di disk case-insensitive):
 
 ```json
 {
   "hooks": {
-    "SessionStart":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "PreToolUse":        [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "PostToolUse":       [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "Notification":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "PermissionRequest": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 60 }] }],
-    "Stop":              [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "SessionEnd":        [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }]
+    "SessionStart":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "PreToolUse":        [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "PostToolUse":       [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "Notification":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "PermissionRequest": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 60 }] }],
+    "Stop":              [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "SessionEnd":        [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }]
   }
 }
 ```
@@ -940,6 +940,7 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 - **Agent:** Dylan tidak pernah mengizinkan apa pun secara otomatis; setiap izin butuh klik user. Tidak ada "izinkan selalu" di v1.0.
 - **Edit config user** (`~/.claude/settings.json`, `~/.zshrc`): selalu dengan backup, diff, persetujuan, dan penulisan atomik.
 - **Notifikasi, pesan, Discord:** isi hanya di memori selama tampil; riwayat hanya menyimpan "app · waktu". Token Discord & Spotify di Keychain. Dylan tidak membaca database chat app mana pun.
+- **Artwork Spotify:** Spotify hanya memberi URL artwork, jadi Dylan mengunduhnya dari CDN Spotify sekali per lagu saat fitur Musik aktif.
 - **Lirik & cuaca:** permintaan ke LRCLIB berisi judul/artis/album/durasi lagu; ke Open-Meteo berisi koordinat yang dibulatkan ke 2 desimal (± 1 km). Keduanya dijelaskan di Settings sebelum dinyalakan.
 - **Kamera cermin:** hanya aktif selama panel terbuka (maks 60 s); tidak merekam atau menyimpan apa pun.
 - **Lock screen:** hanya jam, musik, baterai, cuaca. Tidak ada notifikasi, pesan, atau data pribadi.
@@ -1073,7 +1074,7 @@ Semua teks UI tersedia dalam dua bahasa (FR-18). Tombol ditulis dalam `[kurung]`
 
 | Task | Isi | AC |
 |---|---|---|
-| **T0.1** Setup | SwiftPM: target `DylanCore`, app `Dylan`, CLI `dylan`, test. `scripts/build.sh` membundel `.app` (CLI di `Contents/MacOS`), ad-hoc sign, opsi `--run` dan `--test` | `./scripts/build.sh --test --run` sukses; app jalan tanpa ikon Dock |
+| **T0.1** Setup | SwiftPM: target `DylanCore`, app `Dylan`, CLI `dylan`, test. `scripts/build.sh` membundel `.app` (CLI di `Contents/Helpers`, karena "Dylan" dan "dylan" bentrok di disk case-insensitive), ad-hoc sign, opsi `--run` dan `--test` | `./scripts/build.sh --test --run` sukses; app jalan tanpa ikon Dock |
 | **T0.2** Panel notch | NSPanel di atas notch: geometri dari safe area, level, Spaces, fullscreen, klik tembus di luar bentuk, animasi ukuran saat hover | Closed tak terlihat; menu bar tetap bisa diklik; animasi 120 fps; tidak mencuri fokus. Temuan di `docs/spike-notch.md` |
 | **T0.3** Media | AppleScript + distributed notification untuk Spotify/Music (termasuk shuffle, repeat, volume, `play track <uri>`); uji pendekatan `mediaremote-adapter` untuk browser di macOS 27 + cek lisensinya | `docs/spike-media.md`: apa yang jalan + keputusan |
 | **T0.4** [Dev] Hook Claude Code | `dylan hook claude` → socket. Rekam payload asli semua event jadi fixture. Uji `PermissionRequest`: apakah prompt terminal tertahan selama hook menunggu, format keputusan, perilaku timeout. Catat nilai `__CFBundleIdentifier`/`TERM_PROGRAM` di VS Code, Zed, dan Terminal | `docs/spike-claude-hooks.md` + fixture di `Tests/Fixtures/`; keputusan default FR-9 |
@@ -1096,7 +1097,7 @@ Semua teks UI tersedia dalam dua bahasa (FR-18). Tombol ditulis dalam `[kurung]`
 | **T1.10** Meeting | EventKit, link meeting, countdown, Join | AC §F6; unit test parser link |
 | **T1.11** Timer/Pomodoro | §F7 | Tetap akurat setelah sleep 5 menit |
 | **T1.12** Mode Presentasi | §F12 + uji `sharingType` | Hasil uji Zoom/Meet di `docs/presentation-mode.md` |
-| **T1.13** Settings, onboarding, bahasa, login item, menu bar | §F14, FR-18, D1, D16, D17; String Catalog id + en untuk semua copy §3.4 | Setting tersimpan antar restart; onboarding bisa dilewati; tidak ada string yang belum diterjemahkan (cek `xcstrings` + snapshot English) |
+| **T1.13** Settings, onboarding, bahasa, login item, menu bar | §F14, FR-18, D1, D16, D17; `Localizable.strings` id + en untuk semua copy §3.4 | Setting tersimpan antar restart; onboarding bisa dilewati; tidak ada string yang belum diterjemahkan (cek `xcstrings` + snapshot English) |
 | **T1.14** Profil Umum/Developer | FR-17: `Profile.swift` menentukan provider, tab, izin, dan langkah onboarding yang aktif | Unit test; profil Umum tidak pernah menjalankan provider [Dev] atau meminta izinnya |
 | **T1.15** Baterai & charging | FR-70, D30 | Colok/cabut charger tampil < 1 s; peringatan 20%/10% |
 | **T1.16** AirPods & Bluetooth | FR-44, D31, sesuai keputusan T0.6 | Tersambung/terputus tampil < 2 s |

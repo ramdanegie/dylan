@@ -6,7 +6,7 @@ Dylan mengubah notch MacBook menjadi pusat status yang hidup: musik, Discord, no
 
 Buat software engineer, Dylan punya **Mode Developer**: pantau agent AI, perintah panjang, CI, dan dev server langsung dari notch. Pengguna biasa tidak akan melihat fitur ini sama sekali; engineer cukup menyalakannya sekali.
 
-> **Status:** tahap perencanaan. Belum ada kode. Spesifikasi lengkap ada di [PRD.md](PRD.md).
+> **Status:** v0.1, dalam pengembangan. Phase 0 (spike) dan sebagian besar v1.0 sudah ada; lihat [docs/test-report.md](docs/test-report.md). Spesifikasi lengkap ada di [PRD.md](PRD.md).
 
 ## Fitur untuk semua orang
 
@@ -37,6 +37,21 @@ dylan activity start deploy --title "Deploy staging" --progress 0
 dylan activity update deploy --progress 0.6 --subtitle "migrasi DB"
 dylan activity end deploy --success --detail "v2.4.1 · 3m 10s"
 ```
+
+## Build & jalankan
+
+Cukup Command Line Tools (tanpa Xcode), macOS 15+, Apple Silicon.
+
+```bash
+./scripts/build.sh --test --run   # unit test, bundel build/Dylan.app, lalu jalankan
+```
+
+- CLI ada di `Dylan.app/Contents/Helpers/dylan`. Settings → Terminal → "Pasang CLI" membuat symlink `~/.local/bin/dylan`.
+- Mode Developer: Settings → Umum → Profil → Developer, lalu Settings → Agents → Pasang hook (diff ditampilkan, file lama di-backup).
+- Lacak perintah panjang: tambahkan `eval "$(dylan shell-init zsh)"` ke `~/.zshrc`.
+- `dylan doctor` mengecek app, socket, hook, dan shell integration. `dylan debug state` mencetak aktivitas yang sedang tampil.
+- Build memakai signature ad-hoc, jadi macOS bisa meminta izin (Kalender, Automation) lagi setelah build baru. Untuk pemakaian harian, pakai build yang sama.
+- `build/Dylan.app/Contents/MacOS/Dylan --snapshot <folder> --lang id|en` merender state notch ke PNG tanpa izin Screen Recording.
 
 ## Prinsip
 
