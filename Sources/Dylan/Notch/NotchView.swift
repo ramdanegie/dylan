@@ -30,6 +30,7 @@ struct NotchRootView: View {
         case .home: return m.isDeveloper && !m.agents.active.isEmpty ? 300 : 270
         case .media: return 300
         case .clipboard: return 380
+        case .stats: return 366
         case .agents: return 312
         }
     }

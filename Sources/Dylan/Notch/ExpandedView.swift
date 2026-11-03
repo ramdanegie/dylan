@@ -17,6 +17,7 @@ struct ExpandedView: View {
                 case .home: HomeTab()
                 case .media: MediaTab()
                 case .clipboard: ClipboardTab()
+                case .stats: StatsTab()
                 case .agents: AgentsTab()
                 }
             }

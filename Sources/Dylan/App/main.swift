@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.bluetooth) ? BluetoothProvider.shared.start() : BluetoothProvider.shared.stop()
         f.isEnabled(.privacy) ? PrivacyProvider.shared.start() : ()
         f.isEnabled(.clipboard) ? ClipboardProvider.shared.start() : ClipboardProvider.shared.stop()
+        StatsProvider.shared.refreshSchedule()
         PrivacyProvider.shared.update()
         if !f.isEnabled(.agents) {
             for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }

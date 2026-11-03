@@ -5,13 +5,14 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, clipboard, agents
+    case home, media, clipboard, stats, agents
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .home: return "house"
         case .media: return "music.note"
         case .clipboard: return "doc.on.clipboard"
+        case .stats: return "chart.bar"
         case .agents: return "sparkle"
         }
     }
@@ -59,6 +60,7 @@ enum NotchAction: Equatable {
     case openURL(URL)
     case mediaPrevious, mediaPlayPause, mediaNext
     case dismiss(String)
+    case openStats, stopProcess(Int32)
 }
 
 @Observable
@@ -164,6 +166,7 @@ final class AppModel {
     var tabs: [Tab] {
         var t: [Tab] = [.home, .media]
         if features.isEnabled(.clipboard) { t.append(.clipboard) }
+        if features.isEnabled(.stats) { t.append(.stats) }
         if isDeveloper && features.isEnabled(.agents) { t.append(.agents) }
         return t
     }
@@ -571,6 +574,8 @@ final class AppModel {
         case .mediaPlayPause: MediaProvider.shared.playPause()
         case .mediaNext: MediaProvider.shared.next()
         case .dismiss(let id): center.remove(id, now: Date(), toHistory: true)
+        case .openStats: selectedTab = .stats; notchState = .expanded
+        case .stopProcess(let pid): StatsProvider.shared.stop(pid)
         }
     }
 
@@ -589,6 +594,8 @@ final class AppModel {
             return a.url.flatMap(URL.init(string:)).map { [(L("button.join"), .primaryNeutral, .join($0))] } ?? []
         case .battery where a.priority == .p0:
             return [(L("button.dismiss"), .normal, .dismiss(a.id))]
+        case .notify where a.url?.hasPrefix("pid:") == true:
+            return [(L("stats.view"), .normal, .openStats), (L("stats.stop"), .destructive, .stopProcess(Int32(a.url!.dropFirst(4)) ?? 0))]
         case .script, .notify:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openURL($0))] } ?? []
         default:

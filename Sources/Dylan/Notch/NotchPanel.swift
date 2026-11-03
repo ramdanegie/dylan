@@ -113,6 +113,7 @@ final class NotchController {
     private func observeModel() {
         withObservationTracking {
             _ = AppModel.shared.notchState
+            _ = AppModel.shared.selectedTab
             _ = AppModel.shared.fullscreen
             _ = AppModel.shared.center.urgentIDs
         } onChange: {
@@ -136,6 +137,7 @@ final class NotchController {
             panel?.resignKey()
         }
         lastState = m.notchState
+        StatsProvider.shared.refreshSchedule()
         m.center.setHoldPaused(m.notchState != .closed && inside, now: Date())
         mouseMoved()
     }
