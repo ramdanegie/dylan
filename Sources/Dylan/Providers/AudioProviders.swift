@@ -23,11 +23,12 @@ final class LyricsProvider {
         req.setValue("Dylan/0.1 (https://github.com/ramdanegie/dylan)", forHTTPHeaderField: "User-Agent")
         task?.cancel()
         task = URLSession.shared.dataTask(with: req) { @Sendable data, response, _ in
-            let ok = (response as? HTTPURLResponse)?.statusCode == 200
-            let parsed = ok ? data.flatMap(Lyrics.fromLRCLIB) : nil
+            let status = (response as? HTTPURLResponse)?.statusCode
+            let parsed = status == 200 ? data.flatMap(Lyrics.fromLRCLIB) : nil
             Task { @MainActor in
                 let p = LyricsProvider.shared
-                p.cache[k] = parsed
+                // Only a real answer is cached; a cancel, timeout or 5xx tries again next time.
+                if status == 200 || status == 404 { p.cache[k] = .some(parsed) }
                 if p.key == k { p.lyrics = parsed }
             }
         }
