@@ -24,7 +24,9 @@ enum FileTransforms {
             guard let img = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
             let ext = format == .png ? "png" : "jpg"
             let suffix = scale < 1 ? " (\(Int(scale * 100))%)" : ""
-            let dest = url.deletingLastPathComponent().appendingPathComponent(url.deletingPathExtension().lastPathComponent + suffix + "." + ext)
+            // PNG → PNG at 100% would otherwise be the original itself.
+            let dest = URL(fileURLWithPath: Shelf.freePath(dir: url.deletingLastPathComponent().path,
+                                                           name: url.deletingPathExtension().lastPathComponent + suffix + "." + ext))
             let type = (format == .png ? UTType.png : UTType.jpeg).identifier as CFString
             guard let out = CGImageDestinationCreateWithURL(dest as CFURL, type, 1, nil) else { return nil }
             CGImageDestinationAddImage(out, img, format == .jpeg ? [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary : nil)
@@ -42,15 +44,15 @@ enum FileTransforms {
                 for i in 0..<doc.pageCount { if let p = doc.page(at: i) { out.insert(p, at: out.pageCount) } }
             }
             let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm"
-            let dest = first.deletingLastPathComponent().appendingPathComponent("Merged \(f.string(from: Date())).pdf")
+            let dest = URL(fileURLWithPath: Shelf.freePath(dir: first.deletingLastPathComponent().path, name: "Merged \(f.string(from: Date())).pdf"))
             return out.pageCount > 0 && out.write(to: dest) ? dest : nil
         }.value
     }
 
     /// HEVC 1080p export with AVFoundation.
     static func compressVideo(_ url: URL) async -> URL? {
-        let dest = url.deletingLastPathComponent().appendingPathComponent(url.deletingPathExtension().lastPathComponent + " (compressed).mp4")
-        try? FileManager.default.removeItem(at: dest)
+        let dest = URL(fileURLWithPath: Shelf.freePath(dir: url.deletingLastPathComponent().path,
+                                                       name: url.deletingPathExtension().lastPathComponent + " (compressed).mp4"))
         let asset = AVURLAsset(url: url)
         guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHEVC1920x1080) else { return nil }
         do { try await session.export(to: dest, as: .mp4) } catch { return nil }

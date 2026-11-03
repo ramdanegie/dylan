@@ -75,8 +75,8 @@ final class ShelfProvider {
     /// Zips next to the first item with `ditto` and puts the archive on the shelf.
     func zip(_ items: [Shelf.Item]) {
         guard let first = items.first else { return }
-        let dest = URL(fileURLWithPath: (first.path as NSString).deletingLastPathComponent)
-            .appendingPathComponent(Shelf.zipName(for: items, now: Date()))
+        let dest = URL(fileURLWithPath: Shelf.freePath(dir: (first.path as NSString).deletingLastPathComponent,
+                                                       name: Shelf.zipName(for: items, now: Date())))
         let paths = items.map(\.path)
         Task.detached {
             let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

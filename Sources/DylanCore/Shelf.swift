@@ -34,6 +34,17 @@ public struct Shelf: Codable, Equatable, Sendable {
     /// Paths that no longer exist ("dipindah" in the design).
     public func missing(exists: (String) -> Bool) -> Set<UUID> { Set(items.filter { !exists($0.path) }.map(\.id)) }
 
+    /// `dir/name.ext`, or `dir/name 2.ext`, `name 3.ext`… so a result never replaces an existing file.
+    public static func freePath(dir: String, name: String, exists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }) -> String {
+        let base = (name as NSString).deletingPathExtension, ext = (name as NSString).pathExtension
+        var path = (dir as NSString).appendingPathComponent(name), n = 2
+        while exists(path) {
+            path = (dir as NSString).appendingPathComponent(ext.isEmpty ? "\(base) \(n)" : "\(base) \(n).\(ext)")
+            n += 1
+        }
+        return path
+    }
+
     /// Name for a zip of several items: `Shelf 2026-11-04 09.41.zip`, or `<name>.zip` for one.
     public static func zipName(for items: [Item], now: Date) -> String {
         if items.count == 1 { return ((items[0].name as NSString).deletingPathExtension) + ".zip" }

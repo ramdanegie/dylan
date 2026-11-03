@@ -30,6 +30,12 @@ import Testing
         #expect(Shelf.zipName(for: s.items, now: t0).hasPrefix("Shelf "))
         #expect(Shelf.zipName(for: s.items, now: t0).hasSuffix(".zip"))
     }
+    @Test func freePathNeverReplacesAFile() {
+        let taken: Set<String> = ["/d/a.png", "/d/a 2.png", "/d/notes"]
+        #expect(Shelf.freePath(dir: "/d", name: "b.png") { taken.contains($0) } == "/d/b.png")
+        #expect(Shelf.freePath(dir: "/d", name: "a.png") { taken.contains($0) } == "/d/a 3.png")
+        #expect(Shelf.freePath(dir: "/d", name: "notes") { taken.contains($0) } == "/d/notes 2")
+    }
 }
 
 @Suite struct ShakeTests {
