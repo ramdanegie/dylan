@@ -4,7 +4,7 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 
 ## Otomatis
 
-`./scripts/build.sh --test` → **178 unit test lulus** (49 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
+`./scripts/build.sh --test` → **186 unit test lulus** (51 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
 
 | Area | Yang diuji |
 |---|---|
@@ -57,6 +57,17 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 - Island di bawah menu bar; durasi agent tidak reset; snapshot menulis preferensi; perintah hantu dari urutan start/end; hasil perintah terhapus oleh perintah berikutnya; label port memakai pemisah ribuan; modifier SwiftUI tertelan komentar.
 - 24 temuan review independen pertama (deteksi hook ber-quote, AppleScript bisa membuka Spotify, kebocoran Mode Presentasi, edit config yang tidak aman, fokus keyboard dicuri, dan lainnya).
 - 22 temuan review independen kedua, antara lain: crash saat Reminders dimuat (callback EventKit di background), rahasia di baris `.env`/header/URL tersimpan polos, kamera cermin menyala setelah panel tertutup, konversi PNG→PNG menimpa file asli, download parsial basi tampil selamanya, aktivitas CI/widget tertinggal, "Buka di editor" bisa menjalankan `.command`, drag lama membuka Shelf, kebocoran Mode Presentasi di tab Dev/Agents, `Shell.run` macet pada output > 64 KB, prompt izin Desktop dari Shelf.
+- 15 temuan review independen ketiga (fitur sisa PRD), antara lain:
+  - Face Unlock crash di frame kamera pertama (isolasi actor);
+  - output terminal kuadratik yang bisa membekukan app;
+  - tombol mic Meet yang malah mem-bookmark tab;
+  - hook Cursor `beforeSubmitPrompt` yang ikut menentukan apakah prompt jalan;
+  - volume per app yang bisa membisukan app pada output HDMI/mono/headset;
+  - equalizer crash di 8 kHz;
+  - Mode Presentasi yang mati di tengah share;
+  - fd PTY yang bisa terpakai ulang;
+  - server login Spotify yang bisa macet atau dibatalkan dari luar;
+  - undangan Kalender yang dianggap panggilan.
 
 ## Belum diverifikasi (butuh izin, perangkat, atau akun kamu)
 - Prompt izin yang sengaja tidak dipicu: Kalender, Reminders, Bluetooth, kamera (cermin), folder Downloads, Accessibility.
