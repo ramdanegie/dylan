@@ -10,11 +10,11 @@ public enum Feature: String, Codable, Sendable, CaseIterable {
     // Everyone
     case media, meeting, timer, battery, bluetooth, privacy, presentation, keepAwake, colorPicker, clipboard, stats
     // Developer Mode
-    case agents, commands, cli
+    case agents, commands, cli, ports
 
     public var isDeveloper: Bool {
         switch self {
-        case .agents, .commands, .cli: return true
+        case .agents, .commands, .cli, .ports: return true
         default: return false
         }
     }

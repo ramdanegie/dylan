@@ -492,3 +492,14 @@
 "stats.view" = "View";
 "stats.alert" = "%1$@ is using %2$ld%% CPU · %3$@";
 "stats.alertGeneric" = "A process is using a lot of CPU";
+"tab.dev" = "Dev";
+"feature.ports" = "Dev servers & ports";
+"feature.ports.hint" = "Localhost ports: open, copy, stop";
+"feature.commands" = "Command tracker";
+"feature.commands.hint" = "Commands over 10 s show in the notch";
+"ports.title" = "Ports · %ld";
+"ports.every" = "every 10 s";
+"ports.empty" = "No dev servers running";
+"ports.kill" = "Stop";
+"ports.ready" = "localhost:%1$@ is ready · %2$@";
+"ports.readyGeneric" = "A new server is ready";

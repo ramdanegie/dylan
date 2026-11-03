@@ -31,6 +31,7 @@ struct NotchRootView: View {
         case .media: return 300
         case .clipboard: return 380
         case .stats: return 366
+        case .dev: return 316
         case .agents: return 312
         }
     }
@@ -38,7 +39,7 @@ struct NotchRootView: View {
     static func islandSize(_ m: AppModel, _ g: NotchGeometry) -> CGSize {
         let state = displayState(m)
         if state == .compact && dotsOnly(m) { return CGSize(width: g.notch.width + 36, height: g.notch.height) }
-        return g.size(for: state, wide: m.selectedTab == .media || m.selectedTab == .clipboard, expandedHeight: expandedHeight(m))
+        return g.size(for: state, wide: [.media, .clipboard, .dev].contains(m.selectedTab), expandedHeight: expandedHeight(m))
     }
 
     static func islandFrame(_ m: AppModel, _ g: NotchGeometry) -> CGRect {

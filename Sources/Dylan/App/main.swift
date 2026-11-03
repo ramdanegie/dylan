@@ -64,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.privacy) ? PrivacyProvider.shared.start() : ()
         f.isEnabled(.clipboard) ? ClipboardProvider.shared.start() : ClipboardProvider.shared.stop()
         StatsProvider.shared.refreshSchedule()
+        f.isEnabled(.ports) ? PortsProvider.shared.start() : PortsProvider.shared.stop()
         PrivacyProvider.shared.update()
         if !f.isEnabled(.agents) {
             for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }

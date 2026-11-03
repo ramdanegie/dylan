@@ -81,3 +81,50 @@ public struct CPUAlertTracker: Sendable {
 
     public func hotSince(_ pid: Int32) -> Date? { since[pid] }
 }
+
+/// Listening TCP ports from `lsof -nP -iTCP -sTCP:LISTEN -F pcn` (FR-25, PRD §F10).
+public enum PortScan {
+    public struct Listener: Equatable, Sendable, Hashable {
+        public var port: Int
+        public var pid: Int32
+        public var command: String
+        public init(port: Int, pid: Int32, command: String) { self.port = port; self.pid = pid; self.command = command }
+    }
+
+    /// System and app ports that are not dev servers (ControlCenter AirPlay 5000/7000, Spotify, Docker internals, …).
+    public static let ignoredCommands: Set<String> = ["ControlCe", "ControlCenter", "rapportd", "Spotify", "com.docke", "com.docker",
+                                                      "Dylan", "sharingd", "identitys", "Raycast", "Figma", "Dropbox", "Code Helper"]
+
+    public static func parse(_ output: String) -> [Listener] {
+        var out: Set<Listener> = []
+        var pid: Int32?
+        var command = ""
+        for line in output.split(whereSeparator: \.isNewline) {
+            guard let tag = line.first else { continue }
+            let value = String(line.dropFirst())
+            switch tag {
+            case "p": pid = Int32(value); command = ""
+            case "c": command = value
+            case "n":
+                guard let pid, let colon = value.lastIndex(of: ":"), let port = Int(value[value.index(after: colon)...]) else { continue }
+                out.insert(Listener(port: port, pid: pid, command: command))
+            default: continue
+            }
+        }
+        return out.sorted { $0.port < $1.port }
+    }
+
+    /// Dev-server candidates: not ignored, not in the ephemeral range.
+    public static func devServers(_ all: [Listener], extraIgnored: Set<String> = []) -> [Listener] {
+        all.filter { l in
+            l.port < 49152 && !ignoredCommands.union(extraIgnored).contains { l.command.hasPrefix($0) }
+        }
+    }
+
+    /// Ports that appeared since the last scan (the first scan never announces anything).
+    public static func newPorts(previous: [Listener]?, current: [Listener]) -> [Listener] {
+        guard let previous else { return [] }
+        let old = Set(previous.map(\.port))
+        return current.filter { !old.contains($0.port) }
+    }
+}

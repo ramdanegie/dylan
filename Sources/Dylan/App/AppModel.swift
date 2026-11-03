@@ -5,7 +5,7 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, clipboard, stats, agents
+    case home, media, clipboard, stats, agents, dev
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -14,6 +14,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard"
         case .stats: return "chart.bar"
         case .agents: return "sparkle"
+        case .dev: return "hammer"
         }
     }
     var title: String { L("tab.\(rawValue)") }
@@ -168,6 +169,7 @@ final class AppModel {
         if features.isEnabled(.clipboard) { t.append(.clipboard) }
         if features.isEnabled(.stats) { t.append(.stats) }
         if isDeveloper && features.isEnabled(.agents) { t.append(.agents) }
+        if isDeveloper && features.isEnabled(.ports) { t.append(.dev) }
         return t
     }
 
@@ -596,7 +598,7 @@ final class AppModel {
             return [(L("button.dismiss"), .normal, .dismiss(a.id))]
         case .notify where a.url?.hasPrefix("pid:") == true:
             return [(L("stats.view"), .normal, .openStats), (L("stats.stop"), .destructive, .stopProcess(Int32(a.url!.dropFirst(4)) ?? 0))]
-        case .script, .notify:
+        case .script, .notify, .port:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openURL($0))] } ?? []
         default:
             return []

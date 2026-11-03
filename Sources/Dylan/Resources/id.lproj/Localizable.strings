@@ -492,3 +492,14 @@
 "stats.view" = "Lihat";
 "stats.alert" = "%1$@ memakai %2$ld%% CPU · %3$@";
 "stats.alertGeneric" = "Proses memakai CPU tinggi";
+"tab.dev" = "Dev";
+"feature.ports" = "Dev server & port";
+"feature.ports.hint" = "Port localhost, buka, salin, matikan";
+"feature.commands" = "Command tracker";
+"feature.commands.hint" = "Perintah > 10 detik tampil di notch";
+"ports.title" = "Port · %ld";
+"ports.every" = "tiap 10 dtk";
+"ports.empty" = "Belum ada dev server yang berjalan";
+"ports.kill" = "Matikan";
+"ports.ready" = "localhost:%1$@ siap · %2$@";
+"ports.readyGeneric" = "Server baru siap";

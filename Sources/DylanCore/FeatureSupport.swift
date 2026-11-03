@@ -129,7 +129,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("commands", .developer, [10], .v1_0, built: true, req: true),
         .init("cli", .developer, [6], .v1_0, built: true),
         .init("devTools", .developer, [21], .v1_1, built: true),
-        .init("ports", .developer, [25], .v1_1),
+        .init("ports", .developer, [25], .v1_1, built: true),
         .init("touchID", .developer, [29], .v1_1, built: true),
         .init("github", .developer, [30], .v1_2, req: true),
         .init("widgets", .developer, [31], .v1_2),

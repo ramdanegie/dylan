@@ -374,6 +374,7 @@ struct TerminalSettings: View {
     private var model: AppModel { AppModel.shared }
 
     var body: some View {
+        FeatureToggles(features: [.commands, .ports])
         Section(L("terminal.shell")) {
             LabeledContent("zsh") {
                 SwiftUI.Text(installed ? L("terminal.active") : L("terminal.inactive")).foregroundStyle(installed ? .green : .secondary)

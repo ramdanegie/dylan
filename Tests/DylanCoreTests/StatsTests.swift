@@ -45,3 +45,49 @@ import Testing
         #expect(t.feed([node], now: t0.addingTimeInterval(150)).count == 1)
     }
 }
+
+@Suite struct PortScanTests {
+    static let sample = """
+    p412
+    cnode
+    f22
+    n*:3000
+    f23
+    n[::1]:3000
+    p530
+    cnode
+    f19
+    n127.0.0.1:5173
+    p88
+    cControlCe
+    f7
+    n*:5000
+    f8
+    n*:7000
+    p91
+    cjava
+    n*:8080
+    p95
+    crapportd
+    n*:49158
+    """
+
+    @Test func parsesAndDedupes() {
+        let all = PortScan.parse(Self.sample)
+        #expect(all.map(\.port) == [3000, 5000, 5173, 7000, 8080, 49158])
+        #expect(all.first == PortScan.Listener(port: 3000, pid: 412, command: "node"))
+    }
+
+    @Test func filtersSystemPorts() {
+        let dev = PortScan.devServers(PortScan.parse(Self.sample))
+        #expect(dev.map(\.port) == [3000, 5173, 8080])
+        #expect(PortScan.devServers(PortScan.parse(Self.sample), extraIgnored: ["java"]).map(\.port) == [3000, 5173])
+    }
+
+    @Test func announcesOnlyNewPorts() {
+        let a = [PortScan.Listener(port: 3000, pid: 1, command: "node")]
+        let b = a + [PortScan.Listener(port: 5173, pid: 2, command: "node")]
+        #expect(PortScan.newPorts(previous: nil, current: b).isEmpty)
+        #expect(PortScan.newPorts(previous: a, current: b).map(\.port) == [5173])
+    }
+}
