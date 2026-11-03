@@ -139,6 +139,7 @@ US-1 s/d US-15 ditulis dari sudut pandang engineer (Mode Developer), kecuali US-
 | US-26 | melihat cuaca, reminder hari ini, dan progres download dari notch | informasi kecil sehari-hari ada di satu tempat |
 | US-27 | melihat musik dan baterai di lock screen | tidak perlu membuka kunci hanya untuk ganti lagu |
 | US-28 | menghapus background foto yang di-drop ke shelf | edit cepat tanpa app editor |
+| US-29 | memilih bahasa Dylan (Indonesia atau English) | app nyaman dipakai, juga oleh teman yang tidak berbahasa Indonesia |
 
 ## 1.6 Lingkup per Rilis
 
@@ -146,7 +147,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 
 | Rilis | Tema | Isi |
 |---|---|---|
-| **v1.0 MVP** | Notch + Essentials | Shell notch (Compact/Peek/Expanded), Live Activity engine, CLI `dylan`, profil Umum/Developer, Now Playing+ (Spotify & Music lengkap, media browser bila spike berhasil), meeting berikutnya, timer/Pomodoro, baterai & charging, AirPods/Bluetooth, indikator kamera/mikrofon, Mode Presentasi, Settings & onboarding. **[Dev]** Claude Code, command tracker zsh |
+| **v1.0 MVP** | Notch + Essentials | Shell notch (Compact/Peek/Expanded), Live Activity engine, CLI `dylan`, profil Umum/Developer, bahasa Indonesia/English, Now Playing+ (Spotify & Music lengkap, media browser bila spike berhasil), meeting berikutnya, timer/Pomodoro, baterai & charging, AirPods/Bluetooth, indikator kamera/mikrofon, Mode Presentasi, Settings & onboarding. **[Dev]** Claude Code, command tracker zsh |
 | **v1.1** | Everyday + Discord | Discord (voice + DM/mention), lirik tersinkron, pilih output audio, volume per app, HUD volume/brightness/backlight, shelf file + AirDrop, clipboard history, color picker, keep awake, Focus, tema & kustomisasi, layar tanpa notch/monitor eksternal, stats. **[Dev]** dev tools clipboard, dev server/port, alert proses boros, Touch ID untuk `sudo` |
 | **v1.2** | Notifikasi & Integrasi | Notifikasi app di notch, balas pesan (iMessage, WhatsApp/Telegram bila bisa), panggilan masuk, kontrol meeting, reminder + tambah cepat, cuaca, progres download. **[Dev]** GitHub Actions & PR, script widget, Codex CLI, Docker |
 | **v1.3** | Ekstra (Could) | Visualizer audio nyata, like lagu & daftar playlist Spotify (Web API), transform file + hapus background, floating basket, OCR, scratchpad, kamera cermin, "waktunya berangkat", widget lock screen (eksperimental). **[Dev]** terminal cepat di notch, MCP server |
@@ -176,6 +177,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-15 | **Settings, onboarding, login item**, ikon menu bar (opsional) | Must |
 | FR-16 | **Mode Presentasi:** toggle lewat hotkey ⌃⌥⌘H dan menu; saat aktif, isi sensitif disembunyikan (§F12) | Must |
 | FR-17 | **Profil Umum / Developer:** dipilih di onboarding, bisa diganti kapan saja. Profil Umum (default) menyembunyikan semua fitur [Dev] beserta tab, izin, dan langkah onboarding-nya. Mode Developer menyalakan tab Agents & Dev, hook Claude Code, dan shell integration | Must |
+| FR-18 | **Bahasa:** menu Settings → Umum → Bahasa: Ikuti sistem (default) / Bahasa Indonesia / English. Juga dipilih di langkah pertama onboarding. Berlaku untuk notch, Settings, onboarding, menu bar, dan notifikasi Dylan (§F14) | Must |
 | FR-70 | **Baterai & charging:** animasi saat charger dicolok (persentase + perkiraan waktu penuh), saat dicabut, saat penuh; peringatan 20% dan 10%; ikon Low Power Mode | Must |
 | FR-44 | **AirPods & Bluetooth:** animasi saat perangkat tersambung/terputus (nama + ikon jenis perangkat); baterai kiri/kanan/case bila tersedia (spike T0.6) | Should |
 | FR-71 | **Indikator kamera & mikrofon:** titik hijau (kamera) / oranye (mikrofon) di telinga notch selama dipakai app mana pun; Peek menampilkan "Kamera sedang dipakai" | Should |
@@ -267,7 +269,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | Keamanan | Socket hanya bisa diakses user sendiri (0600). Dylan tidak menjalankan perintah yang datang lewat socket. Edit file config selalu dengan backup |
 | Aksesibilitas | Label VoiceOver di semua kontrol; navigasi keyboard di Expanded; kontras teks ≥ 4,5:1 |
 | Kompatibilitas | macOS 15+, diuji di macOS 27, Apple Silicon (Intel tidak ditargetkan) |
-| Bahasa | UI Bahasa Indonesia (default), string siap diterjemahkan ke Inggris |
+| Bahasa | UI Bahasa Indonesia dan English (FR-18), lengkap di v1.0. Semua string di String Catalog (`Localizable.xcstrings`); tidak ada teks UI yang di-hard-code. Format tanggal, jam, durasi, dan angka mengikuti bahasa terpilih. Bahasa lain bisa ditambah tanpa mengubah kode |
 | Face Unlock (v2.0) | Layar menyala → terbuka ≤ 2 s; kamera hanya aktif ≤ 8 s per percobaan (lampu hijau kamera menyala selama itu); 0 dari 20 percobaan pakai foto wajahmu berhasil membuka; embedding tidak pernah keluar dari Mac |
 
 ## 1.9 Metrik Sukses (pemakaian pribadi, 2 minggu)
@@ -679,9 +681,9 @@ Protokol dan perintah ada di §2.6.
 - **[Dev]** Alert: satu proses > 150% CPU selama 60 s → P1 "node memakai 180% CPU · 2m", dengan tombol [Lihat] [Hentikan].
 - Baterai & charging pindah ke §F19 dan berlaku untuk semua profil.
 
-### F14 — Settings & Onboarding (FR-15)
+### F14 — Settings, Onboarding & Bahasa (FR-15, FR-18)
 - Tab Settings:
-  - **Umum:** profil (Umum/Developer), login item, layar, hotkey, ikon menu bar.
+  - **Umum:** bahasa (FR-18), profil (Umum/Developer), login item, layar, hotkey, ikon menu bar.
   - **Tampilan:** ukuran, delay hover, animasi, Duo, mode "Compact saja", tema & aksen (FR-78).
   - **Live Activity:** durasi hasil, suara, prioritas per jenis.
   - **Media:** sumber, putar cepat, lirik, output audio, Spotify Web API.
@@ -694,8 +696,15 @@ Protokol dan perintah ada di §2.6.
   - **[Dev] Terminal:** shell integration, threshold, daftar abaikan.
   - **[Dev] Integrasi:** GitHub, script, Docker.
   - **Tentang**.
+- **Bahasa (FR-18):**
+  - Pilihan: Ikuti sistem (default; Indonesia bila bahasa macOS Indonesia, selain itu English), Bahasa Indonesia, English.
+  - Disimpan sebagai `AppleLanguages` di defaults Dylan, sehingga sama dengan pengaturan per-app di System Settings → General → Language & Region → Applications. Mengubah salah satunya mengubah keduanya.
+  - Ganti bahasa diterapkan langsung bila memungkinkan; bila sebagian teks baru berubah setelah restart, Dylan menawarkan "Buka ulang" (aktivitas yang berjalan, shelf, dan timer tetap utuh setelah dibuka ulang).
+  - Format tanggal, durasi ("1 j 20 m" / "1 h 20 m"), dan waktu relatif memakai `Locale` bahasa terpilih, bukan string buatan sendiri.
+  - Pesan CLI `dylan` di terminal tetap English (konvensi tool terminal dan supaya mudah dicari saat error).
+  - Lirik, nama lagu, dan isi notifikasi tidak diterjemahkan.
 - Onboarding, semua langkah bisa dilewati:
-  1. Sambutan.
+  1. Sambutan + **pilih bahasa** (terdeteksi otomatis dari sistem, bisa diganti di layar yang sama).
   2. **Pilih profil:** "Umum" (default) atau "Developer". Bisa diganti nanti di Settings.
   3. Pilih fitur yang ingin dinyalakan (musik, Discord, baterai & perangkat, kalender, notifikasi, …), dengan pratinjau kecil per fitur.
   4. Izin yang dibutuhkan fitur terpilih saja (Kalender, Automation Spotify/Music, Bluetooth, dll.), masing-masing dengan alasan yang jelas.
@@ -957,7 +966,7 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 
 | ID | Layar | Isi utama |
 |---|---|---|
-| D1 | **Onboarding** | (1) Sambutan + ilustrasi notch yang hidup, (2) pilih profil: kartu "Umum" dan "Developer", (3) pilih fitur dengan pratinjau kecil per fitur, (4) izin untuk fitur terpilih dengan alasan singkat, (5) [Dev] pasang hook Claude Code: diff `settings.json` berwarna, tombol Pasang/Lewati, (6) [Dev] shell integration: tombol "Tambahkan ke ~/.zshrc" atau salin perintah |
+| D1 | **Onboarding** | (1) Sambutan + ilustrasi notch yang hidup + pemilih bahasa (Indonesia/English) di pojok, (2) pilih profil: kartu "Umum" dan "Developer", (3) pilih fitur dengan pratinjau kecil per fitur, (4) izin untuk fitur terpilih dengan alasan singkat, (5) [Dev] pasang hook Claude Code: diff `settings.json` berwarna, tombol Pasang/Lewati, (6) [Dev] shell integration: tombol "Tambahkan ke ~/.zshrc" atau salin perintah |
 | D2 | **Closed** | Hanya notch; tidak ada yang terlihat |
 | D3 | **Compact – agent** | Varian: bekerja (glyph agent + spinner kecil · "Edit · AuthService.swift", dipotong), butuh izin (amber), menunggu input, selesai (✓ hijau · "4m 12s"), gagal (✗). Multi-sesi: badge angka |
 | D4 | **Compact – command** | Berjalan ("npm test" · 1:23), sukses (✓ · 2m 13s), gagal (✗ exit 1) |
@@ -972,7 +981,7 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 | D13 | **Expanded – Stats** | 4 grafik kecil (CPU, memori, jaringan, baterai) + proses teratas |
 | D14 | **Mode Presentasi** | Compact dengan indikator `eye.slash`, plus contoh aktivitas yang sudah digeneralisasi |
 | D15 | **Pill** (tanpa notch / monitor eksternal) | Sama seperti Compact/Expanded, tapi berbentuk pill mengambang 6 pt dari tepi atas. Opsi tema glass (macOS 26+) |
-| D16 | **Settings** | Jendela Settings macOS standar dengan tab sesuai §F14 (Light & Dark) |
+| D16 | **Settings** | Jendela Settings macOS standar dengan tab sesuai §F14 (Light & Dark), termasuk menu Bahasa di tab Umum |
 | D17 | **Menu bar** (opsional) | Ikon template. Menu: Buka notch, Mode Presentasi, Jeda semua aktivitas, Settings, Keluar |
 | D18 | **Riwayat aktivitas** | Di Home atau Agents: 20 aktivitas terakhir (ikon, judul, hasil, waktu) |
 | D19 | **Face Unlock – pendaftaran** (v2.0) | Halaman peringatan ("Ini bukan Face ID", kapan aman dipakai) → preview kamera dengan cincin progres ala pendaftaran Face ID ("Gerakkan kepala perlahan memutar") → minta password login → selesai + tombol "Coba kunci sekarang" |
@@ -1006,37 +1015,43 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 - **Spacing:** 4 / 8 / 12 / 16 / 24.
 - **Ikon app:** konsep "pulau" + notch: kapsul hitam di atas gradasi gelap dengan satu titik cahaya kecil (status), gaya squircle macOS.
 
-## 3.4 Copy (Bahasa Indonesia)
+## 3.4 Copy (Bahasa Indonesia & English)
 
-- Agent bekerja: **"Claude mengedit AuthService.swift"** / **"Claude menjalankan `npm test`"**
-- Butuh izin: **"Claude butuh izin"** / "Bash: `npm install zod`" · [Tolak] [Izinkan] [Buka terminal]
-- Menunggu input: **"Claude menunggu jawabanmu"**
-- Selesai: **"Selesai · 4m 12s · +120 −8"** · gagal: **"Claude berhenti karena error"**
-- Command: **"npm test berjalan · 1:23"** / **"npm test gagal · exit 1 · 2m 13s"** / **"npm run build selesai · 48s"**
-- Meeting: **"Standup mulai 5 menit lagi"** · [Join]
-- Port: **"localhost:5173 siap · web-admin"**
-- CI: **"CI gagal: build · feat/login"** / **"CI lulus · 6m"**
-- CPU: **"node memakai 180% CPU · 2 menit"** · [Hentikan]
-- Shelf kosong: **"Tarik file ke sini untuk menyimpannya sementara"**
-- Discord voice: **"#ngoding · 5 orang"** · [Mute] [Deafen] [Keluar] / "Kamu di-mute"
-- Discord DM: **"Raka di #tugas-akhir"** / "ada yang mau review slide?"
-- Discord belum tersambung: **"Sambungkan Discord"** / "Buat app Discord gratis sekali saja (± 2 menit), lalu tempel Client ID-nya di sini."
-- Notifikasi gabungan: **"WhatsApp · 3 pesan baru"**
-- Panggilan: **"Ibu menelepon"** · [Tolak] [Terima]
-- Charging: **"Mengisi · 64% · penuh dalam 1 j 20 m"** / baterai lemah: **"Baterai 10% · colok charger"**
-- AirPods: **"AirPods Pro tersambung"** · "L 80% · R 75% · Case 40%"
-- Privasi: **"Kamera sedang dipakai"** / "Zoom memakai mikrofon"
-- Keep awake: **"Mac tetap menyala · 45 menit lagi"**
-- Color picker: **"#FF6B35 disalin"**
-- Download: **"Mengunduh Figma.dmg · 62%"** / "Figma.dmg selesai" · [Tampilkan] [Ke Shelf]
-- Putar cepat kosong: **"Tempel link playlist Spotify untuk memutarnya dari sini"**
-- Lirik tidak ada: (bagian lirik disembunyikan, tanpa pesan)
-- Clipboard rahasia: **"Disembunyikan · terhapus otomatis dalam 2 menit"**
-- Mode Presentasi: **"Mode Presentasi aktif · detail disembunyikan"**
-- Face Unlock peringatan: **"Ini bukan Face ID"** / "Mac tidak punya kamera 3D. Wajah di video bisa membuka Mac-mu. Pakai hanya di tempat tepercaya; di tempat umum, pakai Touch ID."
-- Face Unlock berhasil: **"Dibuka dengan wajah"** · gagal: **"Face Unlock dimatikan. Buka kunci manual sekali untuk mengaktifkannya lagi."**
-- Touch ID sudo: **"Pakai Touch ID untuk sudo"** / "Jalankan perintah ini sekali di terminal. Butuh password admin."
-- Onboarding hook: **"Pantau Claude Code dari notch"** / "Dylan akan menambahkan beberapa hook ke `~/.claude/settings.json`. Hook lain milikmu tidak diubah, dan file lama di-backup."
+Semua teks UI tersedia dalam dua bahasa (FR-18). Tombol ditulis dalam `[kurung]`. Untuk Claude Design: mockup utama memakai Bahasa Indonesia; sertakan minimal D3, D7, D25, dan D30 dalam versi English untuk mengecek panjang teks.
+
+| Konteks | Bahasa Indonesia | English |
+|---|---|---|
+| Agent bekerja | **"Claude mengedit AuthService.swift"** / **"Claude menjalankan `npm test`"** | **"Claude is editing AuthService.swift"** / **"Claude is running `npm test`"** |
+| Butuh izin | **"Claude butuh izin"** / "Bash: `npm install zod`" · [Tolak] [Izinkan] [Buka terminal] | **"Claude needs permission"** / "Bash: `npm install zod`" · [Deny] [Allow] [Open terminal] |
+| Menunggu input | **"Claude menunggu jawabanmu"** | **"Claude is waiting for you"** |
+| Agent selesai / gagal | **"Selesai · 4m 12s · +120 −8"** / **"Claude berhenti karena error"** | **"Done · 4m 12s · +120 −8"** / **"Claude stopped with an error"** |
+| Command | **"npm test berjalan · 1:23"** / **"npm test gagal · exit 1 · 2m 13s"** / **"npm run build selesai · 48s"** | **"npm test running · 1:23"** / **"npm test failed · exit 1 · 2m 13s"** / **"npm run build done · 48s"** |
+| Meeting | **"Standup mulai 5 menit lagi"** · [Join] | **"Standup starts in 5 min"** · [Join] |
+| Port | **"localhost:5173 siap · web-admin"** | **"localhost:5173 is ready · web-admin"** |
+| CI | **"CI gagal: build · feat/login"** / **"CI lulus · 6m"** | **"CI failed: build · feat/login"** / **"CI passed · 6m"** |
+| CPU | **"node memakai 180% CPU · 2 menit"** · [Hentikan] | **"node is using 180% CPU · 2 min"** · [Stop] |
+| Shelf kosong | **"Tarik file ke sini untuk menyimpannya sementara"** | **"Drop files here to keep them for later"** |
+| Discord voice | **"#ngoding · 5 orang"** · [Mute] [Deafen] [Keluar] / "Kamu di-mute" | **"#coding · 5 people"** · [Mute] [Deafen] [Leave] / "You're muted" |
+| Discord DM | **"Raka di #tugas-akhir"** / "ada yang mau review slide?" | **"Raka in #final-project"** / "anyone want to review the slides?" |
+| Discord belum tersambung | **"Sambungkan Discord"** / "Buat app Discord gratis sekali saja (± 2 menit), lalu tempel Client ID-nya di sini." | **"Connect Discord"** / "Create a free Discord app once (about 2 minutes), then paste its Client ID here." |
+| Notifikasi gabungan | **"WhatsApp · 3 pesan baru"** | **"WhatsApp · 3 new messages"** |
+| Panggilan | **"Ibu menelepon"** · [Tolak] [Terima] | **"Mom is calling"** · [Decline] [Accept] |
+| Charging / baterai lemah | **"Mengisi · 64% · penuh dalam 1 j 20 m"** / **"Baterai 10% · colok charger"** | **"Charging · 64% · full in 1 h 20 m"** / **"Battery 10% · plug in charger"** |
+| AirPods | **"AirPods Pro tersambung"** · "L 80% · R 75% · Case 40%" | **"AirPods Pro connected"** · "L 80% · R 75% · Case 40%" |
+| Privasi | **"Kamera sedang dipakai"** / "Zoom memakai mikrofon" | **"Camera in use"** / "Zoom is using the microphone" |
+| Keep awake | **"Mac tetap menyala · 45 menit lagi"** | **"Keeping Mac awake · 45 min left"** |
+| Color picker | **"#FF6B35 disalin"** | **"#FF6B35 copied"** |
+| Download | **"Mengunduh Figma.dmg · 62%"** / "Figma.dmg selesai" · [Tampilkan] [Ke Shelf] | **"Downloading Figma.dmg · 62%"** / "Figma.dmg finished" · [Show] [To Shelf] |
+| Putar cepat kosong | **"Tempel link playlist Spotify untuk memutarnya dari sini"** | **"Paste a Spotify playlist link to play it from here"** |
+| Lirik tidak ada | (bagian lirik disembunyikan, tanpa pesan) | (lyrics section hidden, no message) |
+| Clipboard rahasia | **"Disembunyikan · terhapus otomatis dalam 2 menit"** | **"Hidden · auto-deletes in 2 min"** |
+| Mode Presentasi | **"Mode Presentasi aktif · detail disembunyikan"** | **"Presentation Mode on · details hidden"** |
+| Face Unlock peringatan | **"Ini bukan Face ID"** / "Mac tidak punya kamera 3D. Wajah di video bisa membuka Mac-mu. Pakai hanya di tempat tepercaya; di tempat umum, pakai Touch ID." | **"This is not Face ID"** / "Your Mac has no 3D camera. A video of your face can unlock it. Use this only in trusted places; in public, use Touch ID." |
+| Face Unlock berhasil / gagal | **"Dibuka dengan wajah"** / **"Face Unlock dimatikan. Buka kunci manual sekali untuk mengaktifkannya lagi."** | **"Unlocked with your face"** / **"Face Unlock turned off. Unlock manually once to turn it back on."** |
+| Touch ID sudo | **"Pakai Touch ID untuk sudo"** / "Jalankan perintah ini sekali di terminal. Butuh password admin." | **"Use Touch ID for sudo"** / "Run this command once in Terminal. Requires your admin password." |
+| Onboarding hook | **"Pantau Claude Code dari notch"** / "Dylan akan menambahkan beberapa hook ke `~/.claude/settings.json`. Hook lain milikmu tidak diubah, dan file lama di-backup." | **"Watch Claude Code from the notch"** / "Dylan will add a few hooks to `~/.claude/settings.json`. Your other hooks stay untouched, and the old file is backed up." |
+| Pilih bahasa (onboarding) | **"Pilih bahasa"** · [Ikuti sistem] [Bahasa Indonesia] [English] | **"Choose language"** · [Use system language] [Bahasa Indonesia] [English] |
+| Ganti bahasa butuh restart | **"Bahasa diganti. Buka ulang Dylan sekarang?"** · [Nanti] [Buka ulang] | **"Language changed. Relaunch Dylan now?"** · [Later] [Relaunch] |
 
 ## 3.5 Output yang Diharapkan dari Claude Design
 
@@ -1052,7 +1067,7 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 
 > Kerjakan **berurutan**. Tiap task selesai bila acceptance criteria (AC) terpenuhi dan `./scripts/build.sh` berhasil. Logika murni (ActivityCenter, geometri, parser hook, merge settings, detector, filter command, link meeting, parser lsof, frame Discord, parser LRC, download watcher, profil) wajib punya unit test. Task bertanda [Dev] hanya untuk Mode Developer. Bagian yang butuh hardware atau izin diverifikasi lewat checklist Bagian 5.
 >
-> Sediakan dua alat debug sejak awal: `--snapshot <dir>` (render semua state D2–D36 ke PNG) dan `dylan debug emit <fixture>` (suntik event palsu).
+> Sediakan dua alat debug sejak awal: `--snapshot <dir> [--lang id|en]` (render semua state D2–D36 ke PNG, per bahasa) dan `dylan debug emit <fixture>` (suntik event palsu).
 
 ## Phase 0 — Spike (wajib sebelum UI lengkap)
 
@@ -1081,7 +1096,7 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 | **T1.10** Meeting | EventKit, link meeting, countdown, Join | AC §F6; unit test parser link |
 | **T1.11** Timer/Pomodoro | §F7 | Tetap akurat setelah sleep 5 menit |
 | **T1.12** Mode Presentasi | §F12 + uji `sharingType` | Hasil uji Zoom/Meet di `docs/presentation-mode.md` |
-| **T1.13** Settings, onboarding, login item, menu bar | §F14, D1, D16, D17 | Setting tersimpan antar restart; onboarding bisa dilewati |
+| **T1.13** Settings, onboarding, bahasa, login item, menu bar | §F14, FR-18, D1, D16, D17; String Catalog id + en untuk semua copy §3.4 | Setting tersimpan antar restart; onboarding bisa dilewati; tidak ada string yang belum diterjemahkan (cek `xcstrings` + snapshot English) |
 | **T1.14** Profil Umum/Developer | FR-17: `Profile.swift` menentukan provider, tab, izin, dan langkah onboarding yang aktif | Unit test; profil Umum tidak pernah menjalankan provider [Dev] atau meminta izinnya |
 | **T1.15** Baterai & charging | FR-70, D30 | Colok/cabut charger tampil < 1 s; peringatan 20%/10% |
 | **T1.16** AirPods & Bluetooth | FR-44, D31, sesuai keputusan T0.6 | Tersambung/terputus tampil < 2 s |
@@ -1165,6 +1180,13 @@ persetujuan saya.
 - [ ] Video YouTube fullscreen: notch tersembunyi, tapi P0 tetap muncul.
 - [ ] Sleep/wake, ganti Space, ubah resolusi: posisi tetap benar.
 - [ ] CPU Dylan < 1% selama 1 jam idle (Activity Monitor); memori < 150 MB.
+
+### Bahasa
+- [ ] macOS berbahasa Indonesia → Dylan otomatis Indonesia; macOS berbahasa Inggris → English.
+- [ ] Settings → Bahasa → English: notch, Settings, menu bar, dan onboarding berganti; aktivitas yang berjalan tetap utuh (setelah buka ulang bila diminta).
+- [ ] Durasi dan tanggal mengikuti bahasa ("1 j 20 m" vs. "1 h 20 m", "Selasa" vs. "Tuesday").
+- [ ] Tidak ada teks Indonesia yang tertinggal di mode English, dan sebaliknya (cek semua snapshot D2–D36).
+- [ ] Teks English yang lebih panjang tidak terpotong jelek di Compact/Peek.
 
 ### Profil
 - [ ] Onboarding profil Umum: tidak ada istilah developer, tidak ada permintaan izin untuk fitur [Dev], tab Agents/Dev tidak muncul.
