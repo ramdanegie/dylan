@@ -25,6 +25,7 @@ func usage() -> Never {
       dylan run -- <command…>           run as an activity; passes the exit code through
       dylan shell-init zsh              print the zsh integration
       dylan hook claude | codex         called by Claude Code hooks / Codex notify
+      dylan hook cursor | opencode      called by Cursor hooks / the OpenCode plugin
       dylan mcp                         MCP server (stdio) with notify, activity, shelf_add
       dylan doctor                      check the app, socket, hooks and shell integration
       dylan debug emit <file.json>      send a fake hook payload (testing)
@@ -92,6 +93,16 @@ func hook(source: String) -> Never {
         if let payload = try? JSONDecoder().decode(JSONValue.self, from: raw) {
             send(.hook(source: "codex", env: terminalEnv(), payload: HookPayload.slimCodex(payload)), timeout: 0.2)
         }
+        exit(0)
+    }
+    // Cursor / OpenCode (FR-34): observation only, translated into the Claude shape.
+    if source == "cursor" || source == "opencode" {
+        let payload = try? JSONDecoder().decode(JSONValue.self, from: FileHandle.standardInput.readDataToEndOfFile())
+        if let payload, let t = source == "cursor" ? AgentAdapter.cursor(payload) : AgentAdapter.opencode(payload) {
+            send(.hook(source: source, env: terminalEnv(), payload: HookPayload.slim(t)), timeout: 0.2)
+        }
+        // Cursor parses stdout; this is printed whether or not Dylan is running.
+        if source == "cursor" { print(AgentAdapter.cursorOutput(event: payload?["hook_event_name"]?.string)) }
         exit(0)
     }
     // Fail-open: any problem → exit 0 without output so Claude Code continues normally.

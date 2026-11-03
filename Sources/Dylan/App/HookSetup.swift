@@ -98,18 +98,51 @@ enum HookSetup {
         return (p, codexURL)
     }
 
-    /// Backup + re-check + atomic write, like settings.json.
-    static func applyCodex(_ p: Preview) throws {
+    static func applyCodex(_ p: Preview) throws { try applyFile(p, to: codexURL) }
+
+    /// Backup + re-check + atomic write, like settings.json. Empty content removes the file (a plugin we own).
+    static func applyFile(_ p: Preview, to url: URL) throws {
         let fm = FileManager.default
-        guard (try? Data(contentsOf: codexURL)) == p.base else { throw SetupError.changedSinceReview }
-        let target = codexURL.resolvingSymlinksInPath()
+        guard (try? Data(contentsOf: url)) == p.base else { throw SetupError.changedSinceReview }
+        let target = url.resolvingSymlinksInPath()
         try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         if fm.fileExists(atPath: target.path) {
-            let b = target.deletingLastPathComponent().appendingPathComponent("config.toml.dylan-backup")
+            let b = target.deletingLastPathComponent().appendingPathComponent(target.lastPathComponent + ".dylan-backup")
             try? fm.removeItem(at: b)
             try fm.copyItem(at: target, to: b)
         }
+        if p.newData.isEmpty { try? fm.removeItem(at: target); return }
         try p.newData.write(to: target, options: .atomic)
+    }
+
+    // MARK: Cursor & OpenCode (FR-34)
+
+    static var cursorURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cursor/hooks.json") }
+    static var cursorInstalled: Bool { AgentAdapter.cursorInstalled(try? Data(contentsOf: cursorURL)) }
+    static var cursorAvailable: Bool {
+        Tool.path("cursor-agent") != nil || FileManager.default.fileExists(atPath: cursorURL.deletingLastPathComponent().path)
+    }
+
+    static func previewCursor(install: Bool) throws -> Preview {
+        let old = try? Data(contentsOf: cursorURL)
+        if old != nil, (try? AgentAdapter.cursorRootIsValid(old)) != true { throw SetupError.unreadable("~/.cursor/hooks.json") }
+        let new = install ? try AgentAdapter.installCursor(old, command: AgentAdapter.cursorCommand(cliPath: cliPath))
+                          : try AgentAdapter.uninstallCursor(old ?? Data())
+        return Preview(diff: LineDiff.diff(old: old.map { String(decoding: $0, as: UTF8.self) } ?? "", new: String(decoding: new, as: UTF8.self)),
+                       newData: new, summary: install ? L("agentsOther.summaryInstall", "Cursor") : L("agentsOther.summaryRemove", "Cursor"), base: old)
+    }
+
+    static var opencodeURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/opencode/plugins/dylan.js") }
+    static var opencodeInstalled: Bool { FileManager.default.fileExists(atPath: opencodeURL.path) }
+    static var opencodeAvailable: Bool {
+        Tool.path("opencode") != nil || FileManager.default.fileExists(atPath: opencodeURL.deletingLastPathComponent().deletingLastPathComponent().path)
+    }
+
+    static func previewOpenCode(install: Bool) -> Preview {
+        let old = try? Data(contentsOf: opencodeURL)
+        let new = install ? AgentAdapter.opencodePlugin(cliPath: cliPath) : ""
+        return Preview(diff: LineDiff.diff(old: old.map { String(decoding: $0, as: UTF8.self) } ?? "", new: new), newData: Data(new.utf8),
+                       summary: install ? L("agentsOther.summaryInstall", "OpenCode") : L("agentsOther.summaryRemove", "OpenCode"), base: old)
     }
 
     static var mcpCommand: String {

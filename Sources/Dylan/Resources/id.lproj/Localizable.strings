@@ -680,3 +680,7 @@
 "meetingControls.camera" = "Kamera";
 "meetingControls.share" = "Share";
 "meetingControls.inCall" = "Sedang di %@";
+"agentsOther.title" = "Agent lain";
+"agentsOther.body" = "Cursor dan OpenCode tampil di notch seperti Claude Code. Hanya memantau: Dylan tidak pernah menjawab izin agent lain.";
+"agentsOther.summaryInstall" = "Tambah hook Dylan untuk %@";
+"agentsOther.summaryRemove" = "Lepas hook Dylan dari %@";

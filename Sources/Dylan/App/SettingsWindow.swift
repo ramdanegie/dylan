@@ -387,6 +387,9 @@ struct AgentSettings: View {
     @StateBox private var preview: HookSetup.Preview?
     @StateBox private var codexPreview: HookSetup.Preview?
     @StateBox private var codexInstalled = HookSetup.codexInstalled
+    @StateBox private var otherPreview: (HookSetup.Preview, URL)?
+    @StateBox private var cursorInstalled = HookSetup.cursorInstalled
+    @StateBox private var opencodeInstalled = HookSetup.opencodeInstalled
     @StateBox private var status = HookSetup.status()
     @StateBox private var message: String?
     private var model: AppModel { AppModel.shared }
@@ -408,6 +411,27 @@ struct AgentSettings: View {
             }
             Button(codexInstalled ? L("hooks.uninstall") : L("codex.install")) {
                 do { (codexPreview, _) = try HookSetup.previewCodex(install: !codexInstalled) } catch { message = error.localizedDescription }
+            }
+        }
+        Section(L("agentsOther.title")) {
+            SwiftUI.Text(L("agentsOther.body")).font(.caption).foregroundStyle(.secondary)
+            LabeledContent("Cursor · ~/.cursor/hooks.json") {
+                HStack {
+                    SwiftUI.Text(cursorInstalled ? L("hooks.installed") : L("hooks.notInstalled")).foregroundStyle(cursorInstalled ? .green : .secondary)
+                    Button(cursorInstalled ? L("hooks.uninstall") : L("hooks.install")) {
+                        do { otherPreview = (try HookSetup.previewCursor(install: !cursorInstalled), HookSetup.cursorURL) } catch { message = error.localizedDescription }
+                    }
+                    .disabled(!cursorInstalled && !HookSetup.cursorAvailable)
+                }
+            }
+            LabeledContent("OpenCode · ~/.config/opencode/plugins") {
+                HStack {
+                    SwiftUI.Text(opencodeInstalled ? L("hooks.installed") : L("hooks.notInstalled")).foregroundStyle(opencodeInstalled ? .green : .secondary)
+                    Button(opencodeInstalled ? L("hooks.uninstall") : L("hooks.install")) {
+                        otherPreview = (HookSetup.previewOpenCode(install: !opencodeInstalled), HookSetup.opencodeURL)
+                    }
+                    .disabled(!opencodeInstalled && !HookSetup.opencodeAvailable)
+                }
             }
         }
         Section(L("mcp.title")) {
@@ -435,6 +459,16 @@ struct AgentSettings: View {
                 }
                 preview = nil
                 status = HookSetup.status()
+            }
+        }
+        .sheet(item: Binding(get: { otherPreview.map { IdentifiedPreview(p: $0.0) } }, set: { if $0 == nil { otherPreview = nil } })) { p in
+            DiffSheet(preview: p.p, title: otherPreview.map { "~/" + $0.1.path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path + "/", with: "") } ?? "") { approved in
+                if approved, let url = otherPreview?.1 {
+                    do { try HookSetup.applyFile(p.p, to: url); message = L("hooks.written") } catch { message = error.localizedDescription }
+                }
+                otherPreview = nil
+                cursorInstalled = HookSetup.cursorInstalled
+                opencodeInstalled = HookSetup.opencodeInstalled
             }
         }
         .sheet(item: Binding(get: { codexPreview.map(IdentifiedPreview.init) }, set: { codexPreview = $0?.p })) { p in

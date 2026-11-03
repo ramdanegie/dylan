@@ -26,6 +26,8 @@ public struct ClaudeHookEvent: Equatable, Sendable {
     public var notificationType: String?
     public var message: String?
     public var lastAssistantMessage: String?
+    /// "Claude", or the agent an adapter translated the event from ("Cursor", "OpenCode"; FR-34).
+    public var agent: String
 
     /// Returns nil for events Dylan does not handle or payloads without a session.
     public init?(payload: JSONValue) {
@@ -38,6 +40,7 @@ public struct ClaudeHookEvent: Equatable, Sendable {
         notificationType = payload["notification_type"]?.string
         message = payload["message"]?.string
         lastAssistantMessage = payload["last_assistant_message"]?.string
+        agent = payload["dylan_agent"]?.string ?? "Claude"
         let input = payload["tool_input"]
         toolDetail = Self.detail(tool: toolName, input: input)
         if name == .postToolUse, let t = toolName, ["Edit", "Write", "MultiEdit", "NotebookEdit"].contains(t) {
@@ -79,6 +82,7 @@ public struct AgentSessions: Sendable, Equatable {
         public var id: String
         public var cwd: String?
         public var project: String
+        public var agent = "Claude"
         /// `__CFBundleIdentifier` of the terminal/editor the session runs in.
         public var appBundleID: String?
         public var termProgram: String?
@@ -96,7 +100,7 @@ public struct AgentSessions: Sendable, Equatable {
                                projectName: (String) -> String) {
         if e.name == .sessionEnd { sessions[e.sessionID] = nil; return }
         var s = sessions[e.sessionID] ?? Session(
-            id: e.sessionID, cwd: e.cwd, project: e.cwd.map(projectName) ?? "Claude",
+            id: e.sessionID, cwd: e.cwd, project: e.cwd.map(projectName) ?? e.agent, agent: e.agent,
             appBundleID: env["__CFBundleIdentifier"], termProgram: env["TERM_PROGRAM"], updatedAt: now)
         if let cwd = e.cwd, cwd != s.cwd { s.cwd = cwd; s.project = projectName(cwd) }
         if s.appBundleID == nil { s.appBundleID = env["__CFBundleIdentifier"] }
@@ -225,7 +229,7 @@ public enum ShortStat {
 public enum HookPayload {
     static let topLevel: Set<String> = [
         "hook_event_name", "session_id", "cwd", "tool_name", "tool_input", "notification_type",
-        "message", "title", "last_assistant_message", "source", "reason", "permission_mode",
+        "message", "title", "last_assistant_message", "source", "reason", "permission_mode", "dylan_agent",
     ]
     static let toolInput: Set<String> = ["file_path", "notebook_path", "command", "pattern", "url", "description"]
 

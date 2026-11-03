@@ -135,7 +135,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("widgets", .developer, [31], .v1_2, built: true),
         .init("codex", .developer, [32], .v1_2, built: true),
         .init("docker", .developer, [33], .v1_2, built: true),
-        .init("otherAgents", .developer, [34], .v1_2),
+        .init("otherAgents", .developer, [34], .v1_2, built: true),
         .init("terminal", .developer, [41], .v1_3),
         .init("mcp", .developer, [42], .v1_3, built: true),
     ]

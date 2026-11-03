@@ -410,7 +410,8 @@ final class AppModel {
                                  detail: L("codex.done", project) + " · " + TextRules.firstSentence(message),
                                  genericDetail: L("generic.agentDone"), url: env["__CFBundleIdentifier"].map { "app:" + $0 }, startedAt: now), now: now)
         case let .hook(source, env, payload):
-            guard source == "claude", features.isEnabled(.agents), let e = ClaudeHookEvent(payload: payload) else { break }
+            guard ["claude", "cursor", "opencode"].contains(source), features.isEnabled(.agents),
+                  let e = ClaudeHookEvent(payload: payload) else { break }
             applyAgentEvent(e, env: env, now: now)
         case let .permissionAsk(requestID, _, env, payload):
             handlePermissionAsk(requestID: requestID, env: env, payload: payload, connection: connection, now: now) { r in
@@ -501,8 +502,8 @@ final class AppModel {
         let d = DurationFormat.result(duration)
         var a = Activity(id: id, kind: .agent, priority: .p1, state: success ? .success : .failure,
                          symbol: success ? "checkmark" : "xmark", label: success ? L("compact.done") : L("compact.error"),
-                         value: success ? d : "", detail: success ? L("agent.done", s.project, d) : L("agent.failed"),
-                         genericDetail: success ? L("generic.agentDone") : L("agent.failed"), url: s.id, startedAt: now)
+                         value: success ? d : "", detail: Self.named(success ? L("agent.done", s.project, d) : L("agent.failed"), s.agent),
+                         genericDetail: Self.named(success ? L("generic.agentDone") : L("agent.failed"), s.agent), url: s.id, startedAt: now)
         a.endedAt = now
         center.post(a, now: now)
         agents.acknowledgeResult(sessionID: s.id)
@@ -512,7 +513,7 @@ final class AppModel {
             let out = Shell.run("/usr/bin/git", ["-C", cwd, "diff", "--shortstat", "HEAD"])
             await MainActor.run {
                 guard let stat = ShortStat.parse(out ?? ""), var a = AppModel.shared.center.activities[id] else { return }
-                a.detail = L("agent.doneDiff", s.project, d, DurationFormat.diff(added: stat.added, removed: stat.removed))
+                a.detail = Self.named(L("agent.doneDiff", s.project, d, DurationFormat.diff(added: stat.added, removed: stat.removed)), s.agent)
                 if let summary { a.detail += " · " + summary }
                 AppModel.shared.center.upsert(a)
             }
@@ -532,8 +533,8 @@ final class AppModel {
             a.label = L("compact.permission")
             a.value = active.count > 1 ? "\(permissions.count)" : TextRules.truncateTail(TextRules.commandShortName(detail ?? tool ?? ""), max: 12)
             let what = [tool, detail].compactMap { $0 }.joined(separator: " ")
-            a.detail = what.isEmpty ? L("agent.needsPermission") + " · " + p.project : what
-            a.genericDetail = L("generic.agentPermission")
+            a.detail = what.isEmpty ? Self.named(L("agent.needsPermission"), p.agent) + " · " + p.project : what
+            a.genericDetail = Self.named(L("generic.agentPermission"), p.agent)
             a.url = p.id
         } else if active.count > 1 {
             a.label = "\(active.count)"
@@ -545,8 +546,8 @@ final class AppModel {
             case .working(let tool, let detail):
                 a.label = tool ?? L("compact.working")
                 a.value = detail.map { TextRules.truncateMiddle($0, max: 13) } ?? ""
-                a.detail = agentSentence(tool: tool, detail: detail) + " · " + first.project
-                a.genericDetail = L("generic.agent")
+                a.detail = Self.named(agentSentence(tool: tool, detail: detail), first.agent) + " · " + first.project
+                a.genericDetail = Self.named(L("generic.agent"), first.agent)
             case .waitingInput:
                 // P1 shows 5 s and goes to history; it does not stay until Claude gets an answer.
                 guard !waitingNotified.contains(first.id) else { return }
@@ -554,8 +555,8 @@ final class AppModel {
                 a.priority = .p1
                 a.state = .info
                 a.label = L("compact.waiting")
-                a.detail = L("agent.waiting") + " · " + first.project
-                a.genericDetail = L("agent.waiting")
+                a.detail = Self.named(L("agent.waiting"), first.agent) + " · " + first.project
+                a.genericDetail = Self.named(L("agent.waiting"), first.agent)
                 a.url = first.id
                 center.post(a, now: now)
                 return
@@ -567,7 +568,13 @@ final class AppModel {
         center.upsert(a)
     }
 
-    private func agentSentence(tool: String?, detail: String?) -> String {
+    /// Agent strings name Claude; sessions from other agents (FR-34) get their own name. Brand names are
+    /// the same in both languages, so the swap is safe in id and en.
+    nonisolated static func named(_ text: String, _ agent: String) -> String {
+        agent == "Claude" ? text : text.replacingOccurrences(of: "Claude", with: agent)
+    }
+
+    func agentSentence(tool: String?, detail: String?) -> String {
         switch tool {
         case "Edit", "MultiEdit", "Write": return L("agent.editing", detail ?? "")
         case "Read": return L("agent.reading", detail ?? "")

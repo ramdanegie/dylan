@@ -640,7 +640,7 @@ struct PermissionCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "sparkle").foregroundStyle(DY.action)
-                SwiftUI.Text(L("agent.needsPermission")).font(DY.font(13, .semibold)).foregroundStyle(.white)
+                SwiftUI.Text(AppModel.named(L("agent.needsPermission"), session.agent)).font(DY.font(13, .semibold)).foregroundStyle(.white)
                 SwiftUI.Text(model.presentationMode ? appName(session) : "\(session.project) · \(appName(session))").font(DY.font(11.5, .regular)).foregroundStyle(DY.fg2)
                 Spacer()
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
@@ -698,7 +698,9 @@ struct SessionRow: View {
         }
     }
 
-    private var line: String {
+    private var line: String { AppModel.named(rawLine, session.agent) }
+
+    private var rawLine: String {
         if model.presentationMode { return L("generic.agent") }
         switch session.status {
         case .working(let tool, let detail): return [tool, detail].compactMap { $0 }.joined(separator: " · ")

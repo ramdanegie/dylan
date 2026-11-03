@@ -680,3 +680,7 @@
 "meetingControls.camera" = "Camera";
 "meetingControls.share" = "Share";
 "meetingControls.inCall" = "In a %@ call";
+"agentsOther.title" = "Other agents";
+"agentsOther.body" = "Cursor and OpenCode show in the notch like Claude Code. Watch only: Dylan never answers another agent’s permission prompts.";
+"agentsOther.summaryInstall" = "Add the Dylan hook for %@";
+"agentsOther.summaryRemove" = "Remove the Dylan hook from %@";
