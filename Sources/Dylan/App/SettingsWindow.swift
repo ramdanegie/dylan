@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, devices, agents, terminal, about
+    case general, appearance, liveActivity, media, devices, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -35,6 +35,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .devices: return "battery.100percent.bolt"
         case .agents: return "sparkle"
         case .terminal: return "terminal"
+        case .features: return "checklist"
         case .about: return "info.circle"
         }
     }
@@ -73,6 +74,7 @@ struct SettingsView: View {
         case .devices: FeatureToggles(features: [.battery, .bluetooth, .privacy])
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
+        case .features: FeatureSupportSettings()
         case .about: AboutSettings()
         }
     }
@@ -292,6 +294,154 @@ struct TerminalSettings: View {
                     .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
             }
         }
+    }
+}
+
+/// Settings → Supported features (design D37): search, filter with counts, Developer toggle,
+/// groups like the Settings sidebar. Status comes from `FeatureSupport` (what this build ships).
+struct FeatureSupportSettings: View {
+    enum Filter: Hashable { case all, available, soon, experimental }
+    @StateBox private var filter = Filter.all
+    @StateBox private var query = ""
+    private var model: AppModel { AppModel.shared }
+    private let os = ProcessInfo.processInfo.operatingSystemVersion
+
+    private func status(_ f: FeatureSupport) -> FeatureSupport.Status { f.status(macOSMajor: os.majorVersion) }
+    private func name(_ f: FeatureSupport) -> String { L10n.string("support.\(f.id)") }
+    private func desc(_ f: FeatureSupport) -> String { L10n.string("support.\(f.id).desc") }
+
+    private func matchesQuery(_ f: FeatureSupport) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        return q.isEmpty || (name(f) + " " + desc(f)).lowercased().contains(q)
+    }
+
+    private func matchesFilter(_ f: FeatureSupport) -> Bool {
+        switch (filter, status(f)) {
+        case (.all, _): return true
+        case (.available, .available): return true
+        case (.soon, .soon), (.soon, .planned): return true
+        case (.experimental, .experimental): return true
+        default: return false
+        }
+    }
+
+    /// Search + profile apply to the counts; the filter does not (same as the design).
+    private var searched: [FeatureSupport] {
+        FeatureSupport.all.filter { matchesQuery($0) && (model.isDeveloper || !$0.isDeveloper) }
+    }
+
+    private var hiddenDeveloper: Int {
+        model.isDeveloper || filter == .experimental ? 0 : FeatureSupport.all.filter { $0.isDeveloper && matchesQuery($0) }.count
+    }
+
+    var body: some View {
+        let visible = FeatureSupport.all.filter { model.isDeveloper || !$0.isDeveloper }
+        Section {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SwiftUI.Text(L("settings.section.features")).font(.title3.weight(.semibold))
+                    SwiftUI.Text(L("support.version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev",
+                                   "\(os.majorVersion).\(os.minorVersion)"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                SwiftUI.Text(L("support.devToggle")).font(.callout)
+                Toggle(L("support.devToggle"), isOn: Binding(get: { model.isDeveloper },
+                                                             set: { model.features.profile = $0 ? .developer : .general }))
+                    .toggleStyle(.switch).controlSize(.small).labelsHidden()
+            }
+            TextField("", text: $query, prompt: SwiftUI.Text(L("support.search")))
+                .textFieldStyle(.roundedBorder).labelsHidden()
+            Picker("", selection: $filter) {
+                SwiftUI.Text("\(L("support.filter.all")) \(searched.count)").tag(Filter.all)
+                SwiftUI.Text("\(L("support.filter.available")) \(searched.filter { status($0) == .available }.count)").tag(Filter.available)
+                SwiftUI.Text("\(L("support.filter.soon")) \(searched.filter { [.soon, .planned].contains(status($0)) }.count)").tag(Filter.soon)
+                SwiftUI.Text("\(L("support.filter.experimental")) \(searched.filter { status($0) == .experimental }.count)").tag(Filter.experimental)
+            }
+            .pickerStyle(.segmented).labelsHidden()
+            SwiftUI.Text(L("support.summary", visible.filter { status($0) == .available }.count,
+                           visible.filter { [.soon, .planned].contains(status($0)) }.count,
+                           visible.filter { status($0) == .experimental }.count))
+                .font(.caption).foregroundStyle(.secondary)
+        }
+
+        let groups = FeatureSupport.Group.allCases.compactMap { g -> (FeatureSupport.Group, [FeatureSupport])? in
+            let items = searched.filter { $0.group == g && matchesFilter($0) }
+            return items.isEmpty ? nil : (g, items)
+        }
+        ForEach(groups, id: \.0) { g, items in
+            Section {
+                ForEach(items) { row($0) }
+            } header: {
+                HStack {
+                    SwiftUI.Text(groupTitle(g))
+                    Spacer()
+                    SwiftUI.Text(L("support.groupCount", items.filter { status($0) == .available }.count, items.count))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        if hiddenDeveloper > 0 {
+            Section {
+                HStack {
+                    Image(systemName: "terminal").frame(width: 20)
+                    VStack(alignment: .leading, spacing: 2) {
+                        SwiftUI.Text(L("support.devHidden", hiddenDeveloper))
+                        SwiftUI.Text(L("support.devHiddenBody")).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(L("support.useDeveloper")) { model.features.profile = .developer }
+                }
+            }
+        }
+        if groups.isEmpty && hiddenDeveloper == 0 {
+            Section { SwiftUI.Text(L("support.empty", query)).foregroundStyle(.secondary) }
+        }
+        Section { SwiftUI.Text(L("support.footer")).font(.caption).foregroundStyle(.secondary) }
+    }
+
+    private func groupTitle(_ g: FeatureSupport.Group) -> String {
+        switch g {
+        case .notch: return L("support.group.notch")
+        case .media: return L("support.group.media")
+        case .calendar: return L("support.group.calendar")
+        case .devices: return L("support.group.devices")
+        case .communication: return L("support.group.communication")
+        case .files: return L("support.group.files")
+        case .utilities: return L("support.group.utilities")
+        case .security: return L("support.group.security")
+        case .developer: return L("support.group.developer")
+        }
+    }
+
+    private func row(_ f: FeatureSupport) -> some View {
+        let st = status(f)
+        return HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                SwiftUI.Text(name(f)).foregroundStyle(st == .available ? .primary : .secondary)
+                SwiftUI.Text(desc(f)).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if f.hasRequirement {
+                SwiftUI.Text(L10n.string("support.\(f.id).req")).font(.caption).foregroundStyle(.secondary)
+            }
+            badge(st)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Colours from the design: green available, grey next/planned, amber experimental.
+    private func badge(_ st: FeatureSupport.Status) -> some View {
+        let (text, fg, bg): (String, Color, Color) = switch st {
+        case .available: (L("support.status.available"), Color(red: 0.10, green: 0.50, blue: 0.22), Color(red: 0.89, green: 0.96, blue: 0.91))
+        case .soon: (L("support.status.soon"), Color(white: 0.23), Color(red: 0.93, green: 0.92, blue: 0.91))
+        case .planned: (L("support.status.planned"), Color(white: 0.43), Color(red: 0.95, green: 0.95, blue: 0.93))
+        case .experimental: (L("support.status.experimental"), Color(red: 0.48, green: 0.35, blue: 0), Color(red: 1, green: 0.96, blue: 0.8))
+        case .unsupported: (L("support.status.unsupported"), Color(white: 0.43), Color(red: 0.95, green: 0.95, blue: 0.93))
+        }
+        return SwiftUI.Text(text).font(.caption.weight(.semibold)).foregroundStyle(fg)
+            .padding(.horizontal, 8).padding(.vertical, 2)
+            .background(Capsule().fill(bg))
     }
 }
 

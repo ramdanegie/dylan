@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import DylanCore
 
 /// FR-18 AC: no untranslated strings. Both languages have the same keys and the same format arguments,
 /// and every `L("…")` key used in the app exists.
@@ -43,5 +44,33 @@ import Testing
             }
         }
         #expect(missing.isEmpty, "\(missing)")
+    }
+
+    @Test func featureCatalogCoversPRD() throws {
+        let prd = try String(contentsOf: Self.root.appendingPathComponent("PRD.md"), encoding: .utf8)
+        let re = try NSRegularExpression(pattern: #"(?m)^\| (FR-\d+) \|"#)
+        let inPRD = Set(re.matches(in: prd, range: NSRange(prd.startIndex..., in: prd)).map { String(prd[Range($0.range(at: 1), in: prd)!]) })
+        let covered = Set(FeatureSupport.all.flatMap(\.requirements))
+        #expect(!inPRD.isEmpty)
+        #expect(covered == inPRD, "missing: \(inPRD.subtracting(covered).sorted()) extra: \(covered.subtracting(inPRD).sorted())")
+        #expect(Set(FeatureSupport.all.map(\.id)).count == FeatureSupport.all.count)
+        for lang in ["id", "en"] {
+            let strings = try Self.strings(lang)
+            for f in FeatureSupport.all {
+                #expect(strings["support.\(f.id)"] != nil && strings["support.\(f.id).desc"] != nil, "\(lang): \(f.id)")
+                #expect((strings["support.\(f.id).req"] != nil) == f.hasRequirement, "\(lang): \(f.id).req")
+            }
+        }
+    }
+
+    @Test func featureStatusRules() {
+        let byID = Dictionary(uniqueKeysWithValues: FeatureSupport.all.map { ($0.id, $0) })
+        #expect(byID["faceUnlock"]?.status(macOSMajor: 27) == .experimental)
+        #expect(byID["lockScreen"]?.status(macOSMajor: 27) == .experimental)
+        #expect(byID["claudeSessions"]?.status(macOSMajor: 27) == .available)
+        #expect(byID["discordVoice"]?.status(macOSMajor: 27) == .soon)      // next release
+        #expect(byID["quickPlay"]?.status(macOSMajor: 27) == .soon)         // unfinished v1.0 scope
+        #expect(byID["weather"]?.status(macOSMajor: 27) == .planned)
+        #expect(FeatureSupport.all.filter { $0.built }.allSatisfy { $0.release <= .v1_1 })
     }
 }
