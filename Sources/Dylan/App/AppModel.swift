@@ -142,6 +142,14 @@ final class AppModel {
     }
     var keepAwake: KeepAwake?
     var mirrorOn = false
+    /// Overlay HUD (design D29): replaces the ear contents for 1.5 s, does not take a Duo slot.
+    var hud: (symbol: String, value: Double, until: Date)?
+    var accentFromArtwork: Bool { didSet { defaults.set(accentFromArtwork, forKey: "accentFromArtwork"); mediaAccent = accentFromArtwork ? DY.accent(media?.artwork) : DY.fg } }
+    var glassPill: Bool { didSet { defaults.set(glassPill, forKey: "glassPill") } }
+    var smallCompact: Bool { didSet { defaults.set(smallCompact, forKey: "smallCompact") } }
+    /// Bundle IDs that hide the notch while in front (games, Keynote…).
+    var hideForApps: [String] { didSet { defaults.set(hideForApps, forKey: "hideForApps") } }
+    var hiddenForFrontApp = false
     var scratchpadOpen = false
     @ObservationIgnored private var keepAwakeAssertion: IOPMAssertionID = 0
 
@@ -176,6 +184,10 @@ final class AppModel {
         discordMuteKey = d.string(forKey: "discordMuteKey") ?? "⌃⇧M"
         discordDeafKey = d.string(forKey: "discordDeafKey") ?? "⌃⇧D"
         recentRepos = d.stringArray(forKey: "recentRepos") ?? []
+        accentFromArtwork = d.object(forKey: "accentFromArtwork") as? Bool ?? true
+        glassPill = d.bool(forKey: "glassPill")
+        smallCompact = d.bool(forKey: "smallCompact")
+        hideForApps = d.stringArray(forKey: "hideForApps") ?? []
         quickPlay = d.data(forKey: "quickPlay").flatMap { try? JSONDecoder().decode([QuickPlayItem].self, from: $0) } ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
@@ -253,6 +265,14 @@ final class AppModel {
     }
 
     func clipboardChanged() { clipboardRevision &+= 1 }
+
+    func showHUD(symbol: String, value: Double) {
+        hud = (symbol, min(1, max(0, value)), Date().addingTimeInterval(1.5))
+        let t = Timer(timeInterval: 1.6, repeats: false) { _ in
+            MainActor.assumeIsolated { if let h = AppModel.shared.hud, h.until <= Date() { AppModel.shared.hud = nil } }
+        }
+        RunLoop.main.add(t, forMode: .common)
+    }
 
     func openClipboard() {
         guard features.isEnabled(.clipboard) else { return }
@@ -849,7 +869,7 @@ final class AppModel {
     func mediaChanged(_ m: MediaState?) {
         let artworkChanged = m?.artworkKey != media?.artworkKey || (media?.artwork == nil && m?.artwork != nil)
         media = m
-        if artworkChanged { mediaAccent = DY.accent(m?.artwork) }
+        if artworkChanged { mediaAccent = accentFromArtwork ? DY.accent(m?.artwork) : DY.fg }
         LyricsProvider.shared.trackChanged(m)
         let now = Date()
         guard features.isEnabled(.media), let m, m.isPlaying else { removeIfPresent("media", now: now); return }

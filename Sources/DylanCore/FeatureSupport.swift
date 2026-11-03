@@ -68,7 +68,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("presentation", .notch, [16], .v1_0, built: true),
         .init("autoPresentation", .notch, [28], .v1_1, req: true),
         .init("pill", .notch, [27], .v1_1, built: true),
-        .init("themes", .notch, [78], .v1_1, req: true),
+        .init("themes", .notch, [78], .v1_1, built: true, req: true),
         .init("home", .notch, [14], .v1_0, built: true),
         .init("settings", .notch, [15], .v1_0, built: true),
         .init("profile", .notch, [17], .v1_0, built: true),
@@ -81,7 +81,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("lyrics", .media, [62], .v1_1, built: true, req: true),
         .init("audioOutput", .media, [61], .v1_1, built: true),
         .init("appVolume", .media, [84], .v1_1, req: true),
-        .init("hud", .media, [40], .v1_1, req: true),
+        .init("hud", .media, [40], .v1_1, built: true, req: true),
         .init("visualizer", .media, [63], .v1_3, req: true),
         .init("spotifyAccount", .media, [64], .v1_3, req: true),
         // Calendar & time

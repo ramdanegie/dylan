@@ -36,8 +36,10 @@ final class NotchController {
         guard let s = targetScreen() else {
             return NotchGeometry(screen: CGRect(x: 0, y: 0, width: 1512, height: 982), safeAreaTop: 32, leftAuxWidth: 663.5, rightAuxWidth: 663.5)
         }
-        return NotchGeometry(screen: s.frame, safeAreaTop: s.safeAreaInsets.top,
-                             leftAuxWidth: s.auxiliaryTopLeftArea?.width, rightAuxWidth: s.auxiliaryTopRightArea?.width)
+        var g = NotchGeometry(screen: s.frame, safeAreaTop: s.safeAreaInsets.top,
+                              leftAuxWidth: s.auxiliaryTopLeftArea?.width, rightAuxWidth: s.auxiliaryTopRightArea?.width)
+        if AppModel.shared.smallCompact { g.ear = 72 }
+        return g
     }
 
     func show() {
@@ -93,6 +95,9 @@ final class NotchController {
             wnc.addObserver(forName: name, object: nil, queue: .main) { _ in
                 MainActor.assumeIsolated {
                     NotchController.shared.checkFullscreen()
+                    let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+                    let hide = AppModel.shared.hideForApps.contains(front)
+                    if AppModel.shared.hiddenForFrontApp != hide { AppModel.shared.hiddenForFrontApp = hide }
                     // ⌘-Tab away from an open notch closes it, so typing goes to the new app.
                     if AppModel.shared.notchState == .expanded { NotchController.shared.collapse() }
                 }
@@ -121,6 +126,7 @@ final class NotchController {
             _ = AppModel.shared.notchState
             _ = AppModel.shared.selectedTab
             _ = AppModel.shared.fullscreen
+            _ = AppModel.shared.hiddenForFrontApp
             _ = AppModel.shared.center.urgentIDs
         } onChange: {
             Task { @MainActor in
@@ -132,7 +138,7 @@ final class NotchController {
 
     private func modelChanged() {
         let m = AppModel.shared
-        let hidden = m.fullscreen && m.center.urgentIDs.isEmpty && m.notchState != .expanded
+        let hidden = (m.fullscreen || m.hiddenForFrontApp) && m.center.urgentIDs.isEmpty && m.notchState != .expanded
         panel?.alphaValue = hidden ? 0 : 1
         // Take keyboard focus once, when opening; never again on later model changes (FR-3).
         if m.notchState == .expanded && lastState != .expanded {

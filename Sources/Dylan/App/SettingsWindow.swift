@@ -77,7 +77,7 @@ struct SettingsView: View {
             FeatureToggles(features: [.media, .lyrics, .meeting, .reminders, .timer])
             QuickPlaySettings()
         case .devices:
-            FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake])
+            FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake, .hud])
             KeepAwakeSettings()
         case .utilities: UtilitySettings()
         case .discord: DiscordSettings()
@@ -128,8 +128,32 @@ struct GeneralSettings: View {
 }
 
 struct AppearanceSettings: View {
+    @StateBox private var newApp = ""
     private var model: AppModel { AppModel.shared }
     var body: some View {
+        Section(L("theme.title")) {
+            Toggle(L("theme.accent"), isOn: Binding(get: { model.accentFromArtwork }, set: { model.accentFromArtwork = $0 }))
+            Toggle(L("theme.small"), isOn: Binding(get: { model.smallCompact }, set: { model.smallCompact = $0; NotchController.shared.relayout() }))
+            if #available(macOS 26, *) {
+                Toggle(L("theme.glass"), isOn: Binding(get: { model.glassPill }, set: { model.glassPill = $0 }))
+            } else {
+                LabeledContent(L("theme.glass"), value: L("support.status.unsupported"))
+            }
+            SwiftUI.Text(L("theme.blackNotch")).font(.caption).foregroundStyle(.secondary)
+        }
+        Section(L("theme.hideFor")) {
+            ForEach(model.hideForApps, id: \.self) { id in
+                HStack { SwiftUI.Text(id); Spacer(); Button(L("shelf.remove")) { model.hideForApps.removeAll { $0 == id } } }
+            }
+            HStack {
+                Picker(L("theme.pickApp"), selection: $newApp) {
+                    SwiftUI.Text("—").tag("")
+                    ForEach(NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }.compactMap(\.bundleIdentifier).sorted(), id: \.self) { SwiftUI.Text($0).tag($0) }
+                }
+                Button(L("media.quickPlayAdd")) { if !newApp.isEmpty, !model.hideForApps.contains(newApp) { model.hideForApps.append(newApp); newApp = "" } }
+                    .disabled(newApp.isEmpty)
+            }
+        }
         Section {
             Toggle(L("settings.duo"), isOn: Binding(get: { model.duo }, set: { model.duo = $0 }))
             LabeledContent(L("settings.hoverDelay")) {

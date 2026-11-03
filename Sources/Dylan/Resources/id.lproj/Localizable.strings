@@ -654,3 +654,13 @@
 "discord.toggleDeafen" = "Toggle deafen";
 "discord.simpleHint" = "Samakan dengan Settings → Keybinds di Discord. Butuh izin Accessibility.";
 "settings.section.discord" = "Discord";
+"feature.hud" = "HUD volume di notch";
+"feature.hud.hint" = "Tambahan; HUD bawaan macOS tetap muncul";
+"hud.volume" = "Volume %ld%%";
+"theme.title" = "Tema";
+"theme.accent" = "Warna aksen dari artwork";
+"theme.small" = "Compact kecil";
+"theme.glass" = "Pill Liquid Glass (layar tanpa notch)";
+"theme.blackNotch" = "Di notch fisik bentuknya selalu hitam supaya menyatu dengan hardware.";
+"theme.hideFor" = "Sembunyikan notch saat app ini di depan";
+"theme.pickApp" = "App";

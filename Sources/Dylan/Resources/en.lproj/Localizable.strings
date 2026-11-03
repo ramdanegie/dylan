@@ -654,3 +654,13 @@
 "discord.toggleDeafen" = "Toggle deafen";
 "discord.simpleHint" = "Match Settings → Keybinds in Discord. Needs Accessibility.";
 "settings.section.discord" = "Discord";
+"feature.hud" = "Volume HUD in the notch";
+"feature.hud.hint" = "In addition; the macOS HUD still shows";
+"hud.volume" = "Volume %ld%%";
+"theme.title" = "Theme";
+"theme.accent" = "Accent colour from artwork";
+"theme.small" = "Small Compact";
+"theme.glass" = "Liquid Glass pill (screens without a notch)";
+"theme.blackNotch" = "On a physical notch the shape is always black so it blends with the hardware.";
+"theme.hideFor" = "Hide the notch while these apps are in front";
+"theme.pickApp" = "App";

@@ -26,6 +26,8 @@ public struct NotchGeometry: Equatable, Sendable {
     public let notch: CGSize
     /// Horizontal centre of the notch in screen coordinates.
     public let centerX: CGFloat
+    /// Ear width per side; "small" Compact uses 72 pt (FR-78).
+    public var ear: CGFloat = NotchGeometry.ear
 
     /// - Parameters:
     ///   - screen: `NSScreen.frame` (AppKit coordinates, origin bottom-left).
@@ -49,7 +51,7 @@ public struct NotchGeometry: Equatable, Sendable {
         case .closed:
             return notch
         case .compact:
-            return CGSize(width: notch.width + 2 * Self.ear, height: notch.height)
+            return CGSize(width: notch.width + 2 * ear, height: notch.height)
         case .peek:
             let w = min(max(Self.peekWidth, notch.width + 2 * 80), Self.peekMaxWidth)
             return CGSize(width: w, height: notch.height + Self.peekExtra)

@@ -14,6 +14,7 @@ struct NotchRootView: View {
 
     static func displayState(_ m: AppModel) -> NotchState {
         if m.notchState == .expanded { return .expanded }
+        if m.hud != nil && m.notchState != .peek { return .compact }
         if m.notchState == .peek && !m.center.slots(fullscreen: m.fullscreen).isEmpty { return .peek }
         return m.center.slots(fullscreen: m.fullscreen).isEmpty && !dotsVisible(m) ? .closed : .compact
     }
@@ -22,7 +23,7 @@ struct NotchRootView: View {
 
     /// Closed but with a privacy dot / presentation indicator: tiny ears only.
     static func dotsOnly(_ m: AppModel) -> Bool {
-        displayState(m) == .compact && m.center.slots(fullscreen: m.fullscreen).isEmpty
+        displayState(m) == .compact && m.center.slots(fullscreen: m.fullscreen).isEmpty && m.hud == nil
     }
 
     static func expandedHeight(_ m: AppModel) -> CGFloat {
@@ -61,8 +62,7 @@ struct NotchRootView: View {
 
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
-                shape(radius: radius, hasNotch: g.hasNotch)
-                    .fill(DY.shape)
+                island(radius: radius, hasNotch: g.hasNotch)
                     .frame(width: size.width + (g.hasNotch ? 2 * DY.shoulder : 0), height: size.height)
                     .overlay(PulseRing(token: model.pulse, radius: radius, hasNotch: g.hasNotch))
                     .matchedGeometryEffect(id: "island", in: ns)
@@ -87,6 +87,15 @@ struct NotchRootView: View {
         .environment(\.locale, L10n.locale)
     }
 
+    /// Black always on a real notch; the pill may use Liquid Glass on macOS 26+ (FR-78, design D15).
+    @ViewBuilder private func island(radius: CGFloat, hasNotch: Bool) -> some View {
+        if !hasNotch, model.glassPill, #available(macOS 26, *) {
+            Color.clear.glassEffect(.regular.tint(.black.opacity(0.35)), in: PillShape(radius: radius))
+        } else {
+            shape(radius: radius, hasNotch: hasNotch).fill(DY.shape)
+        }
+    }
+
     private func shape(radius: CGFloat, hasNotch: Bool) -> AnyShape {
         hasNotch ? AnyShape(NotchShape(bottomRadius: radius)) : AnyShape(PillShape(radius: radius))
     }
@@ -98,8 +107,12 @@ struct NotchRootView: View {
         case .closed:
             Color.clear
         case .compact:
-            CompactEars(slots: slots, notchWidth: g.notch.width, height: g.notch.height, dotsOnly: Self.dotsOnly(model))
-                .transition(.dyContent)
+            if let h = model.hud {
+                HUDEars(symbol: h.symbol, value: h.value, notchWidth: g.notch.width, height: g.notch.height).transition(.dyContent)
+            } else {
+                CompactEars(slots: slots, notchWidth: g.notch.width, height: g.notch.height, dotsOnly: Self.dotsOnly(model))
+                    .transition(.dyContent)
+            }
         case .peek:
             VStack(spacing: 0) {
                 CompactEars(slots: Array(slots.prefix(1)), notchWidth: g.notch.width, height: g.notch.height, dotsOnly: false)
@@ -108,6 +121,26 @@ struct NotchRootView: View {
         case .expanded:
             ExpandedView(notchWidth: g.notch.width, notchHeight: g.notch.height).transition(.dyContent)
         }
+    }
+}
+
+/// HUD in the ears (D29): icon left, 64 pt bar with 16 steps right; the shape does not resize.
+struct HUDEars: View {
+    var symbol: String
+    var value: Double
+    var notchWidth: CGFloat
+    var height: CGFloat
+    var body: some View {
+        HStack(spacing: 0) {
+            Image(systemName: symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 14)
+            Color.clear.frame(width: notchWidth)
+            ProgressBar(progress: (value * 16).rounded() / 16, color: .white).frame(width: 64, height: 4)
+                .animation(.easeOut(duration: 0.12), value: value)
+                .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 14)
+        }
+        .frame(height: height)
+        .accessibilityElement().accessibilityLabel(L("hud.volume", Int(value * 100)))
     }
 }
 
