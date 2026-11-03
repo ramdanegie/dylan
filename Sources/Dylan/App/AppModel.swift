@@ -881,20 +881,3 @@ final class AppModel {
                                updatedAt: center.activities["media"]?.updatedAt ?? now))
     }
 }
-
-/// Runs a short command synchronously (callers stay off the main thread).
-enum Shell {
-    nonisolated static func run(_ path: String, _ args: [String], timeout: TimeInterval = 5) -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: path)
-        p.arguments = args
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return nil }
-        let deadline = Date().addingTimeInterval(timeout)
-        while p.isRunning && Date() < deadline { usleep(20_000) }
-        if p.isRunning { p.terminate(); return nil }
-        return String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
-    }
-}

@@ -45,3 +45,16 @@ import Testing
         #expect(ScriptWidget.parse(Data(#"{"title":"q","value":1200,"state":"WEIRD"}"#.utf8))?.value == "1200")
     }
 }
+
+@Suite struct ShellTests {
+    @Test func largeOutputDoesNotStall() {
+        let out = Shell.run("/bin/sh", ["-c", "head -c 200000 /dev/zero | tr '\\0' a"], timeout: 5)
+        #expect(out?.count == 200_000)
+    }
+
+    @Test func timeoutAndMissingTool() {
+        #expect(Shell.run("/bin/sleep", ["5"], timeout: 0.2) == nil)
+        #expect(Shell.run("/nonexistent/tool", []) == nil)
+        #expect(Shell.run("/bin/echo", ["hi"]) == "hi\n")
+    }
+}
