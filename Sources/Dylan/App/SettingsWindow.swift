@@ -276,6 +276,43 @@ struct QuickPlaySettings: View {
             }
             SwiftUI.Text(L("media.quickPlayHint")).font(.caption).foregroundStyle(.secondary)
         }
+        SpotifyAccountSettings()
+    }
+}
+
+/// FR-64: the user's own Spotify app (developer.spotify.com) with the loopback redirect below.
+struct SpotifyAccountSettings: View {
+    private var model: AppModel { AppModel.shared }
+    private var account: SpotifyAccount { SpotifyAccount.shared }
+    var body: some View {
+        Section(L("spotify.account")) {
+            SwiftUI.Text(L("spotify.accountHint")).font(.caption).foregroundStyle(.secondary)
+            TextField("Client ID", text: Binding(get: { model.spotifyClientID }, set: { model.spotifyClientID = $0 })).disabled(account.connected)
+            HStack {
+                SwiftUI.Text(SpotifyAPI.redirectURI).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                Spacer()
+                Button(L("button.copy")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(SpotifyAPI.redirectURI, forType: .string) }
+            }
+            HStack {
+                if account.connected {
+                    SwiftUI.Text(L("spotify.connected")).foregroundStyle(.green)
+                    Spacer()
+                    Button(L("discord.signOut")) { account.disconnect() }
+                } else {
+                    Button(L("spotify.connect")) { account.connect() }.disabled(account.clientID.isEmpty)
+                }
+            }
+            if let s = account.status { SwiftUI.Text(s).font(.caption).foregroundStyle(.secondary) }
+            ForEach(account.playlists, id: \.uri) { p in
+                HStack {
+                    SwiftUI.Text(p.name)
+                    if let d = p.detail { SwiftUI.Text(d).font(.caption).foregroundStyle(.secondary) }
+                    Spacer()
+                    Button(L("media.quickPlayAdd")) { model.quickPlay.append(QuickPlayItem(uri: p.uri, name: p.name)) }
+                        .disabled(model.quickPlay.contains { $0.uri == p.uri })
+                }
+            }
+        }
     }
 }
 

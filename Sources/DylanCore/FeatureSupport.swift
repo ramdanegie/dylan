@@ -83,7 +83,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("appVolume", .media, [84], .v1_1, built: true, req: true),
         .init("hud", .media, [40], .v1_1, built: true, req: true),
         .init("visualizer", .media, [63], .v1_3, built: true, req: true),
-        .init("spotifyAccount", .media, [64], .v1_3, req: true),
+        .init("spotifyAccount", .media, [64], .v1_3, built: true, req: true),
         // Calendar & time
         .init("meeting", .calendar, [12], .v1_0, built: true, req: true),
         .init("timer", .calendar, [13], .v1_0, built: true),

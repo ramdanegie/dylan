@@ -110,7 +110,12 @@ final class AppModel {
     var selectedTab: Tab = .home
     var fullscreen = false
     var presentationMode = false
-    var media: MediaState? { didSet { if media?.isPlaying != oldValue?.isPlaying || media?.source != oldValue?.source { VisualizerProvider.shared.update() } } }
+    var media: MediaState? {
+        didSet {
+            if media?.isPlaying != oldValue?.isPlaying || media?.source != oldValue?.source { VisualizerProvider.shared.update() }
+            if media?.artworkKey != oldValue?.artworkKey { SpotifyAccount.shared.trackChanged(media?.source == .spotify ? media?.artworkKey : nil) }
+        }
+    }
     var mediaAccent: Color = DY.fg
     var meetings: [MeetingSchedule.Event] = []
     var dismissedMeetings: Set<String> = []
@@ -137,6 +142,7 @@ final class AppModel {
     var quickPlay: [QuickPlayItem] { didSet { save(quickPlay, "quickPlay") } }
     var weatherCity: String { didSet { defaults.set(weatherCity, forKey: "weatherCity") } }
     var discordClientID: String { didSet { defaults.set(discordClientID, forKey: "discordClientID") } }
+    var spotifyClientID: String { didSet { defaults.set(spotifyClientID, forKey: "spotifyClientID") } }
     var discordMessages: Bool { didSet { defaults.set(discordMessages, forKey: "discordMessages") } }
     var discordMuteKey: String { didSet { defaults.set(discordMuteKey, forKey: "discordMuteKey") } }
     var discordDeafKey: String { didSet { defaults.set(discordDeafKey, forKey: "discordDeafKey") } }
@@ -187,6 +193,7 @@ final class AppModel {
         screenshotsToShelf = d.object(forKey: "screenshotsToShelf") as? Bool ?? true
         weatherCity = d.string(forKey: "weatherCity") ?? ""
         discordClientID = d.string(forKey: "discordClientID") ?? ""
+        spotifyClientID = d.string(forKey: "spotifyClientID") ?? ""
         discordMessages = d.object(forKey: "discordMessages") as? Bool ?? true
         discordMuteKey = d.string(forKey: "discordMuteKey") ?? "⌃⇧M"
         discordDeafKey = d.string(forKey: "discordDeafKey") ?? "⌃⇧D"

@@ -438,6 +438,10 @@ struct MediaTab: View {
                         SwiftUI.Text(m.source == .spotify ? "Spotify" : "Apple Music").font(DY.font(11, .semibold)).foregroundStyle(DY.fg2)
                         SwiftUI.Text(m.title).font(DY.font(17, .semibold)).foregroundStyle(.white).lineLimit(1)
                         SwiftUI.Text("\(m.artist) · \(m.album)").font(DY.font(12.5, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
+                        if m.source == .spotify, let n = SpotifyAccount.shared.next {
+                            SwiftUI.Text(L("spotify.next", [n.name, n.detail].compactMap { $0 }.joined(separator: " — ")))
+                                .font(DY.font(11, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
+                        }
                     }
                     TimelineView(.periodic(from: .now, by: 1)) { ctx in
                         let pos = scrub ?? m.livePosition(ctx.date)
@@ -459,7 +463,7 @@ struct MediaTab: View {
                         MediaButtons(size: 16)
                         toggle("repeat", on: m.repeating, label: L("media.repeat")) { MediaProvider.shared.toggleRepeat() }
                         if MediaProvider.shared.canLove {
-                            toggle("heart.fill", on: false, label: L("media.love")) { MediaProvider.shared.toggleLove() }
+                            toggle("heart.fill", on: MediaProvider.shared.loved, label: L("media.love")) { MediaProvider.shared.toggleLove() }
                         }
                         Button { AudioOutputProvider.shared.refresh(); showOutputs.toggle() } label: {
                             HStack(spacing: 4) {

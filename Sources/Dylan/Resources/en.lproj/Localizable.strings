@@ -712,3 +712,10 @@
 "calls.accept" = "Accept";
 "calls.decline" = "Decline";
 "button.close" = "Close";
+"spotify.account" = "Spotify account (optional)";
+"spotify.accountHint" = "Save songs with ♥, pick playlists for quick play, and see what plays next. Create an app at developer.spotify.com, add the Redirect URI below, then paste its Client ID. No client secret.";
+"spotify.connect" = "Connect";
+"spotify.connected" = "Connected";
+"spotify.approveInBrowser" = "Approve in your browser…";
+"spotify.signInFailed" = "Could not sign in to Spotify. Try again.";
+"spotify.next" = "Next: %@";

@@ -712,3 +712,10 @@
 "calls.accept" = "Terima";
 "calls.decline" = "Tolak";
 "button.close" = "Tutup";
+"spotify.account" = "Akun Spotify (opsional)";
+"spotify.accountHint" = "Simpan lagu dengan ♥, pilih playlist untuk putar cepat, dan lihat lagu berikutnya. Buat app di developer.spotify.com, isi Redirect URI di bawah, lalu tempel Client ID-nya. Tanpa client secret.";
+"spotify.connect" = "Hubungkan";
+"spotify.connected" = "Terhubung";
+"spotify.approveInBrowser" = "Setujui di browser…";
+"spotify.signInFailed" = "Gagal masuk ke Spotify. Coba lagi.";
+"spotify.next" = "Berikutnya: %@";

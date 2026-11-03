@@ -203,9 +203,18 @@ final class MediaProvider {
     }
 
     /// Apple Music only: Spotify has no AppleScript for saving songs (that needs the Web API, FR-64).
-    var canLove: Bool { AppModel.shared.media?.source == .music }
+    /// Apple Music: favourite through AppleScript. Spotify: save to library with the Spotify account (FR-64).
+    var canLove: Bool {
+        switch AppModel.shared.media?.source {
+        case .music: return true
+        case .spotify: return SpotifyAccount.shared.savedCurrent != nil
+        case nil: return false
+        }
+    }
+    var loved: Bool { AppModel.shared.media?.source == .spotify && SpotifyAccount.shared.savedCurrent == true }
     func toggleLove() {
         guard canLove else { return }
+        if AppModel.shared.media?.source == .spotify { SpotifyAccount.shared.toggleSaved(); return }
         control("set favorited of current track to not (favorited of current track)")
     }
     func next() { control("next track") }
