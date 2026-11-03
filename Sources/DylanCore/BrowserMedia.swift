@@ -73,12 +73,16 @@ public enum BrowserMedia {
     /// AppleScript: one line per tab, "title<TAB>url", front window first. Chrome-family and Safari differ.
     public static func tabsScript(bundleID: String) -> String {
         let titleProp = bundleID == "com.apple.Safari" ? "name" : "title"
+        // Separators are set outside the tell block: inside it, `tab` means the browser's tab class, not a tab
+        // character (found against a real Chrome: titles and URLs came back glued together).
         return """
+        set sep to character id 9
+        set nl to character id 10
         set out to ""
         tell application id "\(bundleID)"
             repeat with w in windows
                 repeat with t in tabs of w
-                    set out to out & (\(titleProp) of t) & tab & (URL of t) & linefeed
+                    set out to out & (\(titleProp) of t) & sep & (URL of t) & nl
                 end repeat
             end repeat
         end tell
@@ -95,9 +99,10 @@ public enum BrowserMedia {
 
     /// VLC: "playing<TAB>name<TAB>duration<TAB>time".
     public static let vlcScript = """
+    set sep to character id 9
     tell application id "org.videolan.vlc"
         if name of current item is missing value then return ""
-        return (playing as text) & tab & (name of current item) & tab & (duration of current item) & tab & (current time)
+        return (playing as text) & sep & (name of current item) & sep & (duration of current item) & sep & (current time)
     end tell
     """
 

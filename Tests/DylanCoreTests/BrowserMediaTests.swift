@@ -24,6 +24,10 @@ import Testing
     @Test func scriptsAndVLC() {
         #expect(BrowserMedia.tabsScript(bundleID: "com.apple.Safari").contains("name of t"))
         #expect(BrowserMedia.tabsScript(bundleID: "com.google.Chrome").contains("title of t"))
+        // `tab` inside `tell application` is the browser's class: the separator must be defined before it.
+        let script = BrowserMedia.tabsScript(bundleID: "com.google.Chrome")
+        #expect(!BrowserMedia.vlcScript.contains("& tab &"))
+        #expect(!script.contains("& tab &") && script.range(of: "set sep")!.lowerBound < script.range(of: "tell application")!.lowerBound)
         #expect(BrowserMedia.parseTabs("A\thttps://a\nB\thttps://b\n").map(\.url) == ["https://a", "https://b"])
         let v = BrowserMedia.parseVLC("true\tFilm Keluarga.mkv\t5400\t61")
         #expect(v?.playing == true && v?.title == "Film Keluarga" && v?.duration == 5400 && v?.position == 61)
