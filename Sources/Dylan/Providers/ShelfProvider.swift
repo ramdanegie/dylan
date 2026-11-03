@@ -59,11 +59,12 @@ final class ShelfProvider {
         NSPasteboard.general.setString(item.path, forType: .string)
     }
 
-    /// Opens in VS Code or Zed when installed, otherwise the default app.
+    /// Opens in VS Code or Zed when installed, otherwise TextEdit.
     func openInEditor(_ item: Shelf.Item) {
         let ws = NSWorkspace.shared
-        let editor = ["com.microsoft.VSCode", "dev.zed.Zed"].lazy.compactMap { ws.urlForApplication(withBundleIdentifier: $0) }.first
-        if let editor { ws.open([url(item)], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration()) } else { ws.open(url(item)) }
+        // Never fall back to a plain open(): that would run a .command, .app or script from the shelf.
+        let editor = ["com.microsoft.VSCode", "dev.zed.Zed", "com.apple.TextEdit"].lazy.compactMap { ws.urlForApplication(withBundleIdentifier: $0) }.first
+        if let editor { ws.open([url(item)], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration()) }
     }
 
     func reveal(_ item: Shelf.Item) { NSWorkspace.shared.activateFileViewerSelecting([url(item)]) }
