@@ -398,3 +398,4 @@
 "support.weather.req" = "Internet";
 "support.widgets" = "Script widget";
 "support.widgets.desc" = "Output JSON script jadi tile.";
+"permission.automationOpenApp" = "Buka Spotify atau Music dulu, lalu klik Izinkan lagi. Bisa juga nanti: macOS bertanya saat kamu pertama mengontrol musik.";

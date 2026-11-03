@@ -24,8 +24,9 @@ final class MediaProvider {
             let info = PlayerInfo(n.userInfo)
             MainActor.assumeIsolated { MediaProvider.shared.musicChanged(info) }
         })
-        // Pick up whatever is already playing.
-        if isRunning(Self.spotifyID) { refreshSpotify() } else if isRunning(Self.musicID) { refreshMusic() }
+        // Pick up whatever is already playing, but only if Automation was granted before:
+        // the permission prompt belongs to the first media control (PRD §2.7), not to app launch.
+        if canQuery(Self.spotifyID) { refreshSpotify() } else if canQuery(Self.musicID) { refreshMusic() }
     }
 
     func stop() {
@@ -37,6 +38,26 @@ final class MediaProvider {
 
     private func isRunning(_ id: String) -> Bool { !NSRunningApplication.runningApplications(withBundleIdentifier: id).isEmpty }
 
+    /// Background queries run only when the app is running and Automation is already allowed,
+    /// so they can neither launch Spotify/Music nor pop a permission prompt.
+    private func canQuery(_ id: String) -> Bool {
+        guard isRunning(id) else { return false }
+        let target = NSAppleEventDescriptor(bundleIdentifier: id)
+        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
+    }
+
+    /// Onboarding: ask for Automation now. macOS can only ask while the target app is running.
+    /// Returns false when neither Spotify nor Music is open.
+    func requestAutomation() -> Bool {
+        guard let id = [Self.spotifyID, Self.musicID].first(where: isRunning) else { return false }
+        Task.detached {
+            let target = NSAppleEventDescriptor(bundleIdentifier: id)
+            _ = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, true)
+            await MainActor.run { MediaProvider.shared.start(); if id == Self.spotifyID { MediaProvider.shared.refreshSpotify() } }
+        }
+        return true
+    }
+
     // MARK: Events
 
     private func spotifyChanged(_ info: PlayerInfo) {
@@ -47,14 +68,21 @@ final class MediaProvider {
         m.artworkKey = info.trackID
         keepArtwork(&m)
         AppModel.shared.mediaChanged(m)
-        if m.artwork == nil { fetchSpotifyArtwork(trackKey: m.artworkKey) }
-        refreshSpotifyExtras()
+        if canQuery(Self.spotifyID) {
+            if m.artwork == nil { fetchSpotifyArtwork(trackKey: m.artworkKey) }
+            refreshSpotifyExtras()
+        }
     }
 
     private func musicChanged(_ info: PlayerInfo) {
         guard info.state != "Stopped" else { AppModel.shared.mediaChanged(nil); return }
-        // Position is not in the notification; ask once.
-        refreshMusic()
+        // Position is not in the notification; ask once when allowed, otherwise show what we have.
+        if canQuery(Self.musicID) { refreshMusic(); return }
+        var m = MediaState(source: .music, title: info.name, artist: info.artist, album: info.album,
+                           isPlaying: info.state == "Playing", position: 0, duration: info.durationMS / 1000, positionAt: Date())
+        m.artworkKey = info.trackID
+        keepArtwork(&m)
+        AppModel.shared.mediaChanged(m)
     }
 
     private func keepArtwork(_ m: inout MediaState) {
@@ -65,7 +93,8 @@ final class MediaProvider {
 
     // MARK: AppleScript queries
 
-    private func refreshSpotify() {
+    fileprivate func refreshSpotify() {
+        let ID = Self.spotifyID
         let script = """
         tell application id "com.spotify.client"
           set s to player state as string
@@ -74,7 +103,7 @@ final class MediaProvider {
           return s & linefeed & (name of t) & linefeed & (artist of t) & linefeed & (album of t) & linefeed & ((duration of t) as string) & linefeed & (player position as string) & linefeed & (id of t) & linefeed & (shuffling as string) & linefeed & (repeating as string) & linefeed & (sound volume as string)
         end tell
         """
-        guard let r = run(script) else { return }
+        guard let r = run(script, app: ID) else { return }
         let f = r.components(separatedBy: "\n")
         guard f.count >= 10, f[0] != "stopped" else { AppModel.shared.mediaChanged(nil); return }
         var m = MediaState(source: .spotify, title: f[1], artist: f[2], album: f[3], isPlaying: f[0] == "playing",
@@ -86,10 +115,11 @@ final class MediaProvider {
     }
 
     private func refreshSpotifyExtras() {
+        let ID = Self.spotifyID
         let script = """
         tell application id "com.spotify.client" to return (shuffling as string) & linefeed & (repeating as string) & linefeed & (sound volume as string)
         """
-        guard let r = run(script) else { return }
+        guard let r = run(script, app: ID) else { return }
         let f = r.components(separatedBy: "\n")
         guard f.count >= 3, var m = AppModel.shared.media, m.source == .spotify else { return }
         m.shuffle = f[0] == "true"; m.repeating = f[1] == "true"; m.volume = Int(num(f[2]))
@@ -97,6 +127,7 @@ final class MediaProvider {
     }
 
     private func refreshMusic() {
+        let ID = Self.musicID
         let script = """
         tell application id "com.apple.Music"
           set s to player state as string
@@ -105,14 +136,14 @@ final class MediaProvider {
           return s & linefeed & (name of t) & linefeed & (artist of t) & linefeed & (album of t) & linefeed & ((duration of t) as string) & linefeed & (player position as string) & linefeed & (persistent ID of t) & linefeed & (shuffle enabled as string) & linefeed & (song repeat as string) & linefeed & (sound volume as string)
         end tell
         """
-        guard let r = run(script) else { return }
+        guard let r = run(script, app: ID) else { return }
         let f = r.components(separatedBy: "\n")
         guard f.count >= 10, f[0] != "stopped" else { AppModel.shared.mediaChanged(nil); return }
         var m = MediaState(source: .music, title: f[1], artist: f[2], album: f[3], isPlaying: f[0] == "playing",
                            position: num(f[5]), duration: num(f[4]), positionAt: Date())
         m.artworkKey = f[6]; m.shuffle = f[7] == "true"; m.repeating = f[8] != "off"; m.volume = Int(num(f[9]))
         keepArtwork(&m)
-        if m.artwork == nil, let data = runData("tell application id \"com.apple.Music\" to get raw data of artwork 1 of current track") {
+        if m.artwork == nil, let data = runData("tell application id \"com.apple.Music\" to get raw data of artwork 1 of current track", app: ID) {
             m.artwork = NSImage(data: data)
         }
         AppModel.shared.mediaChanged(m)
@@ -120,7 +151,7 @@ final class MediaProvider {
 
     /// Spotify only exposes an artwork URL (its CDN). Fetched once per track, cached in memory.
     private func fetchSpotifyArtwork(trackKey: String?) {
-        guard let url = run("tell application id \"com.spotify.client\" to return artwork url of current track")
+        guard let url = run("tell application id \"com.spotify.client\" to return artwork url of current track", app: Self.spotifyID)
             .flatMap(URL.init(string:)), url.scheme == "https" else { return }
         artworkTask?.cancel()
         artworkTask = URLSession.shared.dataTask(with: url) { @Sendable data, _, _ in
@@ -144,11 +175,12 @@ final class MediaProvider {
         }
     }
 
-    /// Never sends to an app that is not running: `tell application` would launch it.
+    /// User-initiated, so it may show the Automation prompt once. Never sends to an app that is not
+    /// running (`tell application` would launch it).
     private func control(_ command: String) {
-        guard let id = appID, isRunning(id) else { return }
-        _ = run("tell application id \"\(id)\" to \(command)")
-        if id == Self.musicID { refreshMusic() }
+        guard let id = appID else { return }
+        _ = run("tell application id \"\(id)\" to \(command)", app: id, userInitiated: true)
+        if id == Self.musicID, canQuery(id) { refreshMusic() }
     }
 
     func playPause() { control("playpause") }
@@ -183,9 +215,12 @@ final class MediaProvider {
 
     private func num(_ s: String) -> Double { Double(s.replacingOccurrences(of: ",", with: ".")) ?? 0 }
 
-    private func run(_ source: String) -> String? {
+    /// NSAppleScript runs on the main thread, so every script gets a 2 s Apple-event timeout:
+    /// a hung Spotify must not freeze the notch or the socket (permission hooks wait on it).
+    private func run(_ source: String, app: String, userInitiated: Bool = false) -> String? {
+        guard userInitiated ? isRunning(app) : canQuery(app) else { return nil }
         var err: NSDictionary?
-        let r = NSAppleScript(source: source)?.executeAndReturnError(&err)
+        let r = NSAppleScript(source: "with timeout of 2 seconds\n\(source)\nend timeout")?.executeAndReturnError(&err)
         if let err {
             let code = err[NSAppleScript.errorNumber] as? Int ?? 0
             // -1743: the user has not allowed Automation for this app.
@@ -195,9 +230,10 @@ final class MediaProvider {
         return r?.stringValue
     }
 
-    private func runData(_ source: String) -> Data? {
+    private func runData(_ source: String, app: String) -> Data? {
+        guard canQuery(app) else { return nil }
         var err: NSDictionary?
-        let r = NSAppleScript(source: source)?.executeAndReturnError(&err)
+        let r = NSAppleScript(source: "with timeout of 2 seconds\n\(source)\nend timeout")?.executeAndReturnError(&err)
         return err == nil ? r?.data : nil
     }
 }

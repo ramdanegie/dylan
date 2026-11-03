@@ -174,8 +174,7 @@ struct OnboardingView: View {
             }
             if chosen.contains(.media) {
                 permissionRow(L("permission.automation"), L("permission.automationWhy"), granted: false) {
-                    MediaProvider.shared.start()
-                    note = L("permission.automationNote")
+                    note = MediaProvider.shared.requestAutomation() ? L("permission.automationNote") : L("permission.automationOpenApp")
                 }
             }
             if chosen.contains(.bluetooth) {
