@@ -5,12 +5,13 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, agents
+    case home, media, clipboard, agents
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .home: return "house"
         case .media: return "music.note"
+        case .clipboard: return "doc.on.clipboard"
         case .agents: return "sparkle"
         }
     }
@@ -117,6 +118,10 @@ final class AppModel {
     /// Bumped when feature toggles change so providers can start/stop.
     var providersNeedRefresh = 0
     var lastError: String?
+    /// Bumped when the clipboard history changes (the provider itself is not observable).
+    var clipboardRevision = 0
+    @ObservationIgnored var focusClipboardSearch = false
+    var clearClipboardOnQuit: Bool { didSet { defaults.set(clearClipboardOnQuit, forKey: "clearClipboardOnQuit") } }
     var keepAwake: KeepAwake?
     @ObservationIgnored private var keepAwakeAssertion: IOPMAssertionID = 0
 
@@ -143,6 +148,7 @@ final class AppModel {
         keepAwakeStopBelow = d.object(forKey: "keepAwakeStopBelow") as? Int ?? 20
         colorFormat = d.string(forKey: "colorFormat") ?? "hex"
         colorHistory = d.stringArray(forKey: "colorHistory") ?? []
+        clearClipboardOnQuit = d.bool(forKey: "clearClipboardOnQuit")
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
         center.config.maxSlots = duo ? 2 : 1
@@ -155,7 +161,12 @@ final class AppModel {
 
     var isDeveloper: Bool { features.profile == .developer }
 
-    var tabs: [Tab] { isDeveloper && features.isEnabled(.agents) ? [.home, .media, .agents] : [.home, .media] }
+    var tabs: [Tab] {
+        var t: [Tab] = [.home, .media]
+        if features.isEnabled(.clipboard) { t.append(.clipboard) }
+        if isDeveloper && features.isEnabled(.agents) { t.append(.agents) }
+        return t
+    }
 
     // MARK: Ticking (only while something depends on the clock)
 
@@ -206,6 +217,15 @@ final class AppModel {
         if timer != nil { refreshTimerActivity(now: now) }
         if let k = keepAwake, k.shouldStop(now: now, battery: battery, stopBelow: keepAwakeStopBelow) { stopKeepAwake() }
         scheduleTick()
+    }
+
+    func clipboardChanged() { clipboardRevision &+= 1 }
+
+    func openClipboard() {
+        guard features.isEnabled(.clipboard) else { return }
+        focusClipboardSearch = true
+        selectedTab = .clipboard
+        notchState = .expanded
     }
 
     // MARK: Keep awake (FR-74)

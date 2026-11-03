@@ -39,5 +39,8 @@ enum Hotkeys {
         register(id: 3, keyCode: kVK_ANSI_C, modifiers: controlKey | optionKey) {
             AppModel.shared.pickColor()
         }
+        register(id: 4, keyCode: kVK_ANSI_V, modifiers: controlKey | optionKey) {
+            AppModel.shared.openClipboard()
+        }
     }
 }

@@ -32,6 +32,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { AppModel.shared.screenLocked = false }
         }
         if !AppModel.shared.onboardingDone { OnboardingWindow.show() }
+        // `--open-notch <tab>`: opens Expanded on a tab (screenshots and quick checks).
+        if let i = CommandLine.arguments.firstIndex(of: "--open-notch"), i + 1 < CommandLine.arguments.count,
+           let tab = Tab(rawValue: CommandLine.arguments[i + 1]) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                AppModel.shared.selectedTab = tab
+                AppModel.shared.notchState = .expanded
+            }
+        }
         // `--open-settings <section>` (e.g. features): used for screenshots and quick checks.
         if let i = CommandLine.arguments.firstIndex(of: "--open-settings"), i + 1 < CommandLine.arguments.count,
            let section = SettingsSection(rawValue: CommandLine.arguments[i + 1]) {
@@ -41,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         AppModel.shared.stopKeepAwake()
+        if AppModel.shared.clearClipboardOnQuit { ClipboardProvider.shared.clearAll() }
         for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }
         SocketServer.shared.stop()
     }
@@ -53,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.battery) ? BatteryProvider.shared.start() : BatteryProvider.shared.stop()
         f.isEnabled(.bluetooth) ? BluetoothProvider.shared.start() : BluetoothProvider.shared.stop()
         f.isEnabled(.privacy) ? PrivacyProvider.shared.start() : ()
+        f.isEnabled(.clipboard) ? ClipboardProvider.shared.start() : ClipboardProvider.shared.stop()
         PrivacyProvider.shared.update()
         if !f.isEnabled(.agents) {
             for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }

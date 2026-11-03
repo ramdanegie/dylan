@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, devices, utilities, agents, terminal, features, about
+    case general, appearance, liveActivity, media, devices, utilities, clipboard, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -34,6 +34,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .media: return "music.note"
         case .devices: return "battery.100percent.bolt"
         case .utilities: return "wrench.and.screwdriver"
+        case .clipboard: return "doc.on.clipboard"
         case .agents: return "sparkle"
         case .terminal: return "terminal"
         case .features: return "checklist"
@@ -76,6 +77,7 @@ struct SettingsView: View {
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake])
             KeepAwakeSettings()
         case .utilities: UtilitySettings()
+        case .clipboard: ClipboardSettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
         case .features: FeatureSupportSettings()
@@ -180,6 +182,29 @@ struct KeepAwakeSettings: View {
                 SwiftUI.Text("10%").tag(10)
                 SwiftUI.Text("20%").tag(20)
                 SwiftUI.Text("30%").tag(30)
+            }
+        }
+    }
+}
+
+struct ClipboardSettings: View {
+    @StateBox private var cleared = false
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        FeatureToggles(features: [.clipboard])
+        Section {
+            LabeledContent(L("color.hotkey"), value: "⌃⌥V")
+            Toggle(L("clipboard.clearOnQuit"), isOn: Binding(get: { model.clearClipboardOnQuit }, set: { model.clearClipboardOnQuit = $0 }))
+            HStack {
+                Button(L("clipboard.clearAll")) { ClipboardProvider.shared.clearAll(); cleared = true }
+                if cleared { SwiftUI.Text(L("clipboard.cleared")).font(.caption).foregroundStyle(.secondary) }
+            }
+        }
+        Section(L("clipboard.protection")) {
+            SwiftUI.Text(L("clipboard.protectionBody")).font(.caption).foregroundStyle(.secondary)
+            LabeledContent(L("clipboard.ignoredApps")) {
+                SwiftUI.Text(ClipboardProvider.shared.ignoredApps.sorted().map { $0.split(separator: ".").last.map(String.init) ?? $0 }.joined(separator: ", "))
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }
