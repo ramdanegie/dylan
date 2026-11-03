@@ -14,6 +14,8 @@ final class MeetingCallProvider {
     private var autoPresenting = false
     /// The user turned Presentation Mode off during this share: do not turn it back on.
     private var overridden = false
+    /// The call's mic went quiet, but a share was still on; finish once it stops.
+    private var callEnded = false
 
     /// Called whenever the microphone user changes (PrivacyProvider.update).
     func micChanged() {
@@ -22,6 +24,7 @@ final class MeetingCallProvider {
         if let p = m.micAppProcess,
            let a = MeetingControls.app(bundleID: p.bundleID, windowTitle: Self.focusedWindowTitle(p.pid)) {
             expiry?.cancel(); expiry = nil
+            callEnded = false
             app = a; pid = p.pid
             publish()
             watchSharing()
@@ -35,6 +38,14 @@ final class MeetingCallProvider {
 
     func end() {
         expiry?.cancel(); expiry = nil
+        // Muted for a while during a screen share: keep Presentation Mode (and the share check) until the share ends.
+        if autoPresenting, let app, pid > 0, AppModel.shared.features.isEnabled(.meeting),
+           MeetingControls.isSharing(app, windowTitles: Self.windowTitles(pid)) {
+            callEnded = true
+            AppModel.shared.removeIfPresent("meeting-live", now: Date())
+            return
+        }
+        callEnded = false
         shareTimer?.invalidate(); shareTimer = nil
         if autoPresenting { autoPresenting = false; if AppModel.shared.presentationMode { AppModel.shared.togglePresentation() } }
         app = nil; pid = 0
@@ -60,6 +71,7 @@ final class MeetingCallProvider {
         if !sharing {
             overridden = false
             if autoPresenting { autoPresenting = false; if m.presentationMode { m.togglePresentation() } }
+            if callEnded { end() }
             return
         }
         if autoPresenting, !m.presentationMode { autoPresenting = false; overridden = true }
@@ -92,8 +104,14 @@ final class MeetingCallProvider {
         guard let app, pid > 0, let sc = MeetingControls.shortcut(app, c) else { return }
         // First use: macOS shows the Accessibility prompt; nothing is sent until it is granted.
         guard AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) else { return }
-        // A menu item works while the app is in the background and in any language; else the shortcut.
-        if Self.pressMenuItem(pid: pid, key: sc.key, modifiers: sc.axModifiers) { return }
+        if app == .meet {
+            // Meet lives in a browser whose ⌘D is "Bookmark", and keys go to the front tab: only send when that is Meet.
+            guard MeetingControls.app(bundleID: NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
+                                      windowTitle: Self.focusedWindowTitle(pid)) == .meet else { return }
+        } else if Self.pressMenuItem(pid: pid, key: sc.key, modifiers: sc.axModifiers) {
+            // A menu item works while the app is in the background and in any language; else the shortcut.
+            return
+        }
         guard let code = KeyCodes.letters[sc.key] else { return }
         var flags: CGEventFlags = [.maskCommand]
         if sc.shift { flags.insert(.maskShift) }
