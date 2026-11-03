@@ -1,0 +1,589 @@
+import AppKit
+import DylanCore
+import Observation
+import SwiftUI
+
+enum Tab: String, CaseIterable, Identifiable {
+    case home, media, agents
+    var id: String { rawValue }
+    var symbol: String {
+        switch self {
+        case .home: return "house"
+        case .media: return "music.note"
+        case .agents: return "sparkle"
+        }
+    }
+    var title: String { L("tab.\(rawValue)") }
+}
+
+struct MediaState: Equatable {
+    enum Source: String { case spotify, music }
+    var source: Source
+    var title: String
+    var artist: String
+    var album: String
+    var isPlaying: Bool
+    var position: TimeInterval
+    var duration: TimeInterval
+    var positionAt: Date
+    var artwork: NSImage?
+    var artworkKey: String?
+    var shuffle = false
+    var repeating = false
+    var volume: Int?
+
+    func livePosition(_ now: Date) -> TimeInterval {
+        guard isPlaying else { return position }
+        return min(duration > 0 ? duration : .infinity, position + now.timeIntervalSince(positionAt))
+    }
+}
+
+/// A Claude Code permission request waiting on an open socket connection.
+struct PendingPermission {
+    var requestID: String
+    var sessionID: String
+    var tool: String?
+    var detail: String?
+    var createdAt: Date
+    var reply: (PermissionReply) -> Void
+}
+
+/// Things the notch can do in response to a button.
+enum NotchAction: Equatable {
+    case allow(String), deny(String), releaseToTerminal(String)
+    case focusSession(String)
+    case join(URL)
+    case openURL(URL)
+    case mediaPrevious, mediaPlayPause, mediaNext
+    case dismiss(String)
+}
+
+@Observable
+final class AppModel {
+    static let shared = AppModel()
+
+    // MARK: Settings (persisted in UserDefaults)
+
+    var features: FeatureSet { didSet { save(features, "features"); providersNeedRefresh += 1 } }
+    var answerPermissionsFromNotch: Bool { didSet { defaults.set(answerPermissionsFromNotch, forKey: "answerPermissions") } }
+    var permissionTimeout: Double { didSet { defaults.set(permissionTimeout, forKey: "permissionTimeout") } }
+    var commandResultsAlways: Bool { didSet { defaults.set(commandResultsAlways, forKey: "commandResultsAlways") } }
+    var commandThreshold: Double {
+        didSet { defaults.set(commandThreshold, forKey: "commandThreshold"); commands.filter.threshold = commandThreshold }
+    }
+    var duo: Bool { didSet { defaults.set(duo, forKey: "duo"); center.config.maxSlots = duo ? 2 : 1 } }
+    var hoverDelay: Double { didSet { defaults.set(hoverDelay, forKey: "hoverDelay") } }
+    var permissionSound: Bool { didSet { defaults.set(permissionSound, forKey: "permissionSound") } }
+    var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: "onboardingDone") } }
+    var language: LanguageChoice {
+        didSet {
+            if let v = language.appleLanguages { defaults.set(v, forKey: "AppleLanguages") }
+            else { defaults.removeObject(forKey: "AppleLanguages") }
+        }
+    }
+
+    // MARK: Live state
+
+    var center = ActivityCenter()
+    var agents = AgentSessions()
+    var commands = CommandTracker()
+    var notchState: NotchState = .closed
+    var selectedTab: Tab = .home
+    var fullscreen = false
+    var presentationMode = false
+    var media: MediaState?
+    var mediaAccent: Color = DY.fg
+    var meetings: [MeetingSchedule.Event] = []
+    var dismissedMeetings: Set<String> = []
+    var timer: CountdownTimer?
+    var battery: BatterySnapshot?
+    var cameraOn = false
+    var micOn = false
+    var micApp: String?
+    var screenLocked = false
+    var pending: [String: PendingPermission] = [:]
+    /// P0 auto-peek (4 s) — design M4.
+    var autoPeekUntil: Date?
+    /// Bumped to play the one-shot P0 pulse.
+    var pulse = 0
+    /// Bumped when feature toggles change so providers can start/stop.
+    var providersNeedRefresh = 0
+    var lastError: String?
+
+    /// Snapshot mode swaps this for a throwaway suite so rendering never touches the user's settings.
+    nonisolated(unsafe) static var store = UserDefaults.standard
+    private let defaults = AppModel.store
+    private var tickTimer: Timer?
+    private var permissionTimers: [String: Timer] = [:]
+
+    private init() {
+        let d = AppModel.store
+        features = (d.data(forKey: "features")).flatMap { try? JSONDecoder().decode(FeatureSet.self, from: $0) } ?? FeatureSet()
+        answerPermissionsFromNotch = d.object(forKey: "answerPermissions") as? Bool ?? false
+        permissionTimeout = d.object(forKey: "permissionTimeout") as? Double ?? 30
+        commandResultsAlways = d.bool(forKey: "commandResultsAlways")
+        commandThreshold = d.object(forKey: "commandThreshold") as? Double ?? 10
+        duo = d.object(forKey: "duo") as? Bool ?? true
+        hoverDelay = d.object(forKey: "hoverDelay") as? Double ?? 0.15
+        permissionSound = d.bool(forKey: "permissionSound")
+        onboardingDone = d.bool(forKey: "onboardingDone")
+        language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
+        center.config.maxSlots = duo ? 2 : 1
+        commands.filter.threshold = commandThreshold
+    }
+
+    private func save<T: Encodable>(_ v: T, _ key: String) {
+        if let d = try? JSONEncoder().encode(v) { defaults.set(d, forKey: key) }
+    }
+
+    var isDeveloper: Bool { features.profile == .developer }
+
+    var tabs: [Tab] { isDeveloper && features.isEnabled(.agents) ? [.home, .media, .agents] : [.home, .media] }
+
+    // MARK: Ticking (only while something depends on the clock)
+
+    func scheduleTick() {
+        let needs = !center.activities.isEmpty || !commands.running.isEmpty || timer != nil || autoPeekUntil != nil
+            || MeetingSchedule.nextChange(meetings, now: Date()) != nil
+        if needs, tickTimer == nil {
+            let t = Timer(timeInterval: 1, repeats: true) { _ in MainActor.assumeIsolated { AppModel.shared.tick() } }
+            t.tolerance = 0.2
+            RunLoop.main.add(t, forMode: .common)
+            tickTimer = t
+        } else if !needs {
+            tickTimer?.invalidate(); tickTimer = nil
+        }
+    }
+
+    func tick(now: Date = Date()) {
+        center.tick(now: now)
+        for r in commands.visible(now: now) where center.activities["cmd-\(r.shellPid)"] == nil {
+            center.upsert(commandActivity(r))
+        }
+        if let t = timer, t.isFinished(now: now) { timerFinished(now: now) }
+        refreshMeeting(now: now)
+        if let until = autoPeekUntil, now >= until {
+            autoPeekUntil = nil
+            if notchState == .peek { notchState = .compact }
+        }
+        if timer != nil { refreshTimerActivity(now: now) }
+        scheduleTick()
+    }
+
+    // MARK: Bridge messages
+
+    func handle(_ m: BridgeMessage, reply: @escaping (Data) -> Void) {
+        let now = Date()
+        switch m {
+        case .ping:
+            let r = PingReply(ok: true, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev",
+                              profile: features.profile.rawValue)
+            if var d = try? JSONEncoder().encode(r) { d.append(0x0A); reply(d) }
+        case let .activityStart(id, title, subtitle, progress, url):
+            center.upsert(Activity(id: "script-\(id)", kind: .script, priority: .p2, state: .running,
+                                   symbol: "chevron.left.forwardslash.chevron.right", label: title,
+                                   value: progress.map { "\(Int($0 * 100))%" } ?? "", detail: subtitle ?? title,
+                                   genericDetail: L("generic.script"), progress: progress, url: url, startedAt: now))
+        case let .activityUpdate(id, title, subtitle, progress):
+            guard var a = center.activities["script-\(id)"] else { break }
+            if let title { a.label = title }
+            if let subtitle { a.detail = subtitle }
+            if let progress { a.progress = progress; a.value = "\(Int(progress * 100))%" }
+            a.updatedAt = now
+            center.upsert(a)
+        case let .activityEnd(id, success, detail):
+            let key = "script-\(id)"
+            if center.activities[key] == nil {
+                center.upsert(Activity(id: key, kind: .script, priority: .p2, state: .running, symbol: "terminal",
+                                       label: id, startedAt: now))
+            }
+            let label = center.activities[key]?.label ?? id
+            // Right ear only fits short results ("48s", "exit 1"); longer details go to Peek.
+            center.finish(key, success: success, value: detail.flatMap { $0.count <= 10 ? $0 : nil } ?? "",
+                          detail: [label, detail].compactMap { $0 }.joined(separator: " · "), now: now)
+        case let .notify(title, body):
+            center.post(Activity(id: "notify-\(UUID().uuidString)", kind: .notify, priority: .p1, state: .info,
+                                 symbol: "bell.badge", label: TextRules.truncateTail(title, max: 12), value: "",
+                                 detail: [title, body].compactMap { $0 }.joined(separator: " · "),
+                                 genericDetail: L("generic.notify"), startedAt: now), now: now)
+        case let .shellStart(pid, cmd, cwd, app):
+            guard features.isEnabled(.commands) else { break }
+            center.remove("cmd-\(pid)", now: now)
+            commands.start(shellPid: pid, command: cmd, cwd: cwd, app: app, now: now)
+        case let .shellEnd(pid, status):
+            guard features.isEnabled(.commands) else { break }
+            let key = "cmd-\(pid)"
+            guard let f = commands.end(shellPid: pid, status: status, now: now) else { center.remove(key, now: now); break }
+            let frontmost = f.running.app != nil && NSWorkspace.shared.frontmostApplication?.bundleIdentifier == f.running.app
+            guard commands.filter.shouldShowResult(duration: f.duration, terminalFrontmost: frontmost, always: commandResultsAlways)
+            else { center.remove(key, now: now); break }
+            if center.activities[key] == nil { center.upsert(commandActivity(f.running)) }
+            let name = TextRules.commandShortName(f.running.command)
+            let d = DurationFormat.result(f.duration)
+            center.finish(key, success: status == 0, value: status == 0 ? d : "exit \(status)",
+                          detail: status == 0 ? L("command.done", name, d) : L("command.failed", name, status, d), now: now)
+        case let .hook(source, env, payload):
+            guard source == "claude", features.isEnabled(.agents), let e = ClaudeHookEvent(payload: payload) else { break }
+            applyAgentEvent(e, env: env, now: now)
+        case let .permissionAsk(requestID, _, env, payload):
+            handlePermissionAsk(requestID: requestID, env: env, payload: payload, now: now) { r in
+                if var d = try? JSONEncoder().encode(r) { d.append(0x0A); reply(d) }
+            }
+        case .shelfAdd:
+            break   // Shelf ships in v1.1
+        case .debugState:
+            let state: [String: Any] = [
+                "notch": NotchRootView.displayState(self).rawValue,
+                "slots": center.slots(fullscreen: fullscreen).map(\.id),
+                "activities": center.ordered.map { ["id": $0.id, "kind": $0.kind.rawValue, "priority": $0.priority.rawValue,
+                                                    "state": "\($0.state)", "label": $0.label, "value": $0.value, "detail": displayDetail($0)] },
+                "sessions": agents.ordered.map { ["project": $0.project, "status": "\($0.status)"] },
+                "history": center.history.count,
+            ]
+            if var d = try? JSONSerialization.data(withJSONObject: state, options: [.sortedKeys]) { d.append(0x0A); reply(d) }
+        }
+        refreshAgentActivity(now: now)
+        scheduleTick()
+    }
+
+    private func commandActivity(_ r: CommandTracker.Running) -> Activity {
+        Activity(id: "cmd-\(r.shellPid)", kind: .command, priority: .p2, state: .running, symbol: "terminal",
+                 label: TextRules.commandShortName(r.command), value: "", detail: L("command.running", TextRules.commandShortName(r.command)),
+                 genericDetail: L("generic.command"), startedAt: r.startedAt)
+    }
+
+    // MARK: Agents (PRD §F3)
+
+    private func applyAgentEvent(_ e: ClaudeHookEvent, env: [String: String], now: Date) {
+        let before = agents.sessions[e.sessionID]?.status
+        agents.apply(e, env: env, now: now, projectName: { ProjectName.resolve(cwd: $0) })
+        // Tool ran → any notch card for this session is stale (answered in the terminal).
+        if e.name == .postToolUse || e.name == .stop || e.name == .userPromptSubmit {
+            for p in pending.values where p.sessionID == e.sessionID { resolvePermission(p.requestID, .passthrough) }
+        }
+        guard let s = agents.sessions[e.sessionID] else { return }
+        if case .done(let duration, let summary) = s.status, before != s.status {
+            postAgentResult(s, success: true, duration: duration, summary: summary, now: now)
+        } else if case .failed(let message) = s.status, before != s.status {
+            postAgentResult(s, success: false, duration: 0, summary: message, now: now)
+        }
+        if case .needsPermission = s.status, !isNeedsPermission(before) { triggerP0(now: now) }
+    }
+
+    private func isNeedsPermission(_ s: AgentSessions.Status?) -> Bool {
+        if case .needsPermission = s { return true }
+        return false
+    }
+
+    private func postAgentResult(_ s: AgentSessions.Session, success: Bool, duration: TimeInterval, summary: String?, now: Date) {
+        let id = "agent-result-\(s.id)"
+        let d = DurationFormat.result(duration)
+        var a = Activity(id: id, kind: .agent, priority: .p1, state: success ? .success : .failure,
+                         symbol: success ? "checkmark" : "xmark", label: success ? L("compact.done") : L("compact.error"),
+                         value: success ? d : "", detail: success ? L("agent.done", s.project, d) : L("agent.failed"),
+                         genericDetail: success ? L("generic.agentDone") : L("agent.failed"), url: s.id, startedAt: now)
+        a.endedAt = now
+        center.post(a, now: now)
+        agents.acknowledgeResult(sessionID: s.id)
+        guard success, let cwd = s.cwd else { return }
+        // `+x −y` from git, off the main thread.
+        Task.detached {
+            let out = Shell.run("/usr/bin/git", ["-C", cwd, "diff", "--shortstat", "HEAD"])
+            await MainActor.run {
+                guard let stat = ShortStat.parse(out ?? ""), var a = AppModel.shared.center.activities[id] else { return }
+                a.detail = L("agent.doneDiff", s.project, d, DurationFormat.diff(added: stat.added, removed: stat.removed))
+                if let summary { a.detail += " · " + summary }
+                AppModel.shared.center.upsert(a)
+            }
+        }
+    }
+
+    func refreshAgentActivity(now: Date) {
+        let active = agents.active
+        guard features.isEnabled(.agents), let first = active.first else { center.remove("agents", now: now); return }
+        var a = Activity(id: "agents", kind: .agent, priority: .p2, state: .running, symbol: "sparkle", label: "",
+                         startedAt: first.promptStartedAt ?? first.updatedAt, updatedAt: now)
+        let permissions = active.filter { isNeedsPermission($0.status) }
+        if let p = permissions.first, case .needsPermission(_, let tool, let detail) = p.status {
+            a.priority = .p0
+            a.state = .needsAction
+            a.label = L("compact.permission")
+            a.value = active.count > 1 ? "\(permissions.count)" : TextRules.truncateTail(TextRules.commandShortName(detail ?? tool ?? ""), max: 12)
+            let what = [tool, detail].compactMap { $0 }.joined(separator: " ")
+            a.detail = what.isEmpty ? L("agent.needsPermission") + " · " + p.project : what
+            a.genericDetail = L("generic.agentPermission")
+            a.url = p.id
+        } else if active.count > 1 {
+            a.label = "\(active.count)"
+            a.value = L("compact.agents", active.count)
+            a.detail = L("agent.many", active.count)
+            a.genericDetail = L("generic.agent")
+        } else {
+            switch first.status {
+            case .working(let tool, let detail):
+                a.label = tool ?? L("compact.working")
+                a.value = detail.map { TextRules.truncateMiddle($0, max: 13) } ?? ""
+                a.detail = agentSentence(tool: tool, detail: detail) + " · " + first.project
+                a.genericDetail = L("generic.agent")
+            case .waitingInput:
+                a.priority = .p1
+                a.state = .info
+                a.label = L("compact.waiting")
+                a.detail = L("agent.waiting") + " · " + first.project
+                a.genericDetail = L("agent.waiting")
+            default:
+                center.remove("agents", now: now); return
+            }
+            a.url = first.id
+        }
+        center.upsert(a)
+    }
+
+    private func agentSentence(tool: String?, detail: String?) -> String {
+        switch tool {
+        case "Edit", "MultiEdit", "Write": return L("agent.editing", detail ?? "")
+        case "Read": return L("agent.reading", detail ?? "")
+        case "Bash": return L("agent.running", detail ?? "")
+        case nil: return L("agent.thinking")
+        default: return L("agent.tool", tool!)
+        }
+    }
+
+    // MARK: Permission from the notch (FR-9)
+
+    private func handlePermissionAsk(requestID: String, env: [String: String], payload: JSONValue, now: Date,
+                                     reply: @escaping (PermissionReply) -> Void) {
+        guard let e = ClaudeHookEvent(payload: payload), features.isEnabled(.agents) else { reply(.init(decision: .passthrough)); return }
+        applyAgentEvent(e, env: env, now: now)
+        let session = agents.sessions[e.sessionID]
+        let terminalFront = session?.appBundleID != nil && NSWorkspace.shared.frontmostApplication?.bundleIdentifier == session?.appBundleID
+        // Never hold the terminal prompt when the user could answer it right there (PRD §F3 step 2).
+        guard answerPermissionsFromNotch, !presentationMode, !screenLocked, !terminalFront else {
+            reply(.init(decision: .passthrough)); return
+        }
+        pending[requestID] = PendingPermission(requestID: requestID, sessionID: e.sessionID, tool: e.toolName,
+                                               detail: e.toolDetail, createdAt: now, reply: reply)
+        agents.setPermission(sessionID: e.sessionID, requestID: requestID, tool: e.toolName, detail: e.toolDetail, now: now)
+        let t = Timer(timeInterval: permissionTimeout, repeats: false) { _ in
+            MainActor.assumeIsolated { AppModel.shared.resolvePermission(requestID, .passthrough) }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        permissionTimers[requestID] = t
+        triggerP0(now: now)
+    }
+
+    func resolvePermission(_ requestID: String, _ decision: PermissionDecision) {
+        permissionTimers.removeValue(forKey: requestID)?.invalidate()
+        guard let p = pending.removeValue(forKey: requestID) else { return }
+        p.reply(PermissionReply(decision: decision, message: decision == .deny ? L("permission.deniedMessage") : nil))
+        agents.clearPermission(requestID: requestID, now: Date())
+        if decision == .allow {
+            let a = Activity(id: "perm-ok-\(requestID)", kind: .agent, priority: .p1, state: .success, symbol: "checkmark",
+                             label: L("compact.allowed"), detail: L("permission.granted", p.tool ?? ""), startedAt: Date())
+            center.post(a, now: Date())
+        }
+        refreshAgentActivity(now: Date())
+    }
+
+    var pendingForDisplay: PendingPermission? { pending.values.sorted { $0.createdAt < $1.createdAt }.first }
+
+    func triggerP0(now: Date) {
+        autoPeekUntil = now.addingTimeInterval(4)
+        pulse += 1
+        if notchState == .closed || notchState == .compact { notchState = .peek }
+        if permissionSound { NSSound(named: "Ping")?.play() }
+        scheduleTick()
+    }
+
+    // MARK: Actions
+
+    func perform(_ action: NotchAction) {
+        switch action {
+        case .allow(let id): resolvePermission(id, .allow)
+        case .deny(let id): resolvePermission(id, .deny)
+        case .releaseToTerminal(let id):
+            let session = pending[id]?.sessionID
+            resolvePermission(id, .passthrough)
+            if let session { TerminalFocus.focus(agents.sessions[session]) }
+        case .focusSession(let id): TerminalFocus.focus(agents.sessions[id])
+        case .join(let url): NSWorkspace.shared.open(url)
+        case .openURL(let url): NSWorkspace.shared.open(url)
+        case .mediaPrevious: MediaProvider.shared.previous()
+        case .mediaPlayPause: MediaProvider.shared.playPause()
+        case .mediaNext: MediaProvider.shared.next()
+        case .dismiss(let id): center.remove(id, now: Date(), toHistory: true)
+        }
+    }
+
+    /// Buttons for an activity in Peek (1–3, design D7).
+    func actions(for a: Activity) -> [(String, NotchButton.Kind, NotchAction)] {
+        switch a.kind {
+        case .agent where a.state == .needsAction:
+            if let p = pendingForDisplay {
+                return [(L("button.deny"), .normal, .deny(p.requestID)), (L("button.allow"), .primaryAction, .allow(p.requestID)),
+                        (L("button.terminal"), .normal, .releaseToTerminal(p.requestID))]
+            }
+            return [(L("button.openTerminal"), .normal, .focusSession(a.url ?? ""))]
+        case .agent:
+            return a.url.map { [(L("button.open"), .normal, .focusSession($0))] } ?? []
+        case .meeting:
+            return a.url.flatMap(URL.init(string:)).map { [(L("button.join"), .primaryNeutral, .join($0))] } ?? []
+        case .script, .notify:
+            return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openURL($0))] } ?? []
+        default:
+            return []
+        }
+    }
+
+    // MARK: Presentation Mode (PRD §F12)
+
+    func togglePresentation() {
+        presentationMode.toggle()
+        if presentationMode {
+            for id in pending.keys { resolvePermission(id, .passthrough) }
+            let now = Date()
+            center.post(Activity(id: "presentation", kind: .presentation, priority: .p1, state: .info, symbol: "eye.slash",
+                                 label: L("compact.presentation"), detail: L("presentation.on"), startedAt: now), now: now)
+            scheduleTick()
+        }
+    }
+
+    func displayDetail(_ a: Activity) -> String {
+        presentationMode ? (a.genericDetail ?? a.detail) : a.detail
+    }
+
+    func displayValue(_ a: Activity) -> String {
+        presentationMode && a.genericDetail != nil && (a.kind == .agent || a.kind == .command) && a.state == .running ? "" : a.value
+    }
+
+    func displayLabel(_ a: Activity) -> String {
+        guard presentationMode, a.genericDetail != nil else { return a.label }
+        switch a.kind {
+        case .agent where a.state == .running: return L("compact.working")
+        case .command: return ""
+        case .meeting: return L("compact.meeting")
+        default: return a.label
+        }
+    }
+
+    // MARK: Meetings (PRD §F6)
+
+    func refreshMeeting(now: Date = Date()) {
+        guard features.isEnabled(.meeting), let (e, phase) = MeetingSchedule.current(meetings, now: now, dismissed: dismissedMeetings) else {
+            center.remove("meeting", now: now); return
+        }
+        let wasImminent = center.activities["meeting"]?.priority == .p0
+        let a = Activity(id: "meeting", kind: .meeting, priority: phase == .imminent ? .p0 : .p1,
+                         state: phase == .imminent ? .needsAction : .info, symbol: "calendar",
+                         label: TextRules.truncateTail(e.title, max: 10), value: DurationFormat.countdown(e.start.timeIntervalSince(now)),
+                         detail: phase == .imminent ? L("meeting.imminent", e.title)
+                                                     : L("meeting.soon", e.title, Int((e.start.timeIntervalSince(now) / 60).rounded(.up))),
+                         genericDetail: L("generic.meeting"), url: (e.link?.appURL ?? e.link?.url)?.absoluteString,
+                         startedAt: e.start.addingTimeInterval(-MeetingSchedule.soonWindow), updatedAt: now)
+        center.upsert(a)
+        if phase == .imminent && !wasImminent { triggerP0(now: now) }
+    }
+
+    var nextMeetingToday: MeetingSchedule.Event? {
+        meetings.filter { !$0.isAllDay && $0.end > Date() }.sorted { $0.start < $1.start }.first
+    }
+
+    // MARK: Timer (PRD §F7)
+
+    func startTimer(_ t: CountdownTimer) {
+        timer = t
+        refreshTimerActivity(now: Date())
+        scheduleTick()
+    }
+
+    func stopTimer() {
+        timer = nil
+        center.remove("timer", now: Date())
+    }
+
+    func toggleTimerPause() {
+        let now = Date()
+        if timer?.isPaused == true { timer?.resume(now: now) } else { timer?.pause(now: now) }
+        refreshTimerActivity(now: now)
+    }
+
+    private func refreshTimerActivity(now: Date) {
+        guard let t = timer, features.isEnabled(.timer) else { return }
+        let label = t.phase == .timer ? L("timer.timer") : (t.phase == .focus ? L("timer.focus") : L("timer.break"))
+        center.upsert(Activity(id: "timer", kind: .timer, priority: .p2, state: .running, symbol: "timer", label: label,
+                               value: DurationFormat.running(t.remaining(now: now)), detail: label,
+                               progress: t.progress(now: now), startedAt: center.activities["timer"]?.startedAt ?? now,
+                               updatedAt: center.activities["timer"]?.updatedAt ?? now))
+    }
+
+    private func timerFinished(now: Date) {
+        guard let t = timer else { return }
+        center.remove("timer", now: now)
+        let msg = t.phase == .focus ? L("timer.focusDone") : (t.phase == .timer ? L("timer.done") : L("timer.breakDone"))
+        center.post(Activity(id: "timer-done-\(now.timeIntervalSince1970)", kind: .timer, priority: .p1, state: .success,
+                             symbol: "timer", label: L("timer.timer"), detail: msg, startedAt: now), now: now)
+        NSSound(named: "Glass")?.play()
+        timer = t.next(now: now)
+        if timer != nil { refreshTimerActivity(now: now) }
+    }
+
+    // MARK: Battery (FR-70)
+
+    func batteryChanged(_ new: BatterySnapshot) {
+        let old = battery
+        battery = new
+        guard features.isEnabled(.battery) else { return }
+        let now = Date()
+        for e in BatteryLogic.events(from: old, to: new) {
+            var a = Activity(id: "battery", kind: .battery, priority: .p1, state: .info, symbol: "bolt.fill",
+                             label: "", value: "\(new.percent)%", detail: "", startedAt: now)
+            switch e {
+            case .pluggedIn:
+                a.state = .success
+                a.detail = new.minutesToFull.map { L("battery.chargingFull", new.percent, DurationFormat.long(TimeInterval($0 * 60), language: L10n.language)) }
+                    ?? L("battery.charging", new.percent)
+            case .unplugged:
+                a.symbol = "battery.75percent"; a.detail = L("battery.unplugged", new.percent)
+            case .full:
+                a.state = .success; a.value = L("battery.fullShort"); a.detail = L("battery.full")
+            case .low20:
+                a.state = .needsAction; a.symbol = "battery.25percent"; a.detail = L("battery.low", new.percent)
+            case .low10:
+                a.priority = .p0; a.state = .failure; a.symbol = "battery.0percent"; a.detail = L("battery.low10", new.percent)
+            }
+            center.post(a, now: now)
+            if a.priority == .p0 { triggerP0(now: now) }
+        }
+        scheduleTick()
+    }
+
+    // MARK: Media (PRD §F5)
+
+    func mediaChanged(_ m: MediaState?) {
+        let artworkChanged = m?.artworkKey != media?.artworkKey || (media?.artwork == nil && m?.artwork != nil)
+        media = m
+        if artworkChanged { mediaAccent = DY.accent(m?.artwork) }
+        let now = Date()
+        guard features.isEnabled(.media), let m, m.isPlaying else { center.remove("media", now: now); return }
+        center.upsert(Activity(id: "media", kind: .media, priority: .p3, state: .ambient, symbol: "music.note",
+                               label: m.title, value: "", detail: "\(m.title) · \(m.artist)", startedAt: now,
+                               updatedAt: center.activities["media"]?.updatedAt ?? now))
+    }
+}
+
+/// Runs a short command synchronously (callers stay off the main thread).
+enum Shell {
+    nonisolated static func run(_ path: String, _ args: [String], timeout: TimeInterval = 5) -> String? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: path)
+        p.arguments = args
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch { return nil }
+        let deadline = Date().addingTimeInterval(timeout)
+        while p.isRunning && Date() < deadline { usleep(20_000) }
+        if p.isRunning { p.terminate(); return nil }
+        return String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+    }
+}
