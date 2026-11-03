@@ -129,6 +129,8 @@ final class AppModel {
     var clearClipboardOnQuit: Bool { didSet { defaults.set(clearClipboardOnQuit, forKey: "clearClipboardOnQuit") } }
     var quickPlay: [QuickPlayItem] { didSet { save(quickPlay, "quickPlay") } }
     var weatherCity: String { didSet { defaults.set(weatherCity, forKey: "weatherCity") } }
+    /// Git roots seen in agent sessions and terminal commands (newest first), for GitHub CI.
+    var recentRepos: [String] { didSet { defaults.set(recentRepos, forKey: "recentRepos") } }
     var screenshotsToShelf: Bool {
         didSet { defaults.set(screenshotsToShelf, forKey: "screenshotsToShelf"); ShelfProvider.shared.restartScreenshotWatch() }
     }
@@ -163,6 +165,7 @@ final class AppModel {
         clearClipboardOnQuit = d.bool(forKey: "clearClipboardOnQuit")
         screenshotsToShelf = d.object(forKey: "screenshotsToShelf") as? Bool ?? true
         weatherCity = d.string(forKey: "weatherCity") ?? ""
+        recentRepos = d.stringArray(forKey: "recentRepos") ?? []
         quickPlay = d.data(forKey: "quickPlay").flatMap { try? JSONDecoder().decode([QuickPlayItem].self, from: $0) } ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
@@ -343,6 +346,7 @@ final class AppModel {
                                  genericDetail: L("generic.notify"), startedAt: now), now: now)
         case let .shellStart(pid, cmd, cwd, app, seq):
             guard features.isEnabled(.commands) else { break }
+            noteRepo(cwd)
             // A new command replaces the shell's running one; results of earlier commands keep their hold time.
             if let old = commands.running[pid] { center.remove(Self.commandKey(old), now: now) }
             commands.start(shellPid: pid, command: cmd, cwd: cwd, app: app, seq: seq, now: now)
@@ -411,7 +415,22 @@ final class AppModel {
 
     // MARK: Agents (PRD §F3)
 
+    /// Remembers the git root of a working directory (max 10) so GitHub CI knows which repos to watch.
+    func noteRepo(_ cwd: String?) {
+        guard let cwd, !cwd.isEmpty else { return }
+        var url = URL(fileURLWithPath: cwd).standardizedFileURL
+        while url.path != "/" {
+            if FileManager.default.fileExists(atPath: url.appendingPathComponent(".git").path) {
+                let root = url.path
+                if recentRepos.first != root { recentRepos = Array(([root] + recentRepos.filter { $0 != root }).prefix(10)) }
+                return
+            }
+            url.deleteLastPathComponent()
+        }
+    }
+
     private func applyAgentEvent(_ e: ClaudeHookEvent, env: [String: String], now: Date) {
+        if e.name == .sessionStart || e.name == .userPromptSubmit { noteRepo(e.cwd) }
         let before = agents.sessions[e.sessionID]?.status
         agents.apply(e, env: env, now: now, projectName: { ProjectName.resolve(cwd: $0) })
         // Tool ran → any notch card for this session is stale (answered in the terminal).
@@ -625,7 +644,7 @@ final class AppModel {
             return acts
         case .notify where a.url?.hasPrefix("pid:") == true:
             return [(L("stats.view"), .normal, .openStats), (L("stats.stop"), .destructive, .stopProcess(Int32(a.url!.dropFirst(4)) ?? 0))]
-        case .script, .notify, .port:
+        case .script, .notify, .port, .ci:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openURL($0))] } ?? []
         default:
             return []

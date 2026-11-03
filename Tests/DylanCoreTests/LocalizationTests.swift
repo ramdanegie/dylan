@@ -70,7 +70,7 @@ import Testing
         #expect(byID["claudeSessions"]?.status(macOSMajor: 27) == .available)
         #expect(byID["discordVoice"]?.status(macOSMajor: 27) == .soon)      // next release
         #expect(byID["otherPlayers"]?.status(macOSMajor: 27) == .soon)      // unfinished v1.0 scope
-        #expect(byID["docker"]?.status(macOSMajor: 27) == .planned)
+        #expect(byID["mcp"]?.status(macOSMajor: 27) == .planned)
         #expect(byID["weather"]?.status(macOSMajor: 27) == .available)
     }
 }

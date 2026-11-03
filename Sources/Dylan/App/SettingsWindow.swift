@@ -415,7 +415,12 @@ struct TerminalSettings: View {
     private var model: AppModel { AppModel.shared }
 
     var body: some View {
-        FeatureToggles(features: [.commands, .ports])
+        FeatureToggles(features: [.commands, .ports, .docker, .github, .widgets])
+        Section("GitHub & widgets") {
+            LabeledContent(L("ci.repos"), value: AppModel.shared.recentRepos.isEmpty ? "—" : AppModel.shared.recentRepos.map { ($0 as NSString).lastPathComponent }.joined(separator: ", "))
+            LabeledContent(L("widgets.folder"), value: "~/.config/dylan/widgets")
+            SwiftUI.Text(L("widgets.hint")).font(.caption).foregroundStyle(.secondary)
+        }
         Section(L("terminal.shell")) {
             LabeledContent("zsh") {
                 SwiftUI.Text(installed ? L("terminal.active") : L("terminal.inactive")).foregroundStyle(installed ? .green : .secondary)
