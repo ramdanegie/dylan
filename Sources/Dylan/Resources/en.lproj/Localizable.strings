@@ -316,6 +316,7 @@
 "support.meeting.req" = "Calendar";
 "support.meetingControls" = "Meeting controls";
 "support.meetingControls.desc" = "Mute, camera, share for Zoom/Teams/Meet.";
+"support.meetingControls.req" = "Needs Accessibility";
 "support.mirror" = "Camera mirror";
 "support.mirror.desc" = "Check how you look before a meeting.";
 "support.mirror.req" = "Camera";
@@ -675,3 +676,7 @@
 "transform.half" = "JPEG 50%";
 "transform.compress" = "Compress";
 "transform.mergePDF" = "Merge PDFs";
+"meetingControls.mic" = "Mic";
+"meetingControls.camera" = "Camera";
+"meetingControls.share" = "Share";
+"meetingControls.inCall" = "In a %@ call";

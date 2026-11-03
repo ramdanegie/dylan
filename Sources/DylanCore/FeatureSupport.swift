@@ -106,7 +106,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("notifications", .communication, [68], .v1_2, req: true),
         .init("replies", .communication, [69], .v1_2),
         .init("calls", .communication, [82], .v1_2),
-        .init("meetingControls", .communication, [83], .v1_2),
+        .init("meetingControls", .communication, [83], .v1_2, built: true, req: true),
         // Files & clipboard
         .init("clipboard", .files, [20], .v1_1, built: true),
         .init("secrets", .files, [22], .v1_1, built: true),

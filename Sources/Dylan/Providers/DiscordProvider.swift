@@ -232,12 +232,7 @@ final class DiscordProvider {
         if s.contains("⇧") { flags.insert(.maskShift) }
         if s.contains("⌥") { flags.insert(.maskAlternate) }
         if s.contains("⌘") { flags.insert(.maskCommand) }
-        guard let letter = s.uppercased().last, let code = keyCodes[letter], !flags.isEmpty else { return nil }
+        guard let letter = s.uppercased().last, let code = KeyCodes.letters[letter], !flags.isEmpty else { return nil }
         return (code, flags)
     }
-
-    nonisolated static let keyCodes: [Character: CGKeyCode] = [
-        "A": 0, "S": 1, "D": 2, "F": 3, "H": 4, "G": 5, "Z": 6, "X": 7, "C": 8, "V": 9, "B": 11, "Q": 12, "W": 13, "E": 14,
-        "R": 15, "Y": 16, "T": 17, "O": 31, "U": 32, "I": 34, "P": 35, "L": 37, "J": 38, "K": 40, "N": 45, "M": 46,
-    ]
 }

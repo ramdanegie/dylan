@@ -316,6 +316,7 @@
 "support.meeting.req" = "Kalender";
 "support.meetingControls" = "Kontrol meeting";
 "support.meetingControls.desc" = "Mute, kamera, share Zoom/Teams/Meet.";
+"support.meetingControls.req" = "Butuh izin Accessibility";
 "support.mirror" = "Kamera cermin";
 "support.mirror.desc" = "Cek penampilan sebelum meeting.";
 "support.mirror.req" = "Kamera";
@@ -675,3 +676,7 @@
 "transform.half" = "JPEG 50%";
 "transform.compress" = "Kompres";
 "transform.mergePDF" = "Gabung PDF";
+"meetingControls.mic" = "Mic";
+"meetingControls.camera" = "Kamera";
+"meetingControls.share" = "Share";
+"meetingControls.inCall" = "Sedang di %@";

@@ -279,8 +279,11 @@ final class PrivacyProvider {
         guard model.features.isEnabled(.privacy) else { model.cameraOn = false; model.micOn = false; return }
         model.micOn = isRunning(micDevice)
         model.cameraOn = cameras.keys.contains { cameraRunning($0) }
-        model.micApp = model.micOn ? micUser() : nil
+        let user = model.micOn ? micUser() : nil
+        model.micApp = user?.name
+        model.micAppProcess = user.map { ($0.pid, $0.bundleID) }
         model.refreshDiscordSimple()
+        MeetingCallProvider.shared.micChanged()
     }
 
     private func isRunning(_ dev: AudioObjectID) -> Bool {
@@ -302,7 +305,7 @@ final class PrivacyProvider {
     }
 
     /// Which app records audio, via Core Audio process objects (macOS 14.2+). Best effort.
-    private func micUser() -> String? {
+    private func micUser() -> (name: String, pid: pid_t, bundleID: String?)? {
         var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyProcessObjectList,
                                               mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var size: UInt32 = 0
@@ -320,11 +323,27 @@ final class PrivacyProvider {
             var pid: pid_t = 0
             var ps = UInt32(MemoryLayout<pid_t>.size)
             if AudioObjectGetPropertyData(p, &pidAddr, 0, nil, &ps, &pid) == noErr,
-               let app = NSRunningApplication(processIdentifier: pid)?.localizedName {
-                return app
+               let app = Self.owningApp(pid: pid, processObject: p), let name = app.localizedName {
+                return (name, app.processIdentifier, app.bundleIdentifier)
             }
         }
         return nil
+    }
+}
+
+extension PrivacyProvider {
+    /// Browsers record from a helper (com.google.Chrome.helper, Safari's WebKit GPU process): map it to the app.
+    static func owningApp(pid: pid_t, processObject p: AudioObjectID) -> NSRunningApplication? {
+        if let app = NSRunningApplication(processIdentifier: pid), app.activationPolicy == .regular { return app }
+        var addr = AudioObjectPropertyAddress(mSelector: kAudioProcessPropertyBundleID,
+                                              mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var cf: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        guard AudioObjectGetPropertyData(p, &addr, 0, nil, &size, &cf) == noErr, let raw = cf?.takeRetainedValue() as String? else { return nil }
+        let id = raw.hasPrefix("com.apple.WebKit") ? "com.apple.Safari"
+            : (raw.range(of: #"\.helper.*$"#, options: [.regularExpression, .caseInsensitive]).map { String(raw[..<$0.lowerBound]) } ?? raw)
+        return NSRunningApplication.runningApplications(withBundleIdentifier: id).first
+            ?? NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier?.caseInsensitiveCompare(id) == .orderedSame }
     }
 }
 

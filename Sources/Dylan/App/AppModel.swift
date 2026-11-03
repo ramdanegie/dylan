@@ -66,6 +66,7 @@ enum NotchAction: Equatable {
     case openStats, stopProcess(Int32)
     case revealFile(String), shelveFile(String)
     case discordMute, discordDeafen, discordLeave, discordKeybindMute, openDiscord(URL)
+    case meetingControl(MeetingControls.Control)
 }
 
 @Observable
@@ -116,6 +117,8 @@ final class AppModel {
     var cameraOn = false
     var micOn = false
     var micApp: String?
+    /// Process using the microphone (with micApp), for meeting controls.
+    @ObservationIgnored var micAppProcess: (pid: pid_t, bundleID: String?)?
     var screenLocked = false
     var pending: [String: PendingPermission] = [:]
     /// P0 auto-peek (4 s) — design M4.
@@ -663,6 +666,7 @@ final class AppModel {
         case .discordDeafen: DiscordProvider.shared.toggleDeaf()
         case .discordLeave: DiscordProvider.shared.leave()
         case .discordKeybindMute: DiscordProvider.shared.sendKeybind(discordMuteKey)
+        case .meetingControl(let c): MeetingCallProvider.shared.press(c)
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -678,6 +682,10 @@ final class AppModel {
             return [(L("button.openTerminal"), .normal, .focusSession(a.url ?? ""))]
         case .agent:
             return a.url.map { [(L("button.open"), .normal, .focusSession($0))] } ?? []
+        case .meeting where a.id == "meeting-live":
+            guard let app = MeetingCallProvider.shared.app else { return [] }
+            return MeetingControls.Control.allCases.filter { MeetingControls.shortcut(app, $0) != nil }
+                .map { (L("meetingControls.\($0.rawValue)"), .normal, .meetingControl($0)) }
         case .meeting:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.join"), .primaryNeutral, .join($0))] } ?? []
         case .discord where a.id == "discord-voice":

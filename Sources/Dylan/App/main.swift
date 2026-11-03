@@ -74,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.discord) ? DiscordProvider.shared.start() : DiscordProvider.shared.stop()
         f.isEnabled(.hud) ? HUDProvider.shared.start() : HUDProvider.shared.stop()
         f.isEnabled(.focus) ? FocusProvider.shared.start() : FocusProvider.shared.stop()
+        if !f.isEnabled(.meeting) { MeetingCallProvider.shared.end() }
         PrivacyProvider.shared.update()
         // A tab that was just turned off must not keep rendering.
         if !AppModel.shared.tabs.contains(AppModel.shared.selectedTab) { AppModel.shared.selectedTab = .home }
