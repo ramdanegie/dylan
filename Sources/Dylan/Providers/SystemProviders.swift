@@ -12,6 +12,7 @@ final class CalendarProvider {
     static let shared = CalendarProvider()
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
+    private var dayObserver: NSObjectProtocol?
     private(set) var authorized = false
 
     var status: EKAuthorizationStatus { EKEventStore.authorizationStatus(for: .event) }
@@ -30,19 +31,25 @@ final class CalendarProvider {
             observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { _ in
                 MainActor.assumeIsolated { CalendarProvider.shared.reload() }
             }
+            // The window is "today + 24 h": reload at midnight as well.
+            dayObserver = NotificationCenter.default.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { CalendarProvider.shared.reload() }
+            }
         }
         reload()
     }
 
     func stop() {
-        if let observer { NotificationCenter.default.removeObserver(observer) }
+        for o in [observer, dayObserver].compactMap({ $0 }) { NotificationCenter.default.removeObserver(o) }
         observer = nil
+        dayObserver = nil
+        authorized = false
         AppModel.shared.meetings = []
         AppModel.shared.refreshMeeting()
     }
 
     func reload() {
-        guard authorized else { return }
+        guard authorized, AppModel.shared.features.isEnabled(.meeting) else { return }
         let now = Date()
         let start = Calendar.current.startOfDay(for: now)
         let end = now.addingTimeInterval(24 * 3600)
@@ -169,7 +176,8 @@ final class BluetoothProvider: NSObject {
 final class PrivacyProvider {
     static let shared = PrivacyProvider()
     private var micDevice = AudioObjectID(kAudioObjectUnknown)
-    private var cameras: [CMIOObjectID] = []
+    private var micListener: AudioObjectPropertyListenerBlock?
+    private var cameras: [CMIOObjectID: CMIOObjectPropertyListenerBlock] = [:]
     private var running = false
 
     func start() {
@@ -182,6 +190,24 @@ final class PrivacyProvider {
         }
         watchMic()
         watchCameras()
+        // Continuity Camera or a USB webcam plugged in later must light the dot too.
+        var devices = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices),
+                                                mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
+                                                mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
+        CMIOObjectAddPropertyListenerBlock(CMIOObjectID(kCMIOObjectSystemObject), &devices, .main) { _, _ in
+            MainActor.assumeIsolated { PrivacyProvider.shared.watchCameras() }
+        }
+    }
+
+    private static func runningAddress() -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
+                                   mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+    }
+
+    private static func cameraRunningAddress() -> CMIOObjectPropertyAddress {
+        CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere),
+                                  mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeWildcard),
+                                  mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementWildcard))
     }
 
     private func watchMic() {
@@ -191,16 +217,21 @@ final class PrivacyProvider {
         var size = UInt32(MemoryLayout<AudioObjectID>.size)
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &dev) == noErr,
               dev != micDevice else { update(); return }
+        // Remove the listener on the previous default input before adding one to the new device.
+        var running = Self.runningAddress()
+        if let old = micListener, micDevice != kAudioObjectUnknown {
+            AudioObjectRemovePropertyListenerBlock(micDevice, &running, .main, old)
+        }
         micDevice = dev
-        var running = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
-                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        AudioObjectAddPropertyListenerBlock(dev, &running, .main) { _, _ in
+        let block: AudioObjectPropertyListenerBlock = { _, _ in
             MainActor.assumeIsolated { PrivacyProvider.shared.update() }
         }
+        AudioObjectAddPropertyListenerBlock(dev, &running, .main, block)
+        micListener = block
         update()
     }
 
-    private func watchCameras() {
+    fileprivate func watchCameras() {
         var addr = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices),
                                              mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
                                              mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
@@ -209,14 +240,19 @@ final class PrivacyProvider {
         var ids = [CMIOObjectID](repeating: 0, count: Int(size) / MemoryLayout<CMIOObjectID>.size)
         var used: UInt32 = 0
         guard CMIOObjectGetPropertyData(CMIOObjectID(kCMIOObjectSystemObject), &addr, 0, nil, size, &used, &ids) == 0 else { return }
-        cameras = ids
-        for id in ids {
-            var r = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere),
-                                              mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeWildcard),
-                                              mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementWildcard))
-            CMIOObjectAddPropertyListenerBlock(id, &r, .main) { _, _ in
+        // Watch new devices once; forget unplugged ones.
+        for gone in cameras.keys where !ids.contains(gone) {
+            var r = Self.cameraRunningAddress()
+            if let b = cameras[gone] { CMIOObjectRemovePropertyListenerBlock(gone, &r, .main, b) }
+            cameras[gone] = nil
+        }
+        for id in ids where cameras[id] == nil {
+            var r = Self.cameraRunningAddress()
+            let block: CMIOObjectPropertyListenerBlock = { _, _ in
                 MainActor.assumeIsolated { PrivacyProvider.shared.update() }
             }
+            CMIOObjectAddPropertyListenerBlock(id, &r, .main, block)
+            cameras[id] = block
         }
         update()
     }
@@ -225,7 +261,7 @@ final class PrivacyProvider {
         let model = AppModel.shared
         guard model.features.isEnabled(.privacy) else { model.cameraOn = false; model.micOn = false; return }
         model.micOn = isRunning(micDevice)
-        model.cameraOn = cameras.contains { cameraRunning($0) }
+        model.cameraOn = cameras.keys.contains { cameraRunning($0) }
         model.micApp = model.micOn ? micUser() : nil
     }
 
@@ -287,7 +323,11 @@ enum TerminalFocus {
         if ["com.microsoft.VSCode", "dev.zed.Zed", "com.todesktop.230313mzl4w4u92"].contains(bundle), let root {
             ws.open([root], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration())
         } else {
-            NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first?.activate()
+            // openApplication activates reliably from an accessory app (activate() can be ignored
+            // under cooperative activation on macOS 14+).
+            let config = NSWorkspace.OpenConfiguration()
+            config.activates = true
+            ws.openApplication(at: appURL, configuration: config)
         }
     }
 
