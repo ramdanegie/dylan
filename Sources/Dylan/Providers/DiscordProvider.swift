@@ -14,6 +14,13 @@ enum Keychain {
         return String(data: d, encoding: .utf8)
     }
 
+    /// Presence only: does not read the secret.
+    static func exists(_ account: String) -> Bool {
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                                kSecAttrAccount as String: account, kSecMatchLimit as String: kSecMatchLimitOne]
+        return SecItemCopyMatching(q as CFDictionary, nil) == errSecSuccess
+    }
+
     static func set(_ value: String?, _ account: String) {
         let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
         SecItemDelete(base as CFDictionary)

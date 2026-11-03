@@ -27,7 +27,7 @@ final class FaceUnlockProvider {
 
     private static var vaultURL: URL { Bridge.socketURL.deletingLastPathComponent().appendingPathComponent("face.sealed") }
 
-    var enrolled: Bool { vault.template != nil && Keychain.get("faceunlock.password") != nil }
+    var enrolled: Bool { vault.template != nil && Keychain.exists("faceunlock.password") }
     var enabled: Bool { vault.settings.enabled && enrolled }
 
     // MARK: Lifecycle
@@ -59,6 +59,7 @@ final class FaceUnlockProvider {
     private func didUnlock() {
         guard vault.template != nil else { lockedAt = nil; return }   // never enrolled: nothing to record
         let now = Date()
+        unlockCheck?.cancel(); unlockCheck = nil
         if typedThisLock {
             let failed = vault.log.failuresSinceLastUnlock
             record(.init(at: now, result: .unlocked))
@@ -96,40 +97,67 @@ final class FaceUnlockProvider {
                                presentationMode: AppModel.shared.presentationMode, network: nil)
     }
 
+    // State of the running attempt or enrollment (main actor). Frames arrive on the camera queue and hop here.
+    @ObservationIgnored private var challenge: LivenessChallenge?
+    @ObservationIgnored private var tracker = FaceGeometry.Tracker()
+    @ObservationIgnored private var bestIdentity: Double = 0
+    @ObservationIgnored private var startedAt = Date()
+    @ObservationIgnored private var enrollPrints: [[Float]] = []
+    @ObservationIgnored private var enrollPassword: String?
+    @ObservationIgnored private var watchdog: DispatchWorkItem?
+    @ObservationIgnored private var unlockCheck: DispatchWorkItem?
+
     private func attempt() {
-        guard camera == nil, let template = vault.template else { return }
+        guard camera == nil, vault.template != nil else { return }
         if let d = FaceUnlockPolicy(settings: vault.settings).denial(facts) {
             if !deniedLoggedThisLock { deniedLoggedThisLock = true; record(.init(at: Date(), result: .denied, reason: d.rawValue)) }
             return
         }
         var g = SystemRandomNumberGenerator()
-        var challenge = LivenessChallenge.random(using: &g)
-        let steps = challenge.steps
-        Speech.say(steps.map { L("faceUnlock.step.\($0.rawValue)") }.joined(separator: ", "))
-        var tracker = FaceGeometry.Tracker()
-        var best: Double = 0
-        let start = Date()
+        let c = LivenessChallenge.random(using: &g)
+        challenge = c
+        tracker = FaceGeometry.Tracker()
+        bestIdentity = 0
+        startedAt = Date()
+        Speech.say(c.steps.map { L("faceUnlock.step.\($0.rawValue)") }.joined(separator: ", "))
         camera = FaceCamera { frame in
-            MainActor.assumeIsolated {
-                let p = FaceUnlockProvider.shared
-                guard p.camera != nil else { return }
-                let identity = frame.print.map { FaceMatcher.identity($0, template) } ?? 0
-                best = max(best, identity)
-                let sample = LivenessChallenge.Sample(time: Date().timeIntervalSince(start), faceCount: frame.faceCount,
-                                                      trackID: frame.box.map { tracker.track($0) }, yaw: frame.yaw, pitch: frame.pitch,
-                                                      eyesOpen: frame.eyesOpen, identity: identity)
-                switch challenge.feed(sample) {
-                case .inProgress: return
-                case .passed: p.finish(passed: true, reason: nil, identity: best, steps: steps)
-                case .failed(let r): p.finish(passed: false, reason: r.rawValue, identity: best, steps: steps)
-                }
-            }
+            DispatchQueue.main.async { MainActor.assumeIsolated { FaceUnlockProvider.shared.attemptFrame(frame) } }
         }
-        if camera == nil { record(.init(at: Date(), result: .failed, reason: "noCamera", steps: steps)) }
+        guard camera != nil else { challenge = nil; record(.init(at: Date(), result: .failed, reason: "noCamera", steps: c.steps)); return }
+        // No frames at all (camera busy or blocked) must not leave the attempt open forever.
+        arm(after: LivenessChallenge.window + 2) { p in
+            guard let c = p.challenge else { return }
+            p.finish(passed: false, reason: LivenessChallenge.Reason.timeout.rawValue, identity: p.bestIdentity, steps: c.steps)
+        }
+    }
+
+    private func attemptFrame(_ frame: FaceCamera.Frame) {
+        guard camera != nil, var c = challenge, let template = vault.template else { return }
+        let identity = frame.print.map { FaceMatcher.identity($0, template) } ?? 0
+        bestIdentity = max(bestIdentity, identity)
+        let sample = LivenessChallenge.Sample(time: Date().timeIntervalSince(startedAt), faceCount: frame.faceCount,
+                                              trackID: frame.box.map { tracker.track($0) }, yaw: frame.yaw, pitch: frame.pitch,
+                                              eyesOpen: frame.eyesOpen, identity: identity)
+        let outcome = c.feed(sample)
+        challenge = c
+        switch outcome {
+        case .inProgress: return
+        case .passed: finish(passed: true, reason: nil, identity: bestIdentity, steps: c.steps)
+        case .failed(let r): finish(passed: false, reason: r.rawValue, identity: bestIdentity, steps: c.steps)
+        }
+    }
+
+    private func arm(after seconds: TimeInterval, _ f: @escaping @MainActor (FaceUnlockProvider) -> Void) {
+        watchdog?.cancel()
+        let w = DispatchWorkItem { MainActor.assumeIsolated { f(FaceUnlockProvider.shared) } }
+        watchdog = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: w)
     }
 
     private func finish(passed: Bool, reason: String?, identity: Double, steps: [LivenessChallenge.Step]) {
+        watchdog?.cancel(); watchdog = nil
         camera?.stop(); camera = nil
+        challenge = nil
         guard passed else {
             vault.consecutiveFailures += 1
             record(.init(at: Date(), result: .failed, reason: reason, identity: identity, steps: steps))
@@ -141,6 +169,16 @@ final class FaceUnlockProvider {
         typedThisLock = true
         save()
         Self.type(password)
+        // Still locked a few seconds later: the stored password is wrong (changed since enrollment). Stop typing it.
+        unlockCheck?.cancel()
+        let w = DispatchWorkItem { MainActor.assumeIsolated {
+            let p = FaceUnlockProvider.shared
+            guard Self.screenLocked, p.typedThisLock else { return }
+            p.record(.init(at: Date(), result: .failed, reason: "passwordRejected", identity: identity, steps: steps))
+            p.disable()
+        } }
+        unlockCheck = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: w)
     }
 
     private func record(_ e: FaceUnlockEvent) { vault.log.append(e); save() }
@@ -151,25 +189,49 @@ final class FaceUnlockProvider {
     func enroll(password: String) {
         guard !busy else { return }
         guard Self.verify(password: password) else { status = L("faceUnlock.wrongPassword"); return }
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized: break
+        case .notDetermined:
+            // First use: ask, then start again with the same (verified) password.
+            AVCaptureDevice.requestAccess(for: .video) { @Sendable granted in
+                Task { @MainActor in
+                    if granted { FaceUnlockProvider.shared.enroll(password: password) } else { FaceUnlockProvider.shared.status = L("faceUnlock.noCamera") }
+                }
+            }
+            return
+        default: status = L("faceUnlock.noCamera"); return
+        }
         busy = true
         status = L("faceUnlock.lookAtCamera")
-        var prints: [[Float]] = []
-        let start = Date()
+        enrollPrints = []
+        enrollPassword = password
+        startedAt = Date()
         camera = FaceCamera { frame in
-            MainActor.assumeIsolated {
-                let p = FaceUnlockProvider.shared
-                if frame.faceCount == 1, let f = frame.print { prints.append(f) }
-                guard Date().timeIntervalSince(start) > 6 || prints.count >= 24 else { return }
-                p.camera?.stop(); p.camera = nil
-                p.busy = false
-                guard let t = FaceMatcher.enroll(prints, now: Date()) else { p.status = L("faceUnlock.enrollFailed"); return }
-                Keychain.set(password, "faceunlock.password")
-                p.vault.template = t
-                p.save()
-                p.status = L("faceUnlock.enrolled", prints.count)
-            }
+            DispatchQueue.main.async { MainActor.assumeIsolated { FaceUnlockProvider.shared.enrollFrame(frame) } }
         }
-        if camera == nil { busy = false; status = L("faceUnlock.noCamera") }
+        guard camera != nil else { busy = false; enrollPassword = nil; status = L("faceUnlock.noCamera"); return }
+        arm(after: 8) { $0.finishEnrollment() }
+    }
+
+    private func enrollFrame(_ frame: FaceCamera.Frame) {
+        guard busy, camera != nil else { return }
+        if frame.faceCount == 1, let f = frame.print { enrollPrints.append(f) }
+        if Date().timeIntervalSince(startedAt) > 6 || enrollPrints.count >= 24 { finishEnrollment() }
+    }
+
+    private func finishEnrollment() {
+        guard busy else { return }
+        watchdog?.cancel(); watchdog = nil
+        camera?.stop(); camera = nil
+        busy = false
+        let password = enrollPassword
+        enrollPassword = nil
+        guard let password, let t = FaceMatcher.enroll(enrollPrints, now: Date()) else { status = L("faceUnlock.enrollFailed"); return }
+        Keychain.set(password, "faceunlock.password")
+        vault.template = t
+        save()
+        status = L("faceUnlock.enrolled", enrollPrints.count)
+        enrollPrints = []
     }
 
     /// Everything goes: password, template, settings, log, file and key.
@@ -296,12 +358,11 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
         guard session.canAddInput(input), session.canAddOutput(output) else { return nil }
         session.addInput(input); session.addOutput(output)
         session.commitConfiguration()
-        let s = session
-        queue.async { s.startRunning() }
-        queue.asyncAfter(deadline: .now() + 8) { s.stopRunning() }
+        queue.async { self.session.startRunning() }
+        queue.asyncAfter(deadline: .now() + 8) { self.session.stopRunning() }
     }
 
-    func stop() { let s = session; queue.async { s.stopRunning() } }
+    func stop() { queue.async { self.session.stopRunning() } }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let now = CACurrentMediaTime()
