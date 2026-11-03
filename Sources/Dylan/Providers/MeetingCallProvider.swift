@@ -137,23 +137,8 @@ final class MeetingCallProvider {
 
     /// Finds an enabled menu item whose shortcut is ⌘+`modifiers`+`key` and presses it.
     static func pressMenuItem(pid: pid_t, key: Character, modifiers: Int) -> Bool {
-        guard let bar = element(AXUIElementCreateApplication(pid), kAXMenuBarAttribute) else { return false }
-        func search(_ el: AXUIElement, depth: Int) -> Bool {
-            guard depth < 4 else { return false }
-            for child in children(el) {
-                var ch: CFTypeRef?, mods: CFTypeRef?, enabled: CFTypeRef?
-                if AXUIElementCopyAttributeValue(child, kAXMenuItemCmdCharAttribute as CFString, &ch) == .success,
-                   (ch as? String)?.uppercased() == String(key),
-                   AXUIElementCopyAttributeValue(child, kAXMenuItemCmdModifiersAttribute as CFString, &mods) == .success,
-                   (mods as? Int) == modifiers,
-                   AXUIElementCopyAttributeValue(child, kAXEnabledAttribute as CFString, &enabled) == .success, enabled as? Bool == true {
-                    return AXUIElementPerformAction(child, kAXPressAction as CFString) == .success
-                }
-                if search(child, depth: depth + 1) { return true }
-            }
-            return false
-        }
-        return search(bar, depth: 0)
+        guard let item = AXMenu.find(pid: pid, key: key, modifiers: modifiers) else { return false }
+        return AXUIElementPerformAction(item, kAXPressAction as CFString) == .success
     }
 
     private static func element(_ el: AXUIElement, _ attr: String) -> AXUIElement? {

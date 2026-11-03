@@ -466,6 +466,7 @@ final class AppModel {
                                                     "state": "\($0.state)", "label": $0.label, "value": $0.value, "detail": displayDetail($0)] },
                 "sessions": agents.ordered.map { ["project": $0.project, "status": "\($0.status)"] },
                 "history": center.history.count,
+                "accessibility": AXIsProcessTrusted(),
             ]
             if var d = try? JSONSerialization.data(withJSONObject: state, options: [.sortedKeys]) { d.append(0x0A); reply(d) }
         }

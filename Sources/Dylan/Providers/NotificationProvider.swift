@@ -145,34 +145,7 @@ final class NotificationProvider {
     // MARK: Accessibility
 
     private func scan() -> [(banner: NotificationBanner, element: AXUIElement)] {
-        guard pid > 0 else { return [] }
-        var out: [(NotificationBanner, AXUIElement)] = []
-        func walk(_ el: AXUIElement, _ depth: Int) {
-            guard depth < 8 else { return }
-            if Self.string(el, kAXSubroleAttribute) == "AXNotificationCenterBanner" {
-                var title: String?, subtitle: String?, body: String?
-                for c in Self.children(el) {
-                    switch Self.string(c, kAXIdentifierAttribute) {
-                    case "title": title = Self.string(c, kAXValueAttribute)
-                    case "subtitle": subtitle = Self.string(c, kAXValueAttribute)
-                    case "body": body = Self.string(c, kAXValueAttribute)
-                    default: break
-                    }
-                }
-                var names: CFArray?
-                AXUIElementCopyActionNames(el, &names)
-                if let b = NotificationBanner(id: Self.string(el, kAXIdentifierAttribute) ?? "", description: Self.string(el, kAXDescriptionAttribute),
-                                              title: title, subtitle: subtitle, body: body, actionNames: names as? [String] ?? []) {
-                    out.append((b, el))
-                }
-                return
-            }
-            for c in Self.children(el) { walk(c, depth + 1) }
-        }
-        var wins: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &wins) == .success else { return [] }
-        for w in (wins as? [AXUIElement] ?? []) where Self.string(w, kAXSubroleAttribute) == "AXSystemDialog" { walk(w, 0) }
-        return out
+        pid > 0 ? BannerScanner.scan(pid: pid) : []
     }
 
     private static func rawAction(_ el: AXUIElement, named name: String) -> String? {
