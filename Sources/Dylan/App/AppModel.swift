@@ -1,4 +1,5 @@
 import AppKit
+import CoreLocation
 import DylanCore
 import IOKit.pwr_mgt
 import Observation
@@ -467,6 +468,10 @@ final class AppModel {
                 "sessions": agents.ordered.map { ["project": $0.project, "status": "\($0.status)"] },
                 "history": center.history.count,
                 "accessibility": AXIsProcessTrusted(),
+                "location": CLLocationManager().authorizationStatus.rawValue,
+                "media": media.map { ["source": $0.source.rawValue, "title": $0.title, "playing": $0.isPlaying, "app": $0.sourceName] as [String: Any] } ?? [:],
+                "visualizerLive": VisualizerProvider.shared.live,
+                "lockScreenUnavailable": LockScreenProvider.shared.unavailable,
             ]
             if var d = try? JSONSerialization.data(withJSONObject: state, options: [.sortedKeys]) { d.append(0x0A); reply(d) }
         }

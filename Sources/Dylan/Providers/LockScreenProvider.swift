@@ -88,8 +88,10 @@ enum SkyLight {
         let cid = main()
         let space = create(cid, 1, 0)
         guard space != 0, setLevel(cid, space, lockScreenLevel) == 0 else { return nil }
+        // Spike T4.1 on a locked macOS 27.2: both calls return 3 although the window then shows above the lock
+        // screen (a control window without them does not), so their results say nothing and are not checked.
         _ = show(cid, [space] as CFArray)
-        guard add(cid, space, [windowNumber] as CFArray, 7) == 0 else { destroy(space: space); return nil }
+        _ = add(cid, space, [windowNumber] as CFArray, 7)
         return space
     }
 

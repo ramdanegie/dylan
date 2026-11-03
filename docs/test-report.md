@@ -49,7 +49,9 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 | Format data asli | LRCLIB, Open-Meteo, `gh run list`, `lsof` cocok dengan parser |
 | Cursor & OpenCode | `dylan hook cursor` → "Cursor is running npm test" → "Cursor finished"; app mati → tetap mencetak `{"continue":true}`, exit 0; OpenCode → "OpenCode finished" |
 | Notifikasi (spike T3.5) | Struktur AX banner asli dibaca (`AXNotificationCenterBanner`, title/subtitle/body, aksi); `AXObserver` memberi event saat banner muncul |
-| SkyLight | Keenam simbol untuk widget lock screen ada di macOS 27.2 (dlsym, tidak dipanggil) |
+| Widget lock screen (spike T4.1) | Layar dikunci sekali (dengan izin kamu). Jendela uji tampil di atas lock screen lewat space SkyLight; jendela kontrol tanpa SkyLight tidak tampil. `SLSShowSpaces`/`SLSSpaceAddWindows…` mengembalikan 3 walau berhasil, sehingga Dylan sempat salah menganggapnya gagal (sudah diperbaiki) |
+| Notifikasi dari Dylan.app | Dengan Accessibility: banner asli → P1 di notch, 3 banner → "· 3 messages", tidak ada isi yang ditulis ke disk |
+| Waktunya berangkat | Location diizinkan; Apple Maps ETA Monas → Senayan 15 menit / 8 km |
 | Plugin OpenCode | JS yang dihasilkan lolos `node --check`, termasuk path dengan kutip |
 | Notifikasi (kode app) | `BannerScanner` membaca banner asli (app, judul, subjudul, isi, aksi) dan aksi **Close** milik banner benar-benar menutupnya |
 | Kontrol meeting (kode app) | `AXMenu` menemukan item menu Finder lewat shortcut; mask modifier terbukti (Shift 1, Control 4); item nonaktif dilewati. Tidak ada yang ditekan |
