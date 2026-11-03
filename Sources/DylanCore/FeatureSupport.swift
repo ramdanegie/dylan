@@ -122,7 +122,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("mirror", .utilities, [79], .v1_3, built: true, req: true),
         .init("lockScreen", .utilities, [80], .v1_3, built: true, experimental: true, req: true),
         // Security
-        .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, experimental: true, req: true),
+        .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, built: true, experimental: true, req: true),
         // Developer
         .init("claudeSessions", .developer, [7, 8], .v1_0, built: true),
         .init("answerFromNotch", .developer, [9], .v1_0, built: true, req: true),

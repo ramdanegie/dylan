@@ -48,8 +48,10 @@ Proyek lain yang dipelajari: KINN-CH/FaceUnlock (kunci Secure Enclave, verifikas
 | Bagian | Status |
 |---|---|
 | Kebijakan (`FaceUnlockPolicy`) + tantangan liveness (`LivenessChallenge`) + audit log | Ada, dengan unit test |
-| Kamera + Vision + embedding | Belum. Model embedding wajah dengan lisensi yang cocok untuk MIT masih dicari (InsightFace/ArcFace pretrained = non-komersial) |
-| Keychain + verifikasi password + pengetikan ke lock screen | Belum. Butuh spike T5.0 di akun macOS uji |
-| Island di lock screen | Belum (SkyLight, spike T4.1) |
-
-**Spike T5.0 tidak dijalankan otomatis:** butuh mengunci layar dan mengetik password ke lock screen. Itu akan dilakukan bersama kamu di akun uji, bukan di akun utama.
+| Identitas | `VNGenerateImageFeaturePrintRequest` pada crop wajah. Model Apple, bagian dari macOS, jadi tanpa masalah lisensi. Ambang dipelajari dari sebaran frame pendaftaran sendiri (jarak terjauh × 1,1). Pendaftaran tanpa sebaran (foto diam) ditolak. Feature print bersifat umum (bukan model wajah khusus), karena itu identitas dicek di **setiap** frame tantangan. Unit test memakai vektor sintetis |
+| Kamera + Vision | Hanya `builtInWideAngleCamera` (bukan Continuity/USB/virtual), ±10 fps, maks 8 s. Yaw/pitch dari `VNFaceObservation`, mata dari landmark, track ID dari IoU |
+| Penyimpanan | Template, pengaturan, dan log disegel AES-GCM (`FaceVault`) di `face.sealed` (0600); kunci 256-bit di Keychain. Password di Keychain setelah diverifikasi OpenDirectory. Tidak ada gambar yang disimpan. "Hapus" menghapus semuanya |
+| Pemicu & pengetikan | Kunci dicatat dari `com.apple.screenIsLocked`; percobaan saat layar menyala (`screensDidWake`) bila `CGSSessionScreenIsLocked`. Lolos → cek ulang kebijakan → ⌘→ ⌘⌫ → password per 20 unit UTF-16 (`.cghidEventTap`) → Return; buffer di-nol-kan |
+| Instruksi tantangan | Diucapkan (AVSpeechSynthesizer, id/en), karena lock screen tidak bisa digambari tanpa panel SkyLight eksperimental |
+| Transparansi | P1 "Dibuka dengan wajah · n gagal sebelumnya" setelah unlock; riwayat 50 kejadian di Settings (tanpa foto); "Matikan Face Unlock" di menu bar; ditolak saat Mode Presentasi |
+| Belum diverifikasi | Arah tanda `yaw` dari Vision (kiri/kanan), skor feature print pada wajah asli vs orang lain, dan pengetikan ke lock screen. **Spike T5.0 bersama kamu di akun macOS uji**, bukan di akun utama |

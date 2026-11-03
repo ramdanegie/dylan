@@ -2,7 +2,7 @@
 "NSAppleEventsUsageDescription" = "Dylan mengontrol Spotify dan Apple Music dari notch.";
 "NSBluetoothAlwaysUsageDescription" = "Dylan menampilkan AirPods dan perangkat Bluetooth lain saat tersambung.";
 "NSRemindersFullAccessUsageDescription" = "Dylan menampilkan reminder hari ini dan bisa mencentangnya dari notch.";
-"NSCameraUsageDescription" = "Dylan menampilkan kamera cermin supaya kamu bisa cek penampilan sebelum meeting. Tidak ada yang direkam.";
+"NSCameraUsageDescription" = "Dylan menampilkan kamera cermin sebelum meeting, dan (bila kamu daftarkan) memakai kamera bawaan untuk Face Unlock. Tidak ada gambar yang disimpan.";
 "NSLocationUsageDescription" = "Dylan memberi tahu kapan harus berangkat ke meeting di lokasi fisik (Waktunya berangkat, mati secara default).";
 "NSLocationWhenInUseUsageDescription" = "Dylan memberi tahu kapan harus berangkat ke meeting di lokasi fisik (Waktunya berangkat, mati secara default).";
 "NSAudioCaptureUsageDescription" = "Dylan membaca suara app musik untuk equalizer langsung, dan app yang kamu kecilkan untuk volume per app. Tidak ada yang direkam.";

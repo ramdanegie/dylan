@@ -40,6 +40,7 @@ let package = Package(
                 .linkedFramework("Carbon"),
                 .linkedFramework("CoreLocation"),
                 .linkedFramework("MapKit"),
+                .linkedFramework("OpenDirectory"),
                 .linkedFramework("ServiceManagement"),
             ]
         ),

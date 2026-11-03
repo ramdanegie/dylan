@@ -635,6 +635,7 @@ struct TerminalSettings: View {
             }
         }
         TouchIDSudoCard()
+        FaceUnlockSettings()
     }
 }
 
@@ -805,5 +806,45 @@ enum App {
         p.arguments = ["-c", "sleep 0.6; /usr/bin/open \"$0\"", path]
         try? p.run()
         NSApp.terminate(nil)
+    }
+}
+
+/// FR-50–55 (experimental): the warning comes first, then enrollment with the verified password.
+struct FaceUnlockSettings: View {
+    private var face: FaceUnlockProvider { FaceUnlockProvider.shared }
+    @StateBox private var password = ""
+    @StateBox private var understood = false
+
+    var body: some View {
+        Section(L("faceUnlock.title")) {
+            SwiftUI.Text(L("faceUnlock.warning")).font(.caption).foregroundStyle(.orange)
+            if face.enrolled {
+                Toggle(L("faceUnlock.enable"), isOn: Binding(get: { face.vault.settings.enabled }, set: { face.vault.settings.enabled = $0; face.save() }))
+                Stepper(L("faceUnlock.maxLocked", face.vault.settings.maxLockedMinutes),
+                        value: Binding(get: { face.vault.settings.maxLockedMinutes }, set: { face.vault.settings.maxLockedMinutes = $0; face.save() }), in: 5...240, step: 5)
+                if !AXIsProcessTrusted() { SwiftUI.Text(L("faceUnlock.needsAccessibility")).font(.caption).foregroundStyle(.secondary) }
+                Button(L("faceUnlock.delete"), role: .destructive) { face.deleteEnrollment() }
+            } else {
+                Toggle(L("faceUnlock.understood"), isOn: $understood)
+                SecureField(L("faceUnlock.password"), text: $password).disabled(!understood)
+                Button(L("faceUnlock.enroll")) { face.enroll(password: password); password = "" }
+                    .disabled(!understood || password.isEmpty || face.busy)
+            }
+            if let s = face.status { SwiftUI.Text(s).font(.caption).foregroundStyle(.secondary) }
+        }
+        if !face.vault.log.events.isEmpty {
+            Section(L("faceUnlock.log")) {
+                ForEach(Array(face.vault.log.events.prefix(10).enumerated()), id: \.offset) { _, e in
+                    HStack {
+                        SwiftUI.Text(e.at.formatted(date: .abbreviated, time: .shortened))
+                        SwiftUI.Text(L("faceUnlock.result.\(e.result.rawValue)"))
+                        if let r = e.reason { SwiftUI.Text(r).foregroundStyle(.secondary) }
+                        Spacer()
+                        if let i = e.identity { SwiftUI.Text(String(format: "%.2f", i)).monospacedDigit().foregroundStyle(.secondary) }
+                    }
+                    .font(.caption)
+                }
+            }
+        }
     }
 }

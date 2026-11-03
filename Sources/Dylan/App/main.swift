@@ -80,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.notifications) ? NotificationProvider.shared.start() : NotificationProvider.shared.stop()
         if !f.isEnabled(.terminal) { TerminalProvider.shared.stop() }
         f.isEnabled(.lockScreen) ? LockScreenProvider.shared.start() : LockScreenProvider.shared.stop()
+        FaceUnlockProvider.shared.start()
         f.isEnabled(.timeToLeave) && f.isEnabled(.meeting) ? TravelProvider.shared.start() : TravelProvider.shared.stop()
         PrivacyProvider.shared.update()
         // A tab that was just turned off must not keep rendering.
@@ -128,6 +129,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let awake = NSMenuItem(title: L("keepAwake.button"), action: #selector(toggleKeepAwake), keyEquivalent: "")
         awake.state = AppModel.shared.keepAwake != nil ? .on : .off
         menu.addItem(awake)
+        // FR-55: one click to turn Face Unlock off.
+        if FaceUnlockProvider.shared.enabled {
+            menu.addItem(NSMenuItem(title: L("faceUnlock.turnOff"), action: #selector(disableFaceUnlock), keyEquivalent: ""))
+        }
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: L("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -138,6 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openNotch() { AppModel.shared.notchState = .expanded }
     @objc private func togglePresentation() { AppModel.shared.togglePresentation() }
     @objc private func toggleKeepAwake() { AppModel.shared.toggleKeepAwake() }
+    @objc private func disableFaceUnlock() { FaceUnlockProvider.shared.disable(); statusItem?.menu = makeMenu() }
     @objc private func openSettings() { SettingsWindow.show() }
 
     /// Template icon: black capsule = island, knocked-out dot = status (design §3).
