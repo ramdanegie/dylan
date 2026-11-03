@@ -132,7 +132,7 @@ enum ShelfDrop {
     /// Reads file URLs from dropped item providers and adds them to the shelf.
     static func accept(_ providers: [NSItemProvider]) {
         for p in providers {
-            _ = p.loadObject(ofClass: URL.self) { url, _ in
+            _ = p.loadObject(ofClass: URL.self) { @Sendable url, _ in
                 guard let url else { return }
                 Task { @MainActor in
                     ShelfProvider.shared.add([url])

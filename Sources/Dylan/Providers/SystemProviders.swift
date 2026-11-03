@@ -20,7 +20,7 @@ final class CalendarProvider {
     func start(requestAccess: Bool) {
         if status == .fullAccess { begin(); return }
         guard requestAccess, status == .notDetermined else { return }
-        store.requestFullAccessToEvents { granted, _ in
+        store.requestFullAccessToEvents { @Sendable granted, _ in
             Task { @MainActor in if granted { CalendarProvider.shared.begin() } }
         }
     }

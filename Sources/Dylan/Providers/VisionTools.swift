@@ -60,24 +60,29 @@ final class MirrorCamera {
     let session = AVCaptureSession()
     private var stopWork: DispatchWorkItem?
     private(set) var running = false
+    /// Cleared by stop(); the permission prompt can return after the panel has closed.
+    private var wanted = false
+    /// Serial, so a quick stop/start cannot run out of order.
+    private let queue = DispatchQueue(label: "dylan.mirror")
 
     func start() {
         guard !running else { return }
-        AVCaptureDevice.requestAccess(for: .video) { granted in
+        wanted = true
+        AVCaptureDevice.requestAccess(for: .video) { @Sendable granted in
             guard granted else { return }
             Task { @MainActor in MirrorCamera.shared.begin() }
         }
     }
 
     private func begin() {
-        guard let cam = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera], mediaType: .video, position: .unspecified).devices.first,
+        guard wanted, !running, let cam = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera], mediaType: .video, position: .unspecified).devices.first,
               let input = try? AVCaptureDeviceInput(device: cam) else { return }
         session.beginConfiguration()
         session.inputs.forEach { session.removeInput($0) }
         if session.canAddInput(input) { session.addInput(input) }
         session.commitConfiguration()
         let s = session
-        DispatchQueue.global(qos: .userInitiated).async { @Sendable in s.startRunning() }
+        queue.async { @Sendable in s.startRunning() }
         running = true
         AppModel.shared.mirrorOn = true
         let w = DispatchWorkItem { MainActor.assumeIsolated { MirrorCamera.shared.stop() } }
@@ -87,9 +92,10 @@ final class MirrorCamera {
 
     func stop() {
         stopWork?.cancel()
+        wanted = false
         guard running else { return }
         let s = session
-        DispatchQueue.global(qos: .userInitiated).async { @Sendable in s.stopRunning() }
+        queue.async { @Sendable in s.stopRunning() }
         running = false
         AppModel.shared.mirrorOn = false
     }

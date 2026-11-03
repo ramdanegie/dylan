@@ -60,7 +60,7 @@ private struct BasketView: View {
             .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])).foregroundStyle(targeted ? Color.white : Color.white.opacity(0.3)).padding(6))
         .onDrop(of: [.fileURL], isTargeted: $targeted) { providers in
             for p in providers {
-                _ = p.loadObject(ofClass: URL.self) { url, _ in
+                _ = p.loadObject(ofClass: URL.self) { @Sendable url, _ in
                     guard let url else { return }
                     Task { @MainActor in ShelfProvider.shared.add([url]); FloatingBasket.shared.dropped() }
                 }

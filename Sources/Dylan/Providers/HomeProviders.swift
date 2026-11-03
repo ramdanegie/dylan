@@ -25,7 +25,7 @@ final class RemindersProvider {
     func start(requestAccess: Bool) {
         if status == .fullAccess { begin(); return }
         guard requestAccess, status == .notDetermined else { return }
-        store.requestFullAccessToReminders { granted, _ in
+        store.requestFullAccessToReminders { @Sendable granted, _ in
             Task { @MainActor in if granted { RemindersProvider.shared.begin() } }
         }
     }
