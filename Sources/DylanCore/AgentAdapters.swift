@@ -6,11 +6,13 @@ import Foundation
 public enum AgentAdapter {
     // MARK: Cursor (~/.cursor/hooks.json)
 
-    /// Hooks whose output Cursor does not read as an allow/deny decision. before*/preToolUse are left out on
-    /// purpose: Cursor blocks the action on output it cannot parse, and Dylan must never approve anything.
-    public static let cursorEvents = ["sessionStart", "beforeSubmitPrompt", "postToolUse", "afterFileEdit", "stop", "sessionEnd"]
+    /// Hooks whose output Cursor does not read as a decision. Every before*/preToolUse hook is left out on
+    /// purpose (beforeSubmitPrompt included: its `continue` gates the prompt): Cursor blocks on output it cannot
+    /// parse, a moved app would then break every prompt, and Dylan must never approve anything.
+    public static let cursorEvents = ["sessionStart", "postToolUse", "afterFileEdit", "stop", "sessionEnd"]
 
-    /// What `dylan hook cursor` prints, Dylan running or not. Only beforeSubmitPrompt expects a field.
+    /// What `dylan hook cursor` prints, Dylan running or not. beforeSubmitPrompt is not installed any more;
+    /// an older install still gets a valid answer.
     public static func cursorOutput(event: String?) -> String {
         event == "beforeSubmitPrompt" ? #"{"continue":true}"# : "{}"
     }
@@ -89,7 +91,8 @@ public enum AgentAdapter {
 
     /// Adds `dylan hook cursor` for each event to hooks.json, keeping the user's own hooks. Idempotent.
     public static func installCursor(_ old: Data?, command: String) throws -> Data {
-        var root = try cursorRoot(old)
+        // Start from a clean slate so Dylan entries on events it no longer uses go away.
+        var root = try cursorRoot(old.map(uninstallCursor) ?? nil)
         var hooks = root["hooks"] as? [String: Any] ?? [:]
         for e in cursorEvents {
             var list = (hooks[e] as? [[String: Any]] ?? []).filter { !isDylan($0["command"] as? String) }

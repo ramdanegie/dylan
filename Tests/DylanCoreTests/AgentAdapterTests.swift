@@ -14,7 +14,7 @@ import Testing
             sessions.apply(e, env: [:], now: t0.addingTimeInterval(at)) { ($0 as NSString).lastPathComponent }
         }
         let base = #""conversation_id":"c1","workspace_roots":["/w/web-admin"]"#
-        try feed(#"{"hook_event_name":"beforeSubmitPrompt",\#(base),"prompt":"fix it"}"#, 0)
+        try feed(#"{"hook_event_name":"sessionStart",\#(base)}"#, 0)
         try feed(#"{"hook_event_name":"postToolUse",\#(base),"tool_name":"Shell","tool_input":{"command":"npm test"}}"#, 5)
         let s = try #require(sessions.sessions["cursor-c1"])
         #expect(s.agent == "Cursor" && s.project == "web-admin")
@@ -22,7 +22,7 @@ import Testing
         try feed(#"{"hook_event_name":"afterFileEdit",\#(base),"file_path":"/w/web-admin/a.ts","edits":[]}"#, 8)
         #expect(sessions.sessions["cursor-c1"]?.changedFiles == ["/w/web-admin/a.ts"])
         try feed(#"{"hook_event_name":"stop",\#(base),"status":"completed"}"#, 20)
-        #expect(sessions.sessions["cursor-c1"]?.status == .done(duration: 20, summary: nil))
+        #expect(sessions.sessions["cursor-c1"]?.status == .done(duration: 15, summary: nil))   // from the first tool
     }
 
     @Test func cursorEdgeCases() throws {
@@ -32,7 +32,7 @@ import Testing
         #expect(fail["hook_event_name"]?.string == "StopFailure")
         #expect(AgentAdapter.cursorOutput(event: "beforeSubmitPrompt") == #"{"continue":true}"#)
         #expect(AgentAdapter.cursorOutput(event: "stop") == "{}")
-        #expect(!AgentAdapter.cursorEvents.contains { $0.hasPrefix("before") && $0 != "beforeSubmitPrompt" || $0 == "preToolUse" })
+        #expect(!AgentAdapter.cursorEvents.contains { $0.hasPrefix("before") || $0 == "preToolUse" })
     }
 
     @Test func opencodeEvents() throws {
@@ -48,7 +48,7 @@ import Testing
 
     @Test func cursorInstallerKeepsUserHooks() throws {
         let cmd = AgentAdapter.cursorCommand(cliPath: "/Applications/Dylan.app/Contents/Helpers/dylan")
-        let user = Data(#"{"version":1,"hooks":{"stop":[{"command":"./audit.sh"}],"beforeShellExecution":[{"command":"./guard.sh"}]}}"#.utf8)
+        let user = Data(#"{"version":1,"hooks":{"stop":[{"command":"./audit.sh"}],"beforeShellExecution":[{"command":"./guard.sh"}],"beforeSubmitPrompt":[{"command":"'/old/dylan' hook cursor"}]}}"#.utf8)
         let once = try AgentAdapter.installCursor(user, command: cmd)
         let twice = try AgentAdapter.installCursor(once, command: cmd)
         #expect(once == twice)
@@ -56,6 +56,7 @@ import Testing
         let root = try #require(JSONSerialization.jsonObject(with: once) as? [String: Any])
         let hooks = try #require(root["hooks"] as? [String: [[String: Any]]])
         #expect(hooks["stop"]?.count == 2 && hooks["beforeShellExecution"]?.count == 1)
+        #expect(hooks["beforeSubmitPrompt"] == nil)   // an older Dylan entry on a gating hook is removed
         let removed = try AgentAdapter.uninstallCursor(once)
         #expect(!AgentAdapter.cursorInstalled(removed))
         let back = try #require((JSONSerialization.jsonObject(with: removed) as? [String: Any])?["hooks"] as? [String: [[String: Any]]])
