@@ -22,6 +22,7 @@ struct ExpandedView: View {
                 case .discord: DiscordTab()
                 case .stats: StatsTab()
                 case .dev: DevTab()
+                case .terminal: TerminalTab()
                 case .agents: AgentsTab()
                 }
             }
@@ -35,8 +36,10 @@ struct ExpandedView: View {
     private var tabBar: some View {
         let tabs = model.tabs
         // Design: Home · Media (· Discord · Shelf) left of the notch, Clipboard (· Stats) · Agents (· Dev) right.
-        let left = tabs.filter { [.home, .media, .discord, .shelf].contains($0) }
-        let right = tabs.filter { ![.home, .media, .discord, .shelf].contains($0) }
+        // Terminal goes left: the right side has no room for a fifth tab and its label.
+        let leftTabs: [Tab] = [.home, .media, .discord, .shelf, .terminal]
+        let left = tabs.filter { leftTabs.contains($0) }
+        let right = tabs.filter { !leftTabs.contains($0) }
         return HStack(spacing: 0) {
             HStack(spacing: 4) { ForEach(left) { tabButton($0) } }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 16)
@@ -60,7 +63,7 @@ struct ExpandedView: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: t.symbol).font(.system(size: 11, weight: .semibold))
-                if active { SwiftUI.Text(t.title).font(DY.font(12, .semibold)) }
+                if active { SwiftUI.Text(t.title).font(DY.font(12, .semibold)).lineLimit(1).fixedSize() }
             }
             .foregroundStyle(active ? .white : DY.fg2)
             .padding(.horizontal, active ? 10 : 0)

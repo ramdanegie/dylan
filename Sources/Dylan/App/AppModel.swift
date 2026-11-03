@@ -5,7 +5,7 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, discord, shelf, clipboard, stats, agents, dev
+    case home, media, discord, shelf, clipboard, stats, agents, dev, terminal
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -17,6 +17,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .stats: return "chart.bar"
         case .agents: return "sparkle"
         case .dev: return "hammer"
+        case .terminal: return "apple.terminal"
         }
     }
     var title: String { L("tab.\(rawValue)") }
@@ -225,6 +226,7 @@ final class AppModel {
         if features.isEnabled(.stats) { t.append(.stats) }
         if isDeveloper && features.isEnabled(.agents) { t.append(.agents) }
         if isDeveloper && features.isEnabled(.ports) { t.append(.dev) }
+        if isDeveloper && features.isEnabled(.terminal) { t.append(.terminal) }
         return t
     }
 

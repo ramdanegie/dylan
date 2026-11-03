@@ -42,5 +42,13 @@ enum Hotkeys {
         register(id: 4, keyCode: kVK_ANSI_V, modifiers: controlKey | optionKey) {
             AppModel.shared.openClipboard()
         }
+        // Quick terminal (FR-41): drops down from the notch, again to put it away.
+        register(id: 5, keyCode: kVK_ANSI_T, modifiers: controlKey | optionKey) {
+            let m = AppModel.shared
+            guard m.tabs.contains(.terminal) else { return }
+            if m.notchState == .expanded && m.selectedTab == .terminal { m.notchState = .closed; return }
+            m.selectedTab = .terminal
+            m.notchState = .expanded
+        }
     }
 }

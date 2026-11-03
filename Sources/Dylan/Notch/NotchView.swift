@@ -35,6 +35,7 @@ struct NotchRootView: View {
         case .discord: return 300
         case .stats: return 366
         case .dev: return 316
+        case .terminal: return 330
         case .agents: return 312
         }
     }

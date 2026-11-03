@@ -88,6 +88,12 @@ enum Snapshot {
             ("D8-expanded-home", { music(); m.startTimer(.pomodoro(now: now.addingTimeInterval(-378))); agentWorking(); m.notchState = .expanded }),
             ("D23-expanded-media", { music(); m.selectedTab = .media; m.notchState = .expanded }),
             ("D9-expanded-agents", { agentWorking(); m.selectedTab = .agents; m.notchState = .expanded }),
+            ("FR41-terminal", {
+                m.features.toggles[.terminal] = true
+                TerminalProvider.shared.lines = ["~/web-admin % git status -sb", "## feat/login...origin/feat/login [ahead 2]",
+                                                 " M src/AuthService.ts", "?? src/login.test.ts", "~/web-admin % npm test", "", "  ✓ 42 passed (1.8s)", "~/web-admin % "]
+                m.selectedTab = .terminal; m.notchState = .expanded
+            }),
             ("D14-presentation", { agentWorking(); m.presentationMode = true; m.notchState = .compact }),
             ("D14-presentation-script", {
                 m.handle(.activityStart(id: "d", title: "deploy client-x", subtitle: "prod", progress: 0.4, url: nil)) { _ in }

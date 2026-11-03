@@ -719,3 +719,12 @@
 "spotify.approveInBrowser" = "Setujui di browser…";
 "spotify.signInFailed" = "Gagal masuk ke Spotify. Coba lagi.";
 "spotify.next" = "Berikutnya: %@";
+"tab.terminal" = "Terminal";
+"feature.terminal" = "Terminal cepat (⌃⌥T)";
+"feature.terminal.hint" = "Shell kamu di notch; vim/htop diserahkan ke Terminal";
+"terminal.placeholder" = "Ketik perintah, Enter";
+"terminal.clear" = "Bersihkan";
+"terminal.interrupt" = "Hentikan (Ctrl-C)";
+"terminal.failed" = "Shell gagal dijalankan.";
+"terminal.exited" = "[shell selesai — ketik perintah untuk mulai lagi]";
+"terminal.hidden" = "Terminal disembunyikan selama Mode Presentasi";

@@ -593,7 +593,7 @@ struct TerminalSettings: View {
     private var model: AppModel { AppModel.shared }
 
     var body: some View {
-        FeatureToggles(features: [.commands, .ports, .docker, .github, .widgets])
+        FeatureToggles(features: [.commands, .ports, .docker, .github, .widgets, .terminal])
         Section("GitHub & widgets") {
             LabeledContent(L("ci.repos"), value: AppModel.shared.recentRepos.isEmpty ? "—" : AppModel.shared.recentRepos.map { ($0 as NSString).lastPathComponent }.joined(separator: ", "))
             LabeledContent(L("widgets.folder"), value: "~/.config/dylan/widgets")

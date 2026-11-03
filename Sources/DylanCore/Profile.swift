@@ -10,17 +10,17 @@ public enum Feature: String, Codable, Sendable, CaseIterable {
     // Everyone
     case media, meeting, timer, battery, bluetooth, privacy, presentation, keepAwake, colorPicker, clipboard, stats, shelf, lyrics, reminders, weather, downloads, mirror, scratchpad, discord, hud, focus, timeToLeave, visualizer, appVolume, autoPresentation, notifications
     // Developer Mode
-    case agents, commands, cli, ports, docker, github, widgets
+    case agents, commands, cli, ports, docker, github, widgets, terminal
 
     public var isDeveloper: Bool {
         switch self {
-        case .agents, .commands, .cli, .ports, .docker, .github, .widgets: return true
+        case .agents, .commands, .cli, .ports, .docker, .github, .widgets, .terminal: return true
         default: return false
         }
     }
 
     /// Off unless the user turns it on: Bluetooth asks for a permission, lyrics use the network.
-    public var defaultOn: Bool { ![.bluetooth, .lyrics, .weather, .downloads, .github, .hud, .timeToLeave, .visualizer, .appVolume, .notifications].contains(self) }
+    public var defaultOn: Bool { ![.bluetooth, .lyrics, .weather, .downloads, .github, .hud, .timeToLeave, .visualizer, .appVolume, .notifications, .terminal].contains(self) }
 }
 
 public struct FeatureSet: Codable, Equatable, Sendable {

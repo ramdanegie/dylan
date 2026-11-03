@@ -78,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         VisualizerProvider.shared.update()
         if !f.isEnabled(.appVolume) { AppVolumeProvider.shared.stopAll() }
         f.isEnabled(.notifications) ? NotificationProvider.shared.start() : NotificationProvider.shared.stop()
+        if !f.isEnabled(.terminal) { TerminalProvider.shared.stop() }
         f.isEnabled(.timeToLeave) && f.isEnabled(.meeting) ? TravelProvider.shared.start() : TravelProvider.shared.stop()
         PrivacyProvider.shared.update()
         // A tab that was just turned off must not keep rendering.

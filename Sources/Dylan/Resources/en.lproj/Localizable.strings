@@ -719,3 +719,12 @@
 "spotify.approveInBrowser" = "Approve in your browser…";
 "spotify.signInFailed" = "Could not sign in to Spotify. Try again.";
 "spotify.next" = "Next: %@";
+"tab.terminal" = "Terminal";
+"feature.terminal" = "Quick terminal (⌃⌥T)";
+"feature.terminal.hint" = "Your shell in the notch; vim/htop go to Terminal";
+"terminal.placeholder" = "Type a command, Enter";
+"terminal.clear" = "Clear";
+"terminal.interrupt" = "Interrupt (Ctrl-C)";
+"terminal.failed" = "Could not start the shell.";
+"terminal.exited" = "[shell exited — type a command to start again]";
+"terminal.hidden" = "Terminal is hidden in Presentation Mode";
