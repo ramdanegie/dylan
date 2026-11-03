@@ -6,7 +6,9 @@ import DylanCore
 final class DownloadsProvider {
     static let shared = DownloadsProvider()
 
-    private struct Tracked { var partial: DownloadWatcher.Partial; var bytes: Int64 }
+    private struct Tracked { var partial: DownloadWatcher.Partial; var bytes: Int64; var changedAt: Date }
+    /// A partial file that has not grown for this long is a leftover (crashed or paused browser), not a download.
+    private static let staleAfter: TimeInterval = 10 * 60
     private var tracked: [String: Tracked] = [:]
     private var source: DispatchSourceFileSystemObject?
     private var timer: Timer?
@@ -29,14 +31,16 @@ final class DownloadsProvider {
         timer?.invalidate(); timer = nil
         for path in tracked.keys { AppModel.shared.center.remove("download-\(path)", now: Date()) }
         tracked = [:]
+        AppModel.shared.downloadFinished()
     }
 
     private func scan() {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
         for n in names {
             let path = dir.appendingPathComponent(n).path
-            guard tracked[path] == nil, let p = DownloadWatcher.classify(path) else { continue }
-            tracked[path] = Tracked(partial: p, bytes: 0)
+            guard tracked[path] == nil, let p = DownloadWatcher.classify(path),
+                  Date().timeIntervalSince(Self.modified(path)) < Self.staleAfter else { continue }
+            tracked[path] = Tracked(partial: p, bytes: 0, changedAt: Date())
         }
         tick()
         if !tracked.isEmpty && timer == nil {
@@ -62,12 +66,16 @@ final class DownloadsProvider {
                 m.downloadFinished()
                 continue
             }
-            guard fm.fileExists(atPath: path) else { tracked[path] = nil; m.center.remove(id, now: now); continue }   // cancelled
+            let bytes = Self.size(path)
+            if bytes != t.bytes { t.bytes = bytes; t.changedAt = now }
+            // Cancelled, or stuck long enough to be a leftover.
+            guard fm.fileExists(atPath: path), now.timeIntervalSince(t.changedAt) < Self.staleAfter else {
+                tracked[path] = nil; m.center.remove(id, now: now); m.downloadFinished(); continue
+            }
             var progress: Double?
             if t.partial.browser == .safari, let d = fm.contents(atPath: (path as NSString).appendingPathComponent("Info.plist")) {
                 progress = DownloadWatcher.safariProgress(infoPlist: d)
             }
-            t.bytes = Self.size(path)
             tracked[path] = t
             let value = progress.map { "\(Int($0 * 100))%" } ?? ByteCountFormatter.string(fromByteCount: t.bytes, countStyle: .file)
             let a = Activity(id: id, kind: .script, priority: .p2, state: .running, symbol: "arrow.down.circle",
@@ -82,6 +90,16 @@ final class DownloadsProvider {
     }
 
     var active: Bool { !tracked.isEmpty }
+
+    /// Newest modification date of the file, or of anything inside a Safari `.download` bundle.
+    private static func modified(_ path: String) -> Date {
+        let fm = FileManager.default
+        let own = (try? fm.attributesOfItem(atPath: path)[.modificationDate] as? Date) ?? .distantPast
+        let inner = (try? fm.contentsOfDirectory(atPath: path))?.compactMap {
+            try? fm.attributesOfItem(atPath: (path as NSString).appendingPathComponent($0))[.modificationDate] as? Date
+        }.max()
+        return max(own, inner ?? .distantPast)
+    }
 
     private static func size(_ path: String) -> Int64 {
         let fm = FileManager.default

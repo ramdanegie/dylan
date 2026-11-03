@@ -395,7 +395,7 @@ struct UtilityButtons: View {
                                     ?? L("keepAwake.stop")) { model.stopKeepAwake() }
                     }
                 } else if DownloadsProvider.shared.active {
-                    NotchButton(title: L("keepAwake.untilDownloads")) { model.keepAwakeUntilDownloads = true; model.startKeepAwake(minutes: 0) }
+                    NotchButton(title: L("keepAwake.untilDownloads")) { model.startKeepAwake(minutes: 0); model.keepAwakeUntilDownloads = true }
                 } else {
                     NotchButton(title: L("keepAwake.button")) { model.startKeepAwake() }
                 }

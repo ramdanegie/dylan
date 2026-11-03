@@ -299,6 +299,7 @@ final class AppModel {
 
     func stopKeepAwake() {
         if keepAwakeAssertion != 0 { IOPMAssertionRelease(keepAwakeAssertion); keepAwakeAssertion = 0 }
+        keepAwakeUntilDownloads = false
         guard keepAwake != nil else { return }
         keepAwake = nil
         removeIfPresent("keepawake", now: Date())
