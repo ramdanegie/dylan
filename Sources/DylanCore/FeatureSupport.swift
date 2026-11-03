@@ -94,7 +94,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         // Devices & system
         .init("battery", .devices, [70], .v1_0, built: true),
         .init("bluetooth", .devices, [44], .v1_0, built: true, req: true),
-        .init("airpodsBattery", .devices, [44], .v1_0),
+        .init("airpodsBattery", .devices, [44], .v1_0, built: true),
         .init("privacy", .devices, [71], .v1_0, built: true),
         .init("keepAwake", .devices, [74], .v1_1, built: true),
         .init("focus", .devices, [72], .v1_1),

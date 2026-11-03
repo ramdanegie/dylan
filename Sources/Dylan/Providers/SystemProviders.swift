@@ -155,6 +155,23 @@ final class BluetoothProvider: NSObject {
             label: TextRules.truncateTail(name, max: 12), value: connected ? L("bluetooth.connectedShort") : L("bluetooth.disconnectedShort"),
             detail: L(connected ? "bluetooth.connected" : "bluetooth.disconnected", name), startedAt: now), now: now)
         model.scheduleTick()
+        if connected, let addr = device.addressString { readBattery(id: "bluetooth-\(addr)", address: addr, name: name) }
+    }
+
+    /// Battery levels arrive a few seconds after the connection (FR-44, design M8). One system_profiler run per connect.
+    private func readBattery(id: String, address: String, name: String) {
+        Task.detached {
+            try? await Task.sleep(for: .seconds(1.5))
+            let out = Shell.run("/usr/sbin/system_profiler", ["SPBluetoothDataType", "-json"], timeout: 15)
+            guard let levels = out.flatMap({ BluetoothBattery.parse(Data($0.utf8))[BluetoothBattery.normalize(address)] }) else { return }
+            await MainActor.run {
+                let m = AppModel.shared
+                guard var a = m.center.activities[id], a.state == .success else { return }   // gone, or disconnected meanwhile
+                a.value = BluetoothBattery.lowest(levels).map { "\($0)%" } ?? a.value
+                a.detail = L("bluetooth.connected", name) + " · " + BluetoothBattery.summary(levels)
+                m.center.upsert(a)
+            }
+        }
     }
 
     static func symbol(for d: IOBluetoothDevice) -> String {

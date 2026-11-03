@@ -1,0 +1,6 @@
+{"SPBluetoothDataType":[{"controller_properties":{"controller_address":"F4:D4:88:00:00:01"},
+ "device_connected":[
+  {"Egie’s AirPods Pro":{"device_address":"51:04:B2:F0:0E:48","device_batteryLevelCase":"40%","device_batteryLevelLeft":"80%","device_batteryLevelRight":"75%","device_minorType":"Headphones"}},
+  {"WH-1000XM5":{"device_address":"80:99:E7:13:DE:FA","device_batteryLevelMain":"60%","device_minorType":"Headset"}},
+  {"Logitech Pebble":{"device_address":"D8:39:95:FD:07:08","device_minorType":"Mouse"}}],
+ "device_not_connected":[{"Egie’s AirPods":{"device_address":"E5:C2:C4:31:7F:C7","device_batteryLevelLeft":"10%"}}]}]}
