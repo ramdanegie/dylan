@@ -40,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        AppModel.shared.stopKeepAwake()
         for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }
         SocketServer.shared.stop()
     }
@@ -94,6 +95,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pres.keyEquivalentModifierMask = [.control, .option, .command]
         pres.state = AppModel.shared.presentationMode ? .on : .off
         menu.addItem(pres)
+        let awake = NSMenuItem(title: L("keepAwake.button"), action: #selector(toggleKeepAwake), keyEquivalent: "")
+        awake.state = AppModel.shared.keepAwake != nil ? .on : .off
+        menu.addItem(awake)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: L("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -103,6 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openNotch() { AppModel.shared.notchState = .expanded }
     @objc private func togglePresentation() { AppModel.shared.togglePresentation() }
+    @objc private func toggleKeepAwake() { AppModel.shared.toggleKeepAwake() }
     @objc private func openSettings() { SettingsWindow.show() }
 
     /// Template icon: black capsule = island, knocked-out dot = status (design §3).

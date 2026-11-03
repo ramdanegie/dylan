@@ -8,7 +8,7 @@ public enum Profile: String, Codable, Sendable, CaseIterable {
 /// Features that can be switched on and off. `[Dev]` features never run under the general profile.
 public enum Feature: String, Codable, Sendable, CaseIterable {
     // Everyone
-    case media, meeting, timer, battery, bluetooth, privacy, presentation
+    case media, meeting, timer, battery, bluetooth, privacy, presentation, keepAwake, colorPicker
     // Developer Mode
     case agents, commands, cli
 

@@ -85,7 +85,10 @@ struct HomeTab: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             if model.isDeveloper { RunningChips() }
-            BatteryLine()
+            HStack(spacing: 6) {
+                BatteryLine()
+                UtilityButtons()
+            }
         }
     }
 }
@@ -234,6 +237,28 @@ struct RunningChips: View {
                     .background(Capsule().fill(DY.control))
                 }
                 Spacer()
+            }
+        }
+    }
+}
+
+/// Text buttons, not icons only, so they read clearly for everyone (design D33).
+struct UtilityButtons: View {
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        HStack(spacing: 6) {
+            if model.features.isEnabled(.colorPicker) {
+                NotchButton(title: L("color.pick")) { model.pickColor() }
+            }
+            if model.features.isEnabled(.keepAwake) {
+                if let k = model.keepAwake {
+                    TimelineView(.periodic(from: .now, by: 30)) { ctx in
+                        NotchButton(title: k.remaining(now: ctx.date).map { L("keepAwake.stopIn", DurationFormat.long($0, language: L10n.language)) }
+                                    ?? L("keepAwake.stop")) { model.stopKeepAwake() }
+                    }
+                } else {
+                    NotchButton(title: L("keepAwake.button")) { model.startKeepAwake() }
+                }
             }
         }
     }

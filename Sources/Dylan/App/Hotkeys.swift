@@ -36,5 +36,8 @@ enum Hotkeys {
         register(id: 2, keyCode: kVK_ANSI_H, modifiers: controlKey | optionKey | cmdKey) {
             AppModel.shared.togglePresentation()
         }
+        register(id: 3, keyCode: kVK_ANSI_C, modifiers: controlKey | optionKey) {
+            AppModel.shared.pickColor()
+        }
     }
 }

@@ -1,5 +1,6 @@
 import AppKit
 import DylanCore
+import IOKit.pwr_mgt
 import Observation
 import SwiftUI
 
@@ -75,6 +76,12 @@ final class AppModel {
     var duo: Bool { didSet { defaults.set(duo, forKey: "duo"); center.config.maxSlots = duo ? 2 : 1 } }
     var hoverDelay: Double { didSet { defaults.set(hoverDelay, forKey: "hoverDelay") } }
     var permissionSound: Bool { didSet { defaults.set(permissionSound, forKey: "permissionSound") } }
+    /// Keep awake default in minutes; 0 = until turned off.
+    var keepAwakeMinutes: Int { didSet { defaults.set(keepAwakeMinutes, forKey: "keepAwakeMinutes") } }
+    /// Stop keep awake on battery below this percentage; 0 = never.
+    var keepAwakeStopBelow: Int { didSet { defaults.set(keepAwakeStopBelow, forKey: "keepAwakeStopBelow") } }
+    var colorFormat: String { didSet { defaults.set(colorFormat, forKey: "colorFormat") } }
+    var colorHistory: [String] { didSet { defaults.set(colorHistory, forKey: "colorHistory") } }
     var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: "onboardingDone") } }
     var language: LanguageChoice {
         didSet {
@@ -110,6 +117,8 @@ final class AppModel {
     /// Bumped when feature toggles change so providers can start/stop.
     var providersNeedRefresh = 0
     var lastError: String?
+    var keepAwake: KeepAwake?
+    @ObservationIgnored private var keepAwakeAssertion: IOPMAssertionID = 0
 
     /// Snapshot mode swaps this for a throwaway suite so rendering never touches the user's settings.
     nonisolated(unsafe) static var store = UserDefaults.standard
@@ -130,6 +139,10 @@ final class AppModel {
         duo = d.object(forKey: "duo") as? Bool ?? true
         hoverDelay = d.object(forKey: "hoverDelay") as? Double ?? 0.15
         permissionSound = d.bool(forKey: "permissionSound")
+        keepAwakeMinutes = d.object(forKey: "keepAwakeMinutes") as? Int ?? 60
+        keepAwakeStopBelow = d.object(forKey: "keepAwakeStopBelow") as? Int ?? 20
+        colorFormat = d.string(forKey: "colorFormat") ?? "hex"
+        colorHistory = d.stringArray(forKey: "colorHistory") ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
         center.config.maxSlots = duo ? 2 : 1
@@ -147,7 +160,7 @@ final class AppModel {
     // MARK: Ticking (only while something depends on the clock)
 
     func scheduleTick() {
-        let needs = !center.activities.isEmpty || !commands.running.isEmpty || timer != nil || autoPeekUntil != nil
+        let needs = !center.activities.isEmpty || !commands.running.isEmpty || timer != nil || autoPeekUntil != nil || keepAwake != nil
             || MeetingSchedule.nextChange(meetings, now: Date()) != nil
         if needs, tickTimer == nil {
             let t = Timer(timeInterval: 1, repeats: true) { _ in MainActor.assumeIsolated { AppModel.shared.tick() } }
@@ -191,6 +204,60 @@ final class AppModel {
             if notchState == .peek { notchState = .compact }
         }
         if timer != nil { refreshTimerActivity(now: now) }
+        if let k = keepAwake, k.shouldStop(now: now, battery: battery, stopBelow: keepAwakeStopBelow) { stopKeepAwake() }
+        scheduleTick()
+    }
+
+    // MARK: Keep awake (FR-74)
+
+    func startKeepAwake(minutes: Int? = nil) {
+        let m = minutes ?? keepAwakeMinutes
+        stopKeepAwake()
+        guard IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                                          "Dylan: Keep awake" as CFString, &keepAwakeAssertion) == kIOReturnSuccess else { return }
+        let now = Date()
+        keepAwake = .start(duration: m > 0 ? TimeInterval(m * 60) : nil, now: now)
+        center.upsert(Activity(id: "keepawake", kind: .timer, priority: .p2, state: .running, symbol: "cup.and.saucer.fill",
+                               label: L("keepAwake.short"), value: m > 0 ? "" : "∞",
+                               detail: m > 0 ? L("keepAwake.until", DurationFormat.long(TimeInterval(m * 60), language: L10n.language)) : L("keepAwake.on"),
+                               progress: nil, startedAt: now))
+        scheduleTick()
+    }
+
+    func stopKeepAwake() {
+        if keepAwakeAssertion != 0 { IOPMAssertionRelease(keepAwakeAssertion); keepAwakeAssertion = 0 }
+        guard keepAwake != nil else { return }
+        keepAwake = nil
+        removeIfPresent("keepawake", now: Date())
+    }
+
+    func toggleKeepAwake() { keepAwake == nil ? startKeepAwake() : stopKeepAwake() }
+
+    // MARK: Color picker (FR-73)
+
+    func pickColor() {
+        guard features.isEnabled(.colorPicker) else { return }
+        NSColorSampler().show { picked in
+            guard let c = picked?.usingColorSpace(.sRGB) else { return }
+            let rgb = PickedColor(r: c.redComponent, g: c.greenComponent, b: c.blueComponent)
+            MainActor.assumeIsolated { AppModel.shared.colorPicked(rgb) }
+        }
+    }
+
+    func colorPicked(_ c: PickedColor) {
+        let text: String
+        switch colorFormat {
+        case "rgb": text = c.rgb
+        case "hsl": text = "hsl(\(c.hsl))"
+        case "swiftui" where isDeveloper: text = c.swiftUI
+        default: text = c.hex
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        colorHistory = Array(([c.hex] + colorHistory.filter { $0 != c.hex }).prefix(20))
+        let now = Date()
+        center.post(Activity(id: "color-\(c.hex)", kind: .notify, priority: .p1, state: .success, symbol: "eyedropper",
+                             label: c.hex, value: L("color.copiedShort"), detail: L("color.copied", text), startedAt: now), now: now)
         scheduleTick()
     }
 

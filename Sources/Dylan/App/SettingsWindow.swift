@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, devices, agents, terminal, features, about
+    case general, appearance, liveActivity, media, devices, utilities, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -33,6 +33,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .liveActivity: return "bell.badge"
         case .media: return "music.note"
         case .devices: return "battery.100percent.bolt"
+        case .utilities: return "wrench.and.screwdriver"
         case .agents: return "sparkle"
         case .terminal: return "terminal"
         case .features: return "checklist"
@@ -71,7 +72,10 @@ struct SettingsView: View {
         case .appearance: AppearanceSettings()
         case .liveActivity: LiveActivitySettings()
         case .media: FeatureToggles(features: [.media, .meeting, .timer])
-        case .devices: FeatureToggles(features: [.battery, .bluetooth, .privacy])
+        case .devices:
+            FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake])
+            KeepAwakeSettings()
+        case .utilities: UtilitySettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
         case .features: FeatureSupportSettings()
@@ -158,6 +162,92 @@ struct FeatureToggles: View {
         }
         if features.contains(.meeting), CalendarProvider.shared.status != .fullAccess {
             Section { Button(L("button.allowCalendar")) { CalendarProvider.shared.start(requestAccess: true) } }
+        }
+    }
+}
+
+struct KeepAwakeSettings: View {
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        Section(L("keepAwake.title")) {
+            Picker(L("keepAwake.default"), selection: Binding(get: { model.keepAwakeMinutes }, set: { model.keepAwakeMinutes = $0 })) {
+                SwiftUI.Text("15 m").tag(15)
+                SwiftUI.Text(DurationFormat.long(3600, language: L10n.language)).tag(60)
+                SwiftUI.Text(L("keepAwake.forever")).tag(0)
+            }
+            Picker(L("keepAwake.stopBelow"), selection: Binding(get: { model.keepAwakeStopBelow }, set: { model.keepAwakeStopBelow = $0 })) {
+                SwiftUI.Text(L("keepAwake.never")).tag(0)
+                SwiftUI.Text("10%").tag(10)
+                SwiftUI.Text("20%").tag(20)
+                SwiftUI.Text("30%").tag(30)
+            }
+        }
+    }
+}
+
+struct UtilitySettings: View {
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        FeatureToggles(features: [.colorPicker])
+        Section(L("color.title")) {
+            LabeledContent(L("color.hotkey"), value: "⌃⌥C")
+            Picker(L("color.format"), selection: Binding(get: { model.colorFormat }, set: { model.colorFormat = $0 })) {
+                SwiftUI.Text("HEX").tag("hex")
+                SwiftUI.Text("RGB").tag("rgb")
+                SwiftUI.Text("HSL").tag("hsl")
+                if model.isDeveloper { SwiftUI.Text("SwiftUI").tag("swiftui") }
+            }
+            SwiftUI.Text(L("color.formatHint")).font(.caption).foregroundStyle(.secondary)
+            if !model.colorHistory.isEmpty {
+                LabeledContent(L("color.history")) {
+                    HStack(spacing: 4) {
+                        ForEach(model.colorHistory.prefix(10), id: \.self) { hex in
+                            let c = PickedColor(hex: hex)
+                            Button {
+                                NSPasteboard.general.clearContents(); NSPasteboard.general.setString(hex, forType: .string)
+                            } label: {
+                                RoundedRectangle(cornerRadius: 4).fill(Color(red: c?.r ?? 0, green: c?.g ?? 0, blue: c?.b ?? 0))
+                                    .frame(width: 18, height: 18)
+                                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.4)))
+                            }
+                            .buttonStyle(.plain).help(hex).accessibilityLabel(hex)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// D22: Touch ID for sudo. Dylan only checks and shows the command; it never writes to /etc.
+struct TouchIDSudoCard: View {
+    @StateBox private var sudoLocal: String?
+    @StateBox private var multiplexer = false
+    var body: some View {
+        Section(L("touchid.title")) {
+            LabeledContent(L("touchid.status")) {
+                SwiftUI.Text(TouchIDSudo.isEnabled(sudoLocal: sudoLocal) ? L("terminal.active") : L("terminal.inactive"))
+                    .foregroundStyle(TouchIDSudo.isEnabled(sudoLocal: sudoLocal) ? .green : .secondary)
+            }
+            if !TouchIDSudo.isEnabled(sudoLocal: sudoLocal) {
+                SwiftUI.Text(L("touchid.body")).font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    SwiftUI.Text(TouchIDSudo.enableCommand).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                    Spacer()
+                    Button(L("button.copy")) {
+                        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(TouchIDSudo.enableCommand, forType: .string)
+                    }
+                }
+            }
+            if TouchIDSudo.needsReattach(sudoLocal: sudoLocal, multiplexerRunning: multiplexer) {
+                SwiftUI.Text(L("touchid.tmux")).font(.caption).foregroundStyle(.orange)
+            }
+            SwiftUI.Text(L("touchid.persist")).font(.caption).foregroundStyle(.secondary)
+        }
+        .onAppear {
+            // Read once per visit, not on every render.
+            sudoLocal = try? String(contentsOfFile: "/etc/pam.d/sudo_local", encoding: .utf8)
+            multiplexer = ["tmux", "screen"].contains { Shell.run("/usr/bin/pgrep", ["-x", $0]).map { !$0.isEmpty } == true }
         }
     }
 }
@@ -294,6 +384,7 @@ struct TerminalSettings: View {
                     .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
             }
         }
+        TouchIDSudoCard()
     }
 }
 
