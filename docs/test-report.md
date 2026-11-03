@@ -4,7 +4,7 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 
 ## Otomatis
 
-`./scripts/build.sh --test` → **189 unit test lulus** (52 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
+`./scripts/build.sh --test` → **190 unit test lulus** (52 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
 
 | Area | Yang diuji |
 |---|---|
@@ -72,6 +72,14 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
   - fd PTY yang bisa terpakai ulang;
   - server login Spotify yang bisa macet atau dibatalkan dari luar;
   - undangan Kalender yang dianggap panggilan.
+- 8 temuan review FR-11:
+  - VLC yang terbuka menutupi browser;
+  - item basi setelah browser ditutup atau tab hilang;
+  - hasil query terlambat yang menimpa Spotify;
+  - media key tanpa izin post-event;
+  - timer palsu;
+  - halaman navigasi yang dianggap lagu;
+  - nama VLC yang terpotong.
 
 ## Belum diverifikasi (butuh izin, perangkat, atau akun kamu)
 - Prompt izin yang sengaja tidak dipicu: Kalender, Reminders, Bluetooth, kamera (cermin), folder Downloads, Accessibility.
