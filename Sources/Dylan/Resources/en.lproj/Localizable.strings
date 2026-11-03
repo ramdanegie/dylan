@@ -728,3 +728,5 @@
 "terminal.failed" = "Could not start the shell.";
 "terminal.exited" = "[shell exited — type a command to start again]";
 "terminal.hidden" = "Terminal is hidden in Presentation Mode";
+"feature.lockScreen" = "Lock screen widgets (experimental)";
+"feature.lockScreen.hint" = "Clock, Now Playing, battery, weather. Uses a private macOS API; turns itself off if refused";

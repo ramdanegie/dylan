@@ -170,7 +170,7 @@ struct LiveActivitySettings: View {
         Section {
             Toggle(L("settings.presentation"), isOn: Binding(get: { model.presentationMode }, set: { _ in model.togglePresentation() }))
             SwiftUI.Text(L("settings.presentationHint")).font(.caption).foregroundStyle(.secondary)
-            FeatureToggles(features: [.autoPresentation])
+            FeatureToggles(features: [.autoPresentation, .lockScreen])
         }
         Section(L("notifications.title")) {
             FeatureToggles(features: [.notifications])

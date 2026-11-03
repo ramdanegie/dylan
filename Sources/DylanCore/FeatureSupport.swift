@@ -120,7 +120,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("colorPicker", .utilities, [73], .v1_1, built: true),
         .init("scratchpad", .utilities, [46], .v1_3, built: true),
         .init("mirror", .utilities, [79], .v1_3, built: true, req: true),
-        .init("lockScreen", .utilities, [80], .v1_3, experimental: true, req: true),
+        .init("lockScreen", .utilities, [80], .v1_3, built: true, experimental: true, req: true),
         // Security
         .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, experimental: true, req: true),
         // Developer

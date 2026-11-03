@@ -728,3 +728,5 @@
 "terminal.failed" = "Shell gagal dijalankan.";
 "terminal.exited" = "[shell selesai — ketik perintah untuk mulai lagi]";
 "terminal.hidden" = "Terminal disembunyikan selama Mode Presentasi";
+"feature.lockScreen" = "Widget di lock screen (eksperimental)";
+"feature.lockScreen.hint" = "Jam, Now Playing, baterai, cuaca. Memakai API privat macOS; mati sendiri bila ditolak";
