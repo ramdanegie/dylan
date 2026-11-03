@@ -11,6 +11,9 @@ final class OtherPlayersProvider {
     static let vlcID = "org.videolan.vlc"
     private var timer: Timer?
     private var lastBrowser: String?
+    /// Tab titles are read off the main thread, at most every 10 s while the same browser keeps playing.
+    private var lastTabQuery = Date.distantPast
+    private var querying = false
 
     func start() {
         guard timer == nil else { return }
@@ -35,10 +38,13 @@ final class OtherPlayersProvider {
         let running = NSWorkspace.shared.runningApplications.filter { candidates.contains($0.bundleIdentifier ?? "") }
         guard !running.isEmpty else { clearIfOurs(); return }
         // VLC has a proper scripting dictionary: ask it directly.
-        if running.contains(where: { $0.bundleIdentifier == Self.vlcID }), let out = run(BrowserMedia.vlcScript, app: Self.vlcID),
-           let v = BrowserMedia.parseVLC(out) {
-            publish(MediaState(source: .vlc, title: v.title, artist: "VLC", album: "", isPlaying: v.playing, position: v.position,
-                               duration: v.duration, positionAt: Date(), artwork: nil, artworkKey: "vlc:" + v.title))
+        if running.contains(where: { $0.bundleIdentifier == Self.vlcID }) {
+            query(BrowserMedia.vlcScript, app: Self.vlcID) { out in
+                guard let v = out.flatMap(BrowserMedia.parseVLC) else { return }
+                OtherPlayersProvider.shared.publish(MediaState(source: .vlc, title: v.title, artist: "VLC", album: "", isPlaying: v.playing,
+                                                               position: v.position, duration: v.duration, positionAt: Date(),
+                                                               artwork: nil, artworkKey: "vlc:" + v.title, appBundleID: Self.vlcID))
+            }
             return
         }
         // Browsers: only the one producing sound, and only then is AppleScript used.
@@ -50,11 +56,39 @@ final class OtherPlayersProvider {
             else if m.media?.source == .vlc { clearIfOurs() }   // VLC quit
             return
         }
-        guard let out = run(BrowserMedia.tabsScript(bundleID: id), app: id), let item = BrowserMedia.pick(BrowserMedia.parseTabs(out)) else { return }
+        if var cur = m.media, cur.source == .browser, cur.appBundleID == id, Date().timeIntervalSince(lastTabQuery) < 10 {
+            if !cur.isPlaying { cur.isPlaying = true; publish(cur) }
+            return
+        }
+        lastTabQuery = Date()
         lastBrowser = id
-        publish(MediaState(source: .browser, title: item.title, artist: item.artist.isEmpty ? "\(item.site) · \(BrowserMedia.browsers[id] ?? "")" : item.artist,
-                           album: item.artist.isEmpty ? "" : item.site, isPlaying: true, position: 0, duration: 0, positionAt: Date(),
-                           artwork: nil, artworkKey: "web:" + item.title, appBundleID: id))
+        query(BrowserMedia.tabsScript(bundleID: id), app: id) { out in
+            guard let item = out.flatMap({ BrowserMedia.pick(BrowserMedia.parseTabs($0)) }) else { return }
+            OtherPlayersProvider.shared.publish(MediaState(
+                source: .browser, title: item.title, artist: item.artist.isEmpty ? "\(item.site) · \(BrowserMedia.browsers[id] ?? "")" : item.artist,
+                album: item.artist.isEmpty ? "" : item.site, isPlaying: true, position: 0, duration: 0, positionAt: Date(),
+                artwork: nil, artworkKey: "web:" + item.title, appBundleID: id))
+        }
+    }
+
+    /// osascript in the background: a browser with hundreds of tabs must not stall the notch. Never prompts
+    /// (checked first); the child's Automation is Dylan's, as its responsible process.
+    private func query(_ script: String, app: String, then: @escaping @MainActor (String?) -> Void) {
+        guard !querying, canAutomate(app) else { return }
+        querying = true
+        Task.detached {
+            let out = Shell.run("/usr/bin/osascript", ["-e", "with timeout of 3 seconds", "-e", script, "-e", "end timeout"], timeout: 4)
+            await MainActor.run {
+                OtherPlayersProvider.shared.querying = false
+                guard OtherPlayersProvider.shared.timer != nil else { return }
+                then(out?.trimmingCharacters(in: .newlines))
+            }
+        }
+    }
+
+    private func canAutomate(_ app: String) -> Bool {
+        let target = NSAppleEventDescriptor(bundleIdentifier: app)
+        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
     }
 
     private func publish(_ s: MediaState) {

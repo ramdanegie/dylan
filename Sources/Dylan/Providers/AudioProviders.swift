@@ -12,7 +12,8 @@ final class LyricsProvider {
     @ObservationIgnored private var task: URLSessionDataTask?
 
     func trackChanged(_ m: MediaState?) {
-        guard AppModel.shared.features.isEnabled(.lyrics), let m, !m.title.isEmpty else { lyrics = nil; key = nil; return }
+        // Browser tabs and VLC have no reliable artist/duration: LRCLIB would get junk queries.
+        guard AppModel.shared.features.isEnabled(.lyrics), let m, m.hasFullControls, !m.title.isEmpty else { lyrics = nil; key = nil; return }
         let k = "\(m.artist)\u{1F}\(m.title)\u{1F}\(Int(m.duration))"
         guard k != key else { return }
         key = k
