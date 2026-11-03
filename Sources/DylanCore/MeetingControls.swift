@@ -55,4 +55,20 @@ public enum MeetingControls {
 
     /// Muted apps may stop the microphone; keep the controls this long after the app last used it.
     public static let grace: TimeInterval = 120
+
+    /// Screen sharing (FR-28, spike T2.7): the windows meeting apps show only while sharing, by title
+    /// (read with Accessibility, no Screen Recording). Heuristic; experimental until verified per app.
+    public static func isSharing(_ app: App, windowTitles: [String]) -> Bool {
+        windowTitles.contains { t in
+            let l = t.lowercased()
+            switch app {
+            case .zoom: return l.hasPrefix("zoom share toolbar") || l.hasPrefix("zoom share statusbar")
+            case .teams: return l.hasPrefix("sharing control bar") || l.contains("is sharing")
+            case .meet: return l.contains("is sharing your screen") || l.contains("is sharing a window") || l.contains("is sharing a tab")
+            }
+        }
+    }
+
+    /// How often to look while a call is on (only then).
+    public static let shareCheckInterval: TimeInterval = 4
 }

@@ -9,6 +9,11 @@ final class MeetingCallProvider {
     private(set) var app: MeetingControls.App?
     private var pid: pid_t = 0
     private var expiry: DispatchWorkItem?
+    private var shareTimer: Timer?
+    /// Presentation Mode that Dylan turned on for a share; turned off again when the share ends.
+    private var autoPresenting = false
+    /// The user turned Presentation Mode off during this share: do not turn it back on.
+    private var overridden = false
 
     /// Called whenever the microphone user changes (PrivacyProvider.update).
     func micChanged() {
@@ -19,6 +24,7 @@ final class MeetingCallProvider {
             expiry?.cancel(); expiry = nil
             app = a; pid = p.pid
             publish()
+            watchSharing()
         } else if app != nil, expiry == nil {
             // Muting can stop the microphone; keep the controls a little longer.
             let w = DispatchWorkItem { MainActor.assumeIsolated { MeetingCallProvider.shared.end() } }
@@ -29,8 +35,45 @@ final class MeetingCallProvider {
 
     func end() {
         expiry?.cancel(); expiry = nil
+        shareTimer?.invalidate(); shareTimer = nil
+        if autoPresenting { autoPresenting = false; if AppModel.shared.presentationMode { AppModel.shared.togglePresentation() } }
         app = nil; pid = 0
         AppModel.shared.removeIfPresent("meeting-live", now: Date())
+    }
+
+    // MARK: Screen sharing → Presentation Mode (FR-28)
+
+    private func watchSharing() {
+        guard shareTimer == nil, AppModel.shared.features.isEnabled(.autoPresentation) else { return }
+        let t = Timer(timeInterval: MeetingControls.shareCheckInterval, repeats: true) { _ in
+            MainActor.assumeIsolated { MeetingCallProvider.shared.checkSharing() }
+        }
+        t.tolerance = 1
+        RunLoop.main.add(t, forMode: .common)
+        shareTimer = t
+    }
+
+    private func checkSharing() {
+        let m = AppModel.shared
+        guard let app, pid > 0, m.features.isEnabled(.autoPresentation), AXIsProcessTrusted() else { return }
+        let sharing = MeetingControls.isSharing(app, windowTitles: Self.windowTitles(pid))
+        if !sharing {
+            overridden = false
+            if autoPresenting { autoPresenting = false; if m.presentationMode { m.togglePresentation() } }
+            return
+        }
+        if autoPresenting, !m.presentationMode { autoPresenting = false; overridden = true }
+        if !m.presentationMode, !overridden { autoPresenting = true; m.togglePresentation() }
+    }
+
+    static func windowTitles(_ pid: pid_t) -> [String] {
+        var v: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &v) == .success,
+              let wins = v as? [AXUIElement] else { return [] }
+        return wins.compactMap { w in
+            var t: CFTypeRef?
+            return AXUIElementCopyAttributeValue(w, kAXTitleAttribute as CFString, &t) == .success ? t as? String : nil
+        }
     }
 
     private func publish() {

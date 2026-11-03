@@ -69,7 +69,7 @@ import Testing
         #expect(byID["lockScreen"]?.status(macOSMajor: 27) == .experimental)
         #expect(byID["claudeSessions"]?.status(macOSMajor: 27) == .available)
         #expect(byID["focus"]?.status(macOSMajor: 27) == .available)
-        #expect(byID["autoPresentation"]?.status(macOSMajor: 27) == .soon)  // next release
+        #expect(byID["autoPresentation"]?.status(macOSMajor: 27) == .experimental)
         #expect(byID["themes"]?.status(macOSMajor: 25) == .available)       // glass part simply off below 26
         #expect(byID["otherPlayers"]?.status(macOSMajor: 27) == .soon)      // unfinished v1.0 scope
         #expect(byID["terminal"]?.status(macOSMajor: 27) == .planned)

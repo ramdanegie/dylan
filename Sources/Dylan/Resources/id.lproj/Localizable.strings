@@ -696,3 +696,5 @@
 "mixer.title" = "Volume per app";
 "mixer.empty" = "Belum ada app yang memutar suara";
 "mixer.volume" = "Volume %@";
+"feature.autoPresentation" = "Nyalakan otomatis saat share layar";
+"feature.autoPresentation.hint" = "Eksperimental: Zoom, Teams, Meet; butuh Accessibility";

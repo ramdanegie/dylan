@@ -21,3 +21,14 @@ import Testing
         for app in MeetingControls.App.allCases { #expect(MeetingControls.shortcut(app, .mic) != nil) }
     }
 }
+
+@Suite struct ScreenShareTests {
+    @Test func sharingWindows() {
+        #expect(MeetingControls.isSharing(.zoom, windowTitles: ["Zoom Meeting", "zoom share toolbar window"]))
+        #expect(MeetingControls.isSharing(.meet, windowTitles: ["meet.google.com is sharing your screen."]))
+        #expect(MeetingControls.isSharing(.teams, windowTitles: ["Sharing control bar | Microsoft Teams"]))
+        #expect(!MeetingControls.isSharing(.zoom, windowTitles: ["Zoom Meeting", "Participants"]))
+        #expect(!MeetingControls.isSharing(.meet, windowTitles: ["Meet - abc-defg-hij - Google Chrome"]))
+        #expect(!MeetingControls.isSharing(.teams, windowTitles: []))
+    }
+}

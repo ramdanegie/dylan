@@ -66,7 +66,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("liveActivity", .notch, [1, 2, 3, 4], .v1_0, built: true),
         .init("fullscreen", .notch, [5], .v1_0, built: true),
         .init("presentation", .notch, [16], .v1_0, built: true),
-        .init("autoPresentation", .notch, [28], .v1_1, req: true),
+        .init("autoPresentation", .notch, [28], .v1_1, built: true, experimental: true, req: true),
         .init("pill", .notch, [27], .v1_1, built: true),
         .init("themes", .notch, [78], .v1_1, built: true, req: true),
         .init("home", .notch, [14], .v1_0, built: true),

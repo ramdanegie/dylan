@@ -696,3 +696,5 @@
 "mixer.title" = "Volume per app";
 "mixer.empty" = "No app is playing sound";
 "mixer.volume" = "%@ volume";
+"feature.autoPresentation" = "Turn on while screen sharing";
+"feature.autoPresentation.hint" = "Experimental: Zoom, Teams, Meet; needs Accessibility";
