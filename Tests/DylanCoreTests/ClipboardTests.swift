@@ -56,16 +56,21 @@ private let t0 = Date(timeIntervalSince1970: 1_762_160_400)   // sample timestam
 @Suite struct SecretTests {
     @Test(arguments: ["ghp_abcdefghijklmnopqrstuvwxyz0123456789a1b2", "github_pat_11ABCDEFG0123456789_abcdefghij",
                       "sk-ant-api03-abcdefghijk", "sk-proj-abcdefghijklmnopqrst", "AKIAIOSFODNN7EXAMPLE",
-                      "xoxb-123456789012-abcdefghij", "-----BEGIN OPENSSH PRIVATE KEY-----\nabc", "password=hunter2", "API_KEY: abc123"])
+                      "xoxb-123456789012-abcdefghij", "-----BEGIN OPENSSH PRIVATE KEY-----\nabc", "password=hunter2", "API_KEY: abc123",
+                      "export GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123", "OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrst",
+                      "DB_PASSWORD=hunter2", "aws_access_key_id = AKIAIOSFODNN7EXAMPLE", "Authorization: Bearer abcdefghijklmnop.qrs",
+                      "DATABASE_URL=postgres://app:hunter2@db.local/app", "\"client_secret\": \"abc\"", "line one\nghp_abcdefghijklmnopqrstuvwxyz0123\n"])
     func secrets(_ s: String) { #expect(SecretDetector.isSecret(s)) }
 
-    @Test(arguments: ["hello", "ghp is short", "skeleton-key", "https://example.com/token"])
+    @Test(arguments: ["hello", "ghp is short", "skeleton-key", "https://example.com/token", "task-abcdefghijklmnopqrstuv",
+                      "https://user@example.com/path", "the token is ready", "Bearer of bad news", "AKIAIOSFODNN7EXAMPLEXYZ"])
     func notSecrets(_ s: String) { #expect(!SecretDetector.isSecret(s)) }
 
     @Test func masking() {
         #expect(SecretDetector.mask("ghp_abcdefghijklmnopqrstuvwxyz0123456789a1b2") == "ghp_••••a1b2")
         #expect(SecretDetector.mask("AKIAIOSFODNN7EXAMPLE") == "AKIA••••MPLE")
         #expect(SecretDetector.mask("short") == "•••••")
+        #expect(SecretDetector.mask("password=hunter2_x1") == "pass••••2_x1")
     }
 
     @Test func generators() {

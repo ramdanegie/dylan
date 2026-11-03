@@ -91,12 +91,17 @@ public enum Detectors {
 
 /// Secrets never reach the history file; they live in memory, masked, for 2 minutes (PRD §2.8).
 public enum SecretDetector {
+    /// Matched anywhere in the copy (an `.env` line, a header, a whole file), not only as the full string.
     static let patterns: [String] = [
-        #"^gh[pousr]_[A-Za-z0-9]{20,}$"#, #"^github_pat_[A-Za-z0-9_]{20,}$"#,
-        #"^sk-ant-[A-Za-z0-9_\-]{10,}$"#, #"^sk-[A-Za-z0-9_\-]{16,}$"#,
-        #"^AKIA[0-9A-Z]{16}$"#, #"^xox[abposr]-[A-Za-z0-9-]{10,}$"#,
+        #"(?<![A-Za-z0-9_])gh[pousr]_[A-Za-z0-9]{20,}"#, #"(?<![A-Za-z0-9_])github_pat_[A-Za-z0-9_]{20,}"#,
+        #"(?<![A-Za-z0-9_-])sk-ant-[A-Za-z0-9_\-]{10,}"#, #"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_\-]{16,}"#,
+        #"(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}(?![0-9A-Z])"#, #"(?<![A-Za-z0-9])xox[abposr]-[A-Za-z0-9-]{10,}"#,
         #"-----BEGIN [A-Z ]*PRIVATE KEY-----"#,
-        #"(?i)\b(password|passwd|token|secret|api[_-]?key)\s*[=:]\s*\S+"#,
+        // DB_PASSWORD=…, GITHUB_TOKEN: …, client_secret=…
+        #"(?i)(?<![A-Za-z0-9])[A-Za-z0-9_]*(password|passwd|pwd|token|secret|api[_-]?key)["']?\s*[=:]\s*["']?[^\s"']+"#,
+        #"(?i)\bbearer\s+[A-Za-z0-9._~+/\-]{12,}"#,
+        // postgres://user:pass@host
+        #"(?i)\b[a-z][a-z0-9+.\-]*://[^:/\s@]+:[^@/\s]+@"#,
     ]
     public static let ttl: TimeInterval = 120
 
@@ -120,7 +125,8 @@ public enum SecretDetector {
     public static func mask(_ raw: String) -> String {
         let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard s.count > 8 else { return String(repeating: "•", count: s.count) }
-        let prefix = s.firstIndex(of: "_").map { String(s[...$0]) } ?? String(s.prefix(4))
+        // Only a short vendor prefix (ghp_, xoxb_); a far-off "_" would expose the secret itself.
+        let prefix = s.firstIndex(of: "_").flatMap { s.distance(from: s.startIndex, to: $0) < 7 ? String(s[...$0]) : nil } ?? String(s.prefix(4))
         return prefix + "••••" + String(s.suffix(4))
     }
 }
