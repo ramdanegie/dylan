@@ -12,20 +12,23 @@ final class HUDProvider {
     private var blocks: [(AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
     private var running = false
     private var lastValue: Float?
+    private var systemBlock: AudioObjectPropertyListenerBlock?
+    private static var defaultOutput = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+                                                                  mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
 
     func start() {
         guard !running else { return }
         running = true
-        var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-                                              mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &addr, .main) { _, _ in
-            MainActor.assumeIsolated { HUDProvider.shared.watchDevice() }
-        }
+        let b: AudioObjectPropertyListenerBlock = { _, _ in MainActor.assumeIsolated { HUDProvider.shared.watchDevice() } }
+        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &Self.defaultOutput, .main, b)
+        systemBlock = b
         watchDevice()
     }
 
     func stop() {
         unwatch()
+        if let b = systemBlock { AudioObjectRemovePropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &Self.defaultOutput, .main, b) }
+        systemBlock = nil
         running = false
     }
 
@@ -36,6 +39,7 @@ final class HUDProvider {
 
     private func watchDevice() {
         unwatch()
+        guard running else { return }
         var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
                                               mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var dev = AudioObjectID(0)

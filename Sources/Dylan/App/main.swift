@@ -74,6 +74,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.discord) ? DiscordProvider.shared.start() : DiscordProvider.shared.stop()
         f.isEnabled(.hud) ? HUDProvider.shared.start() : HUDProvider.shared.stop()
         PrivacyProvider.shared.update()
+        // A tab that was just turned off must not keep rendering.
+        if !AppModel.shared.tabs.contains(AppModel.shared.selectedTab) { AppModel.shared.selectedTab = .home }
         if !f.isEnabled(.agents) {
             for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }
             AppModel.shared.center.remove("agents", now: Date())

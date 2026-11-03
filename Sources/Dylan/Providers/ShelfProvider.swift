@@ -115,7 +115,7 @@ final class ShelfProvider {
     }
 
     private func startScreenshotWatch() {
-        guard query == nil, AppModel.shared.screenshotsToShelf else { return }
+        guard query == nil, AppModel.shared.screenshotsToShelf, AppModel.shared.features.isEnabled(.shelf) else { return }
         started = Date()
         let q = NSMetadataQuery()
         q.predicate = NSPredicate(format: "kMDItemIsScreenCapture == 1 && kMDItemContentCreationDate > %@", started as NSDate)
