@@ -21,8 +21,11 @@ public enum HookInstaller {
         Event(name: "SessionEnd", matcher: nil, timeout: 5),
     ]
 
-    /// Any hook whose command contains this belongs to Dylan.
-    public static let marker = "dylan hook"
+    /// A hook belongs to Dylan when its command runs `dylan hook <agent>` (path optionally quoted;
+    /// `dylan-cli` is the unbundled dev build).
+    public static func isDylanHook(_ command: String) -> Bool {
+        command.range(of: #"(^|/)dylan(-cli)?'?\s+hook\s+(claude|codex)\b"#, options: .regularExpression) != nil
+    }
 
     public enum Status: Equatable, Sendable {
         case notInstalled
@@ -42,11 +45,10 @@ public enum HookInstaller {
         public var removed: Int
     }
 
-    /// `'…/Dylan.app/Contents/MacOS/dylan' hook claude`, quoted when the path has spaces.
+    /// `'…/Dylan.app/Contents/Helpers/dylan' hook claude`. Always single-quoted: Claude Code runs hooks
+    /// through a shell, and characters like `(`, `&` or spaces in the path would break it.
     public static func command(cliPath: String) -> String {
-        let quoted = cliPath.contains(where: { " '\"$`\\".contains($0) })
-            ? "'" + cliPath.replacingOccurrences(of: "'", with: "'\\''") + "'" : cliPath
-        return "\(quoted) hook claude"
+        "'" + cliPath.replacingOccurrences(of: "'", with: "'\\''") + "' hook claude"
     }
 
     public static func status(_ data: Data?, command: String) throws -> Status {
@@ -83,7 +85,7 @@ public enum HookInstaller {
             var present = false
             for gi in groups.indices {
                 guard var list = groups[gi]["hooks"] as? [[String: Any]] else { continue }
-                for hi in list.indices where (list[hi]["command"] as? String)?.contains(marker) == true {
+                for hi in list.indices where (list[hi]["command"] as? String).map(isDylanHook) == true {
                     if !present {
                         present = true
                         if list[hi]["command"] as? String != command || list[hi]["timeout"] as? Int != e.timeout {
@@ -117,11 +119,14 @@ public enum HookInstaller {
             guard var groups = value as? [[String: Any]] else { continue }
             for gi in groups.indices {
                 guard let list = groups[gi]["hooks"] as? [[String: Any]] else { continue }
-                let kept = list.filter { ($0["command"] as? String)?.contains(marker) != true }
+                let kept = list.filter { ($0["command"] as? String).map(isDylanHook) != true }
+                guard kept.count != list.count else { continue }
                 removed += list.count - kept.count
                 groups[gi]["hooks"] = kept
+                // Only groups that became empty because of us are dropped; the user's own empty groups stay.
+                if kept.isEmpty { groups[gi]["__dylanEmptied"] = true }
             }
-            groups.removeAll { ($0["hooks"] as? [[String: Any]])?.isEmpty == true }
+            groups.removeAll { $0["__dylanEmptied"] as? Bool == true }
             hooks[name] = groups.isEmpty ? nil : groups
         }
         root["hooks"] = hooks.isEmpty ? nil : hooks
@@ -132,7 +137,7 @@ public enum HookInstaller {
         guard let groups = value as? [[String: Any]] else { return [] }
         return groups.flatMap { ($0["hooks"] as? [[String: Any]]) ?? [] }
             .compactMap { $0["command"] as? String }
-            .filter { $0.contains(marker) }
+            .filter(isDylanHook)
     }
 
     static func object(_ data: Data) throws -> [String: Any] {

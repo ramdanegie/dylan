@@ -74,9 +74,36 @@ private func obj(_ d: Data) throws -> [String: Any] {
         #expect(try obj(r.json)["hooks"] == nil)
     }
 
-    @Test func quotesPathsWithSpaces() {
+    @Test func alwaysQuotesThePath() {
         #expect(HookInstaller.command(cliPath: "/Apps/My Dylan.app/dylan") == "'/Apps/My Dylan.app/dylan' hook claude")
-        #expect(cmd == "/Applications/Dylan.app/Contents/MacOS/dylan hook claude")
+        #expect(HookInstaller.command(cliPath: "/Apps/It's.app/dylan") == #"'/Apps/It'\''s.app/dylan' hook claude"#)
+        #expect(cmd == "'/Applications/Dylan.app/Contents/MacOS/dylan' hook claude")
+    }
+
+    /// Review finding: quoted commands were not recognised, so every install duplicated the hooks.
+    @Test(arguments: ["/Apps/My Dylan (2).app/dylan", "/tmp/a&b/dylan", "/Users/gg/x/.build/debug/dylan-cli"])
+    func quotedPathsRoundTrip(_ path: String) throws {
+        let c = HookInstaller.command(cliPath: path)
+        let once = try HookInstaller.install(into: nil, command: c)
+        #expect(try HookInstaller.status(once.json, command: c) == .installed)
+        let twice = try HookInstaller.install(into: once.json, command: c)
+        #expect(twice.added == 0)
+        #expect(try HookInstaller.uninstall(from: twice.json).removed == 8)
+    }
+
+    @Test func recognisesOnlyDylanHooks() {
+        #expect(HookInstaller.isDylanHook("/x/dylan hook claude"))
+        #expect(HookInstaller.isDylanHook("'/x y/dylan' hook codex"))
+        #expect(!HookInstaller.isDylanHook("~/bin/guard.sh"))
+        #expect(!HookInstaller.isDylanHook("mydylan hook claude"))
+        #expect(!HookInstaller.isDylanHook("echo 'dylan hook claude is cool'"))
+    }
+
+    @Test func uninstallKeepsUsersOwnEmptyGroups() throws {
+        let user = #"{"hooks":{"Stop":[{"matcher":"x","hooks":[]}]}}"#
+        let r = try HookInstaller.install(into: Data(user.utf8), command: cmd)
+        let u = try HookInstaller.uninstall(from: r.json)
+        #expect(try HookInstaller.normalized(u.json) == (try HookInstaller.normalized(Data(user.utf8))))
     }
 
     @Test func lineDiff() {
