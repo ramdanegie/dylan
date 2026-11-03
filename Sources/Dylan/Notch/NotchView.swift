@@ -27,7 +27,7 @@ struct NotchRootView: View {
 
     static func expandedHeight(_ m: AppModel) -> CGFloat {
         switch m.selectedTab {
-        case .home: return m.isDeveloper && !m.agents.active.isEmpty ? 300 : 270
+        case .home: return m.isDeveloper && !m.agents.active.isEmpty ? 330 : 300
         case .media: return 300
         case .clipboard: return 380
         case .shelf: return 236

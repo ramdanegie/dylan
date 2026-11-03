@@ -102,6 +102,8 @@ final class NotchController {
             MainActor.assumeIsolated {
                 NotchController.shared.relayout()
                 CalendarProvider.shared.reload()
+                RemindersProvider.shared.reload()
+                WeatherProvider.shared.refresh()
                 AppModel.shared.tick()
             }
         }

@@ -86,9 +86,14 @@ struct HomeTab: View {
                 Divider().overlay(Color.white.opacity(0.08))
                 AgendaCard().frame(maxWidth: .infinity, alignment: .leading)
                 Divider().overlay(Color.white.opacity(0.08))
-                TimerCard().frame(width: 150)
+                VStack(spacing: 8) {
+                    WeatherMini()
+                    TimerCard()
+                }
+                .frame(width: 150)
             }
             .frame(maxHeight: .infinity, alignment: .top)
+            if model.features.isEnabled(.reminders) { QuickAddField() }
             if model.isDeveloper { RunningChips() }
             HStack(spacing: 6) {
                 BatteryLine()
@@ -167,6 +172,7 @@ struct AgendaCard: View {
             } else {
                 SwiftUI.Text(L("home.noMeetings")).font(DY.font(12, .regular)).foregroundStyle(DY.fg2)
             }
+            if model.features.isEnabled(.reminders) { RemindersList() }
         }
     }
 
@@ -179,6 +185,89 @@ struct AgendaCard: View {
         let s = start.timeIntervalSince(now)
         if s <= 0 { return L("meeting.started") }
         return L("meeting.startsIn", DurationFormat.long(s, language: L10n.language))
+    }
+}
+
+/// Today's reminders with checkboxes (design D33).
+struct RemindersList: View {
+    private var r: RemindersProvider { RemindersProvider.shared }
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        if r.status != .fullAccess {
+            Button(L("reminders.allow")) { RemindersProvider.shared.start(requestAccess: true) }
+                .buttonStyle(.plain).font(DY.font(11)).foregroundStyle(DY.info)
+        } else if !r.items.isEmpty {
+            VStack(alignment: .leading, spacing: 3) {
+                SwiftUI.Text(L("reminders.today")).font(DY.font(10.5, .semibold)).foregroundStyle(DY.fg2).padding(.top, 4)
+                ForEach(r.items.prefix(3)) { item in
+                    HStack(spacing: 6) {
+                        Button { RemindersProvider.shared.complete(item) } label: {
+                            Image(systemName: "circle").font(.system(size: 11)).foregroundStyle(DY.fg2)
+                        }
+                        .buttonStyle(.plain).accessibilityLabel(L("reminders.complete"))
+                        SwiftUI.Text(model.presentationMode ? L("reminders.generic") : item.title)
+                            .font(DY.font(11.5, .regular)).foregroundStyle(DY.fg).lineLimit(1)
+                        if item.overdue { SwiftUI.Text(L("reminders.overdue")).font(DY.font(10)).foregroundStyle(DY.action) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct WeatherMini: View {
+    private var w: WeatherProvider { WeatherProvider.shared }
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        if model.features.isEnabled(.weather), let c = w.current {
+            let d = Weather.describe(c.code)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Image(systemName: d.symbol).font(.system(size: 13)).symbolRenderingMode(.multicolor)
+                    SwiftUI.Text("\(Int(c.temperature.rounded()))°").font(DY.font(15, .semibold)).foregroundStyle(.white)
+                    SwiftUI.Text(w.place ?? model.weatherCity).font(DY.font(10.5)).foregroundStyle(DY.fg2).lineLimit(1)
+                }
+                SwiftUI.Text(L(d.key) + (c.low.flatMap { lo in c.high.map { " · \(Int(lo.rounded()))° / \(Int($0.rounded()))°" } } ?? ""))
+                    .font(DY.font(10.5, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
+                if let rain = Weather.nextRain(c), rain > Date() {
+                    SwiftUI.Text(L("weather.rainAt", rain.formatted(.dateTime.hour().minute().locale(L10n.locale))))
+                        .font(DY.font(10.5)).foregroundStyle(DY.info)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+        }
+    }
+}
+
+/// "+ Rapat tim besok 10.00" → preview → saved as event or reminder (FR-85).
+struct QuickAddField: View {
+    @StateBox private var text = ""
+    @StateBox private var note: String?
+    private var model: AppModel { AppModel.shared }
+    var body: some View {
+        let parsed = QuickAdd.parse(text, now: Date())
+        HStack(spacing: 8) {
+            Image(systemName: "plus").font(.system(size: 11, weight: .bold)).foregroundStyle(DY.fg2)
+            TextField(L("quickAdd.placeholder"), text: $text)
+                .textFieldStyle(.plain).font(DY.font(12, .regular)).foregroundStyle(.white)
+                .onSubmit {
+                    guard let p = QuickAdd.parse(text, now: Date()) else { return }
+                    note = RemindersProvider.shared.save(p)
+                    text = ""
+                    RemindersProvider.shared.reload()
+                }
+            if let p = parsed, !text.isEmpty {
+                SwiftUI.Text((p.kind == .event ? L("quickAdd.event") : L("quickAdd.reminder"))
+                             + (p.date.map { " · " + $0.formatted(p.hasTime ? .dateTime.weekday(.abbreviated).hour().minute().locale(L10n.locale)
+                                                                    : .dateTime.weekday(.abbreviated).day().locale(L10n.locale)) } ?? ""))
+                    .font(DY.font(10.5)).foregroundStyle(DY.info).lineLimit(1)
+            } else if let note {
+                SwiftUI.Text(note).font(DY.font(10.5)).foregroundStyle(DY.fg2).lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 10).frame(height: 26)
+        .background(Capsule().fill(DY.control))
     }
 }
 

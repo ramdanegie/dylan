@@ -73,7 +73,7 @@ struct SettingsView: View {
         case .appearance: AppearanceSettings()
         case .liveActivity: LiveActivitySettings()
         case .media:
-            FeatureToggles(features: [.media, .lyrics, .meeting, .timer])
+            FeatureToggles(features: [.media, .lyrics, .meeting, .reminders, .timer])
             QuickPlaySettings()
         case .devices:
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake])
@@ -245,7 +245,12 @@ struct ClipboardSettings: View {
 struct UtilitySettings: View {
     private var model: AppModel { AppModel.shared }
     var body: some View {
-        FeatureToggles(features: [.shelf, .colorPicker])
+        FeatureToggles(features: [.shelf, .colorPicker, .weather])
+        Section(L("weather.title")) {
+            TextField(L("weather.city"), text: Binding(get: { model.weatherCity }, set: { model.weatherCity = $0 }))
+                .onSubmit { WeatherProvider.shared.cityChanged() }
+            SwiftUI.Text(L("weather.privacy")).font(.caption).foregroundStyle(.secondary)
+        }
         Section("Shelf") {
             Toggle(L("shelf.screenshots"), isOn: Binding(get: { model.screenshotsToShelf }, set: { model.screenshotsToShelf = $0 }))
             LabeledContent("CLI", value: "dylan shelf add <file…>")

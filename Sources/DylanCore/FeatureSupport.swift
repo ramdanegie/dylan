@@ -87,9 +87,9 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         // Calendar & time
         .init("meeting", .calendar, [12], .v1_0, built: true, req: true),
         .init("timer", .calendar, [13], .v1_0, built: true),
-        .init("reminders", .calendar, [75], .v1_2, req: true),
-        .init("quickAdd", .calendar, [85], .v1_2),
-        .init("weather", .calendar, [45], .v1_2, req: true),
+        .init("reminders", .calendar, [75], .v1_2, built: true, req: true),
+        .init("quickAdd", .calendar, [85], .v1_2, built: true),
+        .init("weather", .calendar, [45], .v1_2, built: true, req: true),
         .init("timeToLeave", .calendar, [81], .v1_3, req: true),
         // Devices & system
         .init("battery", .devices, [70], .v1_0, built: true),

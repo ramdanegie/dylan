@@ -127,6 +127,7 @@ final class AppModel {
     @ObservationIgnored var focusClipboardSearch = false
     var clearClipboardOnQuit: Bool { didSet { defaults.set(clearClipboardOnQuit, forKey: "clearClipboardOnQuit") } }
     var quickPlay: [QuickPlayItem] { didSet { save(quickPlay, "quickPlay") } }
+    var weatherCity: String { didSet { defaults.set(weatherCity, forKey: "weatherCity") } }
     var screenshotsToShelf: Bool {
         didSet { defaults.set(screenshotsToShelf, forKey: "screenshotsToShelf"); ShelfProvider.shared.restartScreenshotWatch() }
     }
@@ -158,6 +159,7 @@ final class AppModel {
         colorHistory = d.stringArray(forKey: "colorHistory") ?? []
         clearClipboardOnQuit = d.bool(forKey: "clearClipboardOnQuit")
         screenshotsToShelf = d.object(forKey: "screenshotsToShelf") as? Bool ?? true
+        weatherCity = d.string(forKey: "weatherCity") ?? ""
         quickPlay = d.data(forKey: "quickPlay").flatMap { try? JSONDecoder().decode([QuickPlayItem].self, from: $0) } ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])

@@ -66,6 +66,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         StatsProvider.shared.refreshSchedule()
         f.isEnabled(.ports) ? PortsProvider.shared.start() : PortsProvider.shared.stop()
         f.isEnabled(.shelf) ? ShelfProvider.shared.start() : ShelfProvider.shared.stop()
+        f.isEnabled(.reminders) ? RemindersProvider.shared.start(requestAccess: false) : RemindersProvider.shared.stop()
+        f.isEnabled(.weather) ? WeatherProvider.shared.start() : WeatherProvider.shared.stop()
         PrivacyProvider.shared.update()
         if !f.isEnabled(.agents) {
             for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }
