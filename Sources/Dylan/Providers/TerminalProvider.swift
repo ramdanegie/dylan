@@ -3,6 +3,7 @@ import DylanCore
 
 /// Quick terminal in the notch (FR-41): your login shell on a real PTY, opened with ⌃⌥T. Line-based, without a
 /// full VT100 screen; full-screen programs (vim, htop) are handed to Terminal or VS Code in the same folder.
+/// Like any terminal app, commands run here with Dylan's macOS permissions (e.g. Accessibility).
 @Observable
 final class TerminalProvider {
     static let shared = TerminalProvider()

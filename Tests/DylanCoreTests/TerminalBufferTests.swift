@@ -34,4 +34,16 @@ import Testing
         #expect(run(["a\tb"]).lines == ["a       b"])
         #expect(run([(1...10).map(String.init).joined(separator: "\n")], max: 3).lines == ["8", "9", "10"])
     }
+
+    @Test func hugeLinesAndUnterminatedEscapes() {
+        let start = Date()
+        var t = TerminalBuffer()
+        t.append(Data(String(repeating: "x", count: 50_000).utf8))
+        #expect(Date().timeIntervalSince(start) < 1)                       // was quadratic: seconds per line
+        #expect(t.lines.allSatisfy { $0.count <= TerminalBuffer.maxColumns })
+        var u = TerminalBuffer()
+        u.append(Data("\u{1B}]0;never ends".utf8))
+        u.append(Data((String(repeating: "y", count: 5_000) + "\nvisible").utf8))
+        #expect(u.lines.last == "visible")                                // output is not held back forever
+    }
 }

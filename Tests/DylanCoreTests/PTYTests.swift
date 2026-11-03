@@ -50,3 +50,15 @@ import Testing
         pty.terminate()
     }
 }
+
+@Suite struct PTYTerminateTests {
+    @Test func terminateEndsTheShellAndItsJobs() throws {
+        let pty = try #require(PTY(path: "/bin/sh", args: ["-c", "trap '' HUP; sleep 30 & wait"], environment: ["PATH": "/usr/bin:/bin"], cwd: "/tmp"))
+        let done = DispatchSemaphore(value: 0)
+        Thread { pty.readLoop { _ in }; done.signal() }.start()
+        usleep(200_000)
+        pty.terminate()
+        // HUP is ignored by the script, so this needs the SIGKILL fallback.
+        #expect(done.wait(timeout: .now() + 5) == .success)
+    }
+}

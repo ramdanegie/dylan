@@ -9,6 +9,8 @@ public final class PTY: @unchecked Sendable {
     public let master: Int32
     private let lock = NSLock()
     private var closed = false
+    private var exited = false
+    private var reading = false
 
     public init?(path: String, args: [String], environment: [String: String], cwd: String, cols: UInt16 = 90, rows: UInt16 = 14) {
         let m = posix_openpt(O_RDWR | O_NOCTTY)
@@ -46,7 +48,10 @@ public final class PTY: @unchecked Sendable {
         master = m
     }
 
-    deinit { terminate() }
+    deinit {
+        terminate()
+        if !reading { close(master) }   // no reader thread will close it
+    }
 
     public func write(_ data: Data) {
         lock.lock(); defer { lock.unlock() }
@@ -66,8 +71,10 @@ public final class PTY: @unchecked Sendable {
         _ = ioctl(master, TIOCSWINSZ, &size)
     }
 
-    /// Blocking: reads until the shell exits. Run it on its own thread.
+    /// Blocking: reads until the shell exits, then closes the master. Run it on its own thread.
+    /// Only this loop closes the fd, so a terminate() can never let it read a reused descriptor.
     public func readLoop(_ onData: (Data) -> Void) {
+        lock.lock(); reading = true; lock.unlock()
         var buf = [UInt8](repeating: 0, count: 16_384)
         while true {
             let n = read(master, &buf, buf.count)
@@ -77,14 +84,23 @@ public final class PTY: @unchecked Sendable {
         }
         var status: Int32 = 0
         waitpid(pid, &status, 0)
+        lock.lock(); exited = true; lock.unlock()
+        close(master)
     }
 
+    /// Hangs up the shell and its jobs (the whole process group); SIGKILL after 2 s if something ignores it.
     public func terminate() {
         lock.lock(); defer { lock.unlock() }
         guard !closed else { return }
         closed = true
+        kill(-pid, SIGHUP)
         kill(pid, SIGHUP)
-        close(master)
+        let pid = self.pid
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self else { return }
+            self.lock.lock(); let gone = self.exited; self.lock.unlock()
+            if !gone { kill(-pid, SIGKILL); kill(pid, SIGKILL) }
+        }
     }
 
     /// The shell's current directory, for handing the session to Terminal or VS Code.
