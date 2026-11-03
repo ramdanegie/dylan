@@ -4,7 +4,7 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 
 ## Otomatis
 
-`./scripts/build.sh --test` → **186 unit test lulus** (51 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
+`./scripts/build.sh --test` → **189 unit test lulus** (52 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
 
 | Area | Yang diuji |
 |---|---|
@@ -51,6 +51,10 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 | Notifikasi (spike T3.5) | Struktur AX banner asli dibaca (`AXNotificationCenterBanner`, title/subtitle/body, aksi); `AXObserver` memberi event saat banner muncul |
 | SkyLight | Keenam simbol untuk widget lock screen ada di macOS 27.2 (dlsym, tidak dipanggil) |
 | Plugin OpenCode | JS yang dihasilkan lolos `node --check`, termasuk path dengan kutip |
+| Notifikasi (kode app) | `BannerScanner` membaca banner asli (app, judul, subjudul, isi, aksi) dan aksi **Close** milik banner benar-benar menutupnya |
+| Kontrol meeting (kode app) | `AXMenu` menemukan item menu Finder lewat shortcut; mask modifier terbukti (Shift 1, Control 4); item nonaktif dilewati. Tidak ada yang ditekan |
+| Focus & baterai | Parser jalan di data asli Mac ini (tidak ada Focus aktif, tidak ada perangkat Bluetooth tersambung) |
+| osascript | Output multi-baris (pemisah tab + linefeed) utuh untuk parser tab browser |
 
 ## Bug yang ditemukan dan diperbaiki
 - 3 crash isolasi Swift 6 (socket accept, simpan clipboard di background, dan pola yang sama dicegah di provider lain).
@@ -75,4 +79,5 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 - Mode Presentasi saat share layar di Zoom/Meet, monitor eksternal, 120 fps.
 - Butuh layar terkunci (dilakukan bersama kamu, untuk Face Unlock di akun uji): widget lock screen (T4.1), Face Unlock end-to-end (T5.0), arah tanda yaw Vision.
 - Butuh izin/perangkat: tap audio (equalizer langsung, volume per app), Location + Apple Maps, AirPods tersambung, panggilan FaceTime dan banner WhatsApp/Pesan dengan aksi Balas, share layar Zoom/Teams/Meet, akun Spotify dengan Client ID.
-- Pemutar lain (YouTube/Safari/VLC lewat MediaRemote) belum dibuat: perlu persetujuan kamu untuk mem-build `mediaremote-adapter` (BSD-3).
+- Pemutar lain (FR-11) dibuat tanpa MediaRemote. Pembacaan tab browser dan VLC butuh izin Automation per app; belum dicoba dengan YouTube yang diputar.
+- Dylan.app belum punya Accessibility (signature ad-hoc berubah tiap build). Fitur berbasis AX diuji dengan kode yang sama dari proses yang punya izin, bukan dari app.
