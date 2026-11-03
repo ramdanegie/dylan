@@ -263,6 +263,7 @@ final class PrivacyProvider {
         model.micOn = isRunning(micDevice)
         model.cameraOn = cameras.keys.contains { cameraRunning($0) }
         model.micApp = model.micOn ? micUser() : nil
+        model.refreshDiscordSimple()
     }
 
     private func isRunning(_ dev: AudioObjectID) -> Bool {

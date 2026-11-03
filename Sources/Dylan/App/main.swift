@@ -71,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.downloads) ? DownloadsProvider.shared.start() : DownloadsProvider.shared.stop()
         f.isEnabled(.github) ? DevIntegrations.shared.startGitHub() : DevIntegrations.shared.stopGitHub()
         f.isEnabled(.widgets) ? DevIntegrations.shared.startWidgets() : DevIntegrations.shared.stopWidgets()
+        f.isEnabled(.discord) ? DiscordProvider.shared.start() : DiscordProvider.shared.stop()
         PrivacyProvider.shared.update()
         if !f.isEnabled(.agents) {
             for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }

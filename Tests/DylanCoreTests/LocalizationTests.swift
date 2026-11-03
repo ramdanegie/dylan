@@ -68,7 +68,7 @@ import Testing
         #expect(byID["faceUnlock"]?.status(macOSMajor: 27) == .experimental)
         #expect(byID["lockScreen"]?.status(macOSMajor: 27) == .experimental)
         #expect(byID["claudeSessions"]?.status(macOSMajor: 27) == .available)
-        #expect(byID["discordVoice"]?.status(macOSMajor: 27) == .soon)      // next release
+        #expect(byID["hud"]?.status(macOSMajor: 27) == .soon)               // next release
         #expect(byID["otherPlayers"]?.status(macOSMajor: 27) == .soon)      // unfinished v1.0 scope
         #expect(byID["terminal"]?.status(macOSMajor: 27) == .planned)
         #expect(byID["weather"]?.status(macOSMajor: 27) == .available)

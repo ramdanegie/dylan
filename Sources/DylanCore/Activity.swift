@@ -7,7 +7,7 @@ public enum Priority: Int, Codable, Comparable, Sendable {
 }
 
 public enum ActivityKind: String, Codable, Sendable {
-    case agent, command, script, notify, media, meeting, timer, battery, bluetooth, port, ci, presentation
+    case agent, command, script, notify, media, meeting, timer, battery, bluetooth, port, ci, presentation, discord
 }
 
 public enum ActivityState: Equatable, Codable, Sendable {

@@ -5,7 +5,7 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, shelf, clipboard, stats, agents, dev
+    case home, media, discord, shelf, clipboard, stats, agents, dev
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -13,6 +13,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .media: return "music.note"
         case .clipboard: return "doc.on.clipboard"
         case .shelf: return "tray.and.arrow.down"
+        case .discord: return "headphones"
         case .stats: return "chart.bar"
         case .agents: return "sparkle"
         case .dev: return "hammer"
@@ -64,6 +65,7 @@ enum NotchAction: Equatable {
     case dismiss(String)
     case openStats, stopProcess(Int32)
     case revealFile(String), shelveFile(String)
+    case discordMute, discordDeafen, discordLeave, discordKeybindMute, openDiscord(URL)
 }
 
 @Observable
@@ -129,6 +131,10 @@ final class AppModel {
     var clearClipboardOnQuit: Bool { didSet { defaults.set(clearClipboardOnQuit, forKey: "clearClipboardOnQuit") } }
     var quickPlay: [QuickPlayItem] { didSet { save(quickPlay, "quickPlay") } }
     var weatherCity: String { didSet { defaults.set(weatherCity, forKey: "weatherCity") } }
+    var discordClientID: String { didSet { defaults.set(discordClientID, forKey: "discordClientID") } }
+    var discordMessages: Bool { didSet { defaults.set(discordMessages, forKey: "discordMessages") } }
+    var discordMuteKey: String { didSet { defaults.set(discordMuteKey, forKey: "discordMuteKey") } }
+    var discordDeafKey: String { didSet { defaults.set(discordDeafKey, forKey: "discordDeafKey") } }
     /// Git roots seen in agent sessions and terminal commands (newest first), for GitHub CI.
     var recentRepos: [String] { didSet { defaults.set(recentRepos, forKey: "recentRepos") } }
     var screenshotsToShelf: Bool {
@@ -165,6 +171,10 @@ final class AppModel {
         clearClipboardOnQuit = d.bool(forKey: "clearClipboardOnQuit")
         screenshotsToShelf = d.object(forKey: "screenshotsToShelf") as? Bool ?? true
         weatherCity = d.string(forKey: "weatherCity") ?? ""
+        discordClientID = d.string(forKey: "discordClientID") ?? ""
+        discordMessages = d.object(forKey: "discordMessages") as? Bool ?? true
+        discordMuteKey = d.string(forKey: "discordMuteKey") ?? "⌃⇧M"
+        discordDeafKey = d.string(forKey: "discordDeafKey") ?? "⌃⇧D"
         recentRepos = d.stringArray(forKey: "recentRepos") ?? []
         quickPlay = d.data(forKey: "quickPlay").flatMap { try? JSONDecoder().decode([QuickPlayItem].self, from: $0) } ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
@@ -181,6 +191,8 @@ final class AppModel {
 
     var tabs: [Tab] {
         var t: [Tab] = [.home, .media]
+        // Discord tab only appears when connected (design D26), or to finish setting up.
+        if features.isEnabled(.discord) && (DiscordProvider.shared.connected || !discordClientID.isEmpty) { t.append(.discord) }
         if features.isEnabled(.shelf) { t.append(.shelf) }
         if features.isEnabled(.clipboard) { t.append(.clipboard) }
         if features.isEnabled(.stats) { t.append(.stats) }
@@ -626,6 +638,11 @@ final class AppModel {
         case .stopProcess(let pid): StatsProvider.shared.stop(pid)
         case .revealFile(let p): NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)])
         case .shelveFile(let p): ShelfProvider.shared.add([URL(fileURLWithPath: p)])
+        case .discordMute: DiscordProvider.shared.toggleMute()
+        case .discordDeafen: DiscordProvider.shared.toggleDeaf()
+        case .discordLeave: DiscordProvider.shared.leave()
+        case .discordKeybindMute: DiscordProvider.shared.sendKeybind(discordMuteKey)
+        case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
 
@@ -642,6 +659,15 @@ final class AppModel {
             return a.url.map { [(L("button.open"), .normal, .focusSession($0))] } ?? []
         case .meeting:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.join"), .primaryNeutral, .join($0))] } ?? []
+        case .discord where a.id == "discord-voice":
+            let s = DiscordProvider.shared.state
+            return [(s.selfMute ? L("discord.unmute") : L("discord.mute"), .normal, .discordMute),
+                    (s.selfDeaf ? L("discord.undeafen") : L("discord.deafen"), .normal, .discordDeafen),
+                    (L("discord.leave"), .destructive, .discordLeave)]
+        case .discord:
+            return [(L("discord.toggleMute"), .normal, .discordKeybindMute)]
+        case .notify where a.url?.hasPrefix("discord://") == true:
+            return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openDiscord($0))] } ?? []
         case .battery where a.priority == .p0:
             return [(L("button.dismiss"), .normal, .dismiss(a.id))]
         case .notify where a.url?.hasPrefix("dl:") == true:
@@ -672,7 +698,19 @@ final class AppModel {
     }
 
     /// Kinds whose labels/details can carry file names, commands, script titles or meeting titles (PRD §F12).
-    static let sensitiveKinds: Set<ActivityKind> = [.agent, .command, .script, .notify, .meeting]
+    static let sensitiveKinds: Set<ActivityKind> = [.agent, .command, .script, .notify, .meeting, .discord]
+
+    /// FR-67: without RPC, show "Discord is using the microphone" with a keybind toggle.
+    func refreshDiscordSimple() {
+        let now = Date()
+        let on = features.isEnabled(.discord) && discordClientID.isEmpty && micApp == "Discord"
+        if on, center.activities["discord-simple"] == nil {
+            center.upsert(Activity(id: "discord-simple", kind: .discord, priority: .p2, state: .running, symbol: "mic.fill",
+                                   label: "Discord", value: "", detail: L("discord.simple"), genericDetail: L("discord.voiceGeneric"), startedAt: now))
+        } else if !on, center.activities["discord-simple"] != nil {
+            center.remove("discord-simple", now: now)
+        }
+    }
 
     func displayDetail(_ a: Activity) -> String {
         guard presentationMode else { return a.detail }

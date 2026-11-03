@@ -31,6 +31,7 @@ struct NotchRootView: View {
         case .media: return 300
         case .clipboard: return 380
         case .shelf: return 236
+        case .discord: return 300
         case .stats: return 366
         case .dev: return 316
         case .agents: return 312
@@ -174,6 +175,8 @@ struct RightEar: View {
         switch activity.kind {
         case .media:
             Equalizer(playing: model.media?.isPlaying ?? false, color: model.mediaAccent)
+        case .discord where activity.id == "discord-voice":
+            DiscordAvatars(size: 18)
         case .timer:
             HStack(spacing: 5) {
                 TimerRing(progress: activity.progress ?? 0, size: 14)

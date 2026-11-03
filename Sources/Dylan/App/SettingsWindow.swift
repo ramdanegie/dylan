@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, devices, utilities, clipboard, agents, terminal, features, about
+    case general, appearance, liveActivity, media, discord, devices, utilities, clipboard, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -32,6 +32,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .appearance: return "paintbrush"
         case .liveActivity: return "bell.badge"
         case .media: return "music.note"
+        case .discord: return "headphones"
         case .devices: return "battery.100percent.bolt"
         case .utilities: return "wrench.and.screwdriver"
         case .clipboard: return "doc.on.clipboard"
@@ -79,6 +80,7 @@ struct SettingsView: View {
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake])
             KeepAwakeSettings()
         case .utilities: UtilitySettings()
+        case .discord: DiscordSettings()
         case .clipboard: ClipboardSettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
@@ -166,6 +168,45 @@ struct FeatureToggles: View {
         }
         if features.contains(.meeting), CalendarProvider.shared.status != .fullAccess {
             Section { Button(L("button.allowCalendar")) { CalendarProvider.shared.start(requestAccess: true) } }
+        }
+    }
+}
+
+struct DiscordSettings: View {
+    @StateBox private var secret = ""
+    private var model: AppModel { AppModel.shared }
+    private var d: DiscordProvider { DiscordProvider.shared }
+    var body: some View {
+        FeatureToggles(features: [.discord])
+        Section(L("discord.status")) {
+            LabeledContent("Client ID") {
+                TextField("", text: Binding(get: { model.discordClientID }, set: { model.discordClientID = $0.filter(\.isNumber) }))
+                    .multilineTextAlignment(.trailing)
+            }
+            SecureField(L("discord.secret"), text: $secret)
+                .onSubmit { Keychain.set(secret, "discord.secret"); secret = "" }
+            SwiftUI.Text(L("discord.secretHint")).font(.caption).foregroundStyle(.secondary)
+            LabeledContent(L("discord.connection")) {
+                SwiftUI.Text(d.connected && d.state.authenticated ? L("discord.connected") : (d.status ?? L("discord.notConnected")))
+                    .foregroundStyle(d.connected && d.state.authenticated ? .green : .secondary)
+            }
+            HStack {
+                Button(L("discord.connect")) { d.stop(); d.start() }.disabled(model.discordClientID.count < 15)
+                Button(L("discord.signOut")) { d.signOut() }
+            }
+        }
+        Section {
+            Toggle(L("discord.showMessages"), isOn: Binding(get: { model.discordMessages }, set: { model.discordMessages = $0 }))
+            SwiftUI.Text(L("discord.namesHidden")).font(.caption).foregroundStyle(.secondary)
+        }
+        Section(L("discord.simpleTitle")) {
+            LabeledContent(L("discord.toggleMute")) {
+                TextField("", text: Binding(get: { model.discordMuteKey }, set: { model.discordMuteKey = $0 })).multilineTextAlignment(.trailing)
+            }
+            LabeledContent(L("discord.toggleDeafen")) {
+                TextField("", text: Binding(get: { model.discordDeafKey }, set: { model.discordDeafKey = $0 })).multilineTextAlignment(.trailing)
+            }
+            SwiftUI.Text(L("discord.simpleHint")).font(.caption).foregroundStyle(.secondary)
         }
     }
 }
