@@ -401,3 +401,4 @@
 "permission.automationOpenApp" = "Open Spotify or Music first, then click Allow again. Or later: macOS asks the first time you control music.";
 "hooks.changed" = "settings.json changed since the diff was opened. Open the diff again to see the latest version.";
 "setup.unreadable" = "%@ could not be read or is taken by another file, so it was left alone.";
+"button.dismiss" = "Dismiss";

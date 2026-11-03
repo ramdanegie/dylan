@@ -45,6 +45,7 @@ struct PendingPermission {
     var tool: String?
     var detail: String?
     var createdAt: Date
+    var connection: UUID?
     var reply: (PermissionReply) -> Void
 }
 
@@ -193,7 +194,7 @@ final class AppModel {
 
     // MARK: Bridge messages
 
-    func handle(_ m: BridgeMessage, reply: @escaping (Data) -> Void) {
+    func handle(_ m: BridgeMessage, connection: UUID? = nil, reply: @escaping (Data) -> Void) {
         let now = Date()
         switch m {
         case .ping:
@@ -252,7 +253,7 @@ final class AppModel {
             guard source == "claude", features.isEnabled(.agents), let e = ClaudeHookEvent(payload: payload) else { break }
             applyAgentEvent(e, env: env, now: now)
         case let .permissionAsk(requestID, _, env, payload):
-            handlePermissionAsk(requestID: requestID, env: env, payload: payload, now: now) { r in
+            handlePermissionAsk(requestID: requestID, env: env, payload: payload, connection: connection, now: now) { r in
                 if var d = try? JSONEncoder().encode(r) { d.append(0x0A); reply(d) }
             }
         case .shelfAdd:
@@ -301,7 +302,9 @@ final class AppModel {
         agents.apply(e, env: env, now: now, projectName: { ProjectName.resolve(cwd: $0) })
         // Tool ran → any notch card for this session is stale (answered in the terminal).
         if e.name == .postToolUse || e.name == .stop || e.name == .userPromptSubmit {
-            for p in pending.values where p.sessionID == e.sessionID { resolvePermission(p.requestID, .passthrough) }
+            for p in pending.values where p.sessionID == e.sessionID && (e.name != .postToolUse || e.toolName == nil || p.tool == e.toolName) {
+                resolvePermission(p.requestID, .passthrough)
+            }
         }
         guard let s = agents.sessions[e.sessionID] else { return }
         if case .done(let duration, let summary) = s.status, before != s.status {
@@ -393,8 +396,8 @@ final class AppModel {
 
     // MARK: Permission from the notch (FR-9)
 
-    private func handlePermissionAsk(requestID: String, env: [String: String], payload: JSONValue, now: Date,
-                                     reply: @escaping (PermissionReply) -> Void) {
+    private func handlePermissionAsk(requestID: String, env: [String: String], payload: JSONValue, connection: UUID?,
+                                     now: Date, reply: @escaping (PermissionReply) -> Void) {
         guard let e = ClaudeHookEvent(payload: payload), features.isEnabled(.agents) else { reply(.init(decision: .passthrough)); return }
         applyAgentEvent(e, env: env, now: now)
         let session = agents.sessions[e.sessionID]
@@ -404,7 +407,7 @@ final class AppModel {
             reply(.init(decision: .passthrough)); return
         }
         pending[requestID] = PendingPermission(requestID: requestID, sessionID: e.sessionID, tool: e.toolName,
-                                               detail: e.toolDetail, createdAt: now, reply: reply)
+                                               detail: e.toolDetail, createdAt: now, connection: connection, reply: reply)
         agents.setPermission(sessionID: e.sessionID, requestID: requestID, tool: e.toolName, detail: e.toolDetail, now: now)
         let t = Timer(timeInterval: permissionTimeout, repeats: false) { _ in
             MainActor.assumeIsolated { AppModel.shared.resolvePermission(requestID, .passthrough) }
@@ -423,6 +426,16 @@ final class AppModel {
             let a = Activity(id: "perm-ok-\(requestID)", kind: .agent, priority: .p1, state: .success, symbol: "checkmark",
                              label: L("compact.allowed"), detail: L("permission.granted", p.tool ?? ""), startedAt: Date())
             center.post(a, now: Date())
+        }
+        refreshAgentActivity(now: Date())
+    }
+
+    /// The hook process went away (Claude interrupted, prompt answered in the terminal): drop its card.
+    func connectionClosed(_ id: UUID) {
+        for p in pending.values where p.connection == id {
+            permissionTimers.removeValue(forKey: p.requestID)?.invalidate()
+            pending[p.requestID] = nil
+            agents.clearPermission(requestID: p.requestID, now: Date())
         }
         refreshAgentActivity(now: Date())
     }
@@ -448,8 +461,16 @@ final class AppModel {
             resolvePermission(id, .passthrough)
             if let session { TerminalFocus.focus(agents.sessions[session]) }
         case .focusSession(let id): TerminalFocus.focus(agents.sessions[id])
-        case .join(let url): NSWorkspace.shared.open(url)
-        case .openURL(let url): NSWorkspace.shared.open(url)
+        case .join(let url):
+            // zoommtg:// needs the Zoom app; fall back to the web link (stored in the meeting's link).
+            let web = meetings.first { $0.link?.appURL == url }?.link?.url
+            let target = NSWorkspace.shared.urlForApplication(toOpen: url) != nil ? url : (web ?? url)
+            if ["https", "http", "zoommtg", "msteams"].contains(target.scheme?.lowercased() ?? "") { NSWorkspace.shared.open(target) }
+            if let e = MeetingSchedule.current(meetings, now: Date(), dismissed: dismissedMeetings)?.0 { dismissedMeetings.insert(e.id) }
+            refreshMeeting()
+        case .openURL(let url):
+            // URLs come from scripts over the socket: never open file:// (an .app or .command would run).
+            if ["https", "http"].contains(url.scheme?.lowercased() ?? "") { NSWorkspace.shared.open(url) }
         case .mediaPrevious: MediaProvider.shared.previous()
         case .mediaPlayPause: MediaProvider.shared.playPause()
         case .mediaNext: MediaProvider.shared.next()
@@ -470,6 +491,8 @@ final class AppModel {
             return a.url.map { [(L("button.open"), .normal, .focusSession($0))] } ?? []
         case .meeting:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.join"), .primaryNeutral, .join($0))] } ?? []
+        case .battery where a.priority == .p0:
+            return [(L("button.dismiss"), .normal, .dismiss(a.id))]
         case .script, .notify:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openURL($0))] } ?? []
         default:

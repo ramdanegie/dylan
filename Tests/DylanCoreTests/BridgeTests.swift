@@ -47,6 +47,13 @@ import Testing
         }
     }
 
+    @Test func progressIsClampedAtDecode() throws {
+        let big = try BridgeMessage.decode(line: Data(#"{"v":1,"type":"activity.update","id":"x","progress":1e300}"#.utf8))
+        #expect(big == .activityUpdate(id: "x", title: nil, subtitle: nil, progress: 1))
+        let neg = try BridgeMessage.decode(line: Data(#"{"v":1,"type":"activity.start","id":"x","title":"t","progress":-3}"#.utf8))
+        #expect(neg == .activityStart(id: "x", title: "t", subtitle: nil, progress: 0, url: nil))
+    }
+
     @Test func lineBufferSplitsAndLimits() throws {
         var b = LineBuffer()
         #expect(try b.append(Data("{\"a\":1}\n{\"b\"".utf8)).count == 1)

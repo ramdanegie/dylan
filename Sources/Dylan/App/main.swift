@@ -7,6 +7,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // One Dylan at a time: a second copy would take over the socket and draw a second island.
+        if let id = Bundle.main.bundleIdentifier,
+           NSRunningApplication.runningApplications(withBundleIdentifier: id).contains(where: { $0 != .current }) {
+            NSApp.terminate(nil)
+            return
+        }
         NotchController.shared.show()
         SocketServer.shared.start()
         Hotkeys.registerDefaults()

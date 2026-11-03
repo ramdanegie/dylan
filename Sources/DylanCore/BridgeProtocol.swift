@@ -68,13 +68,18 @@ extension BridgeMessage: Codable {
         let type = try c.decode(String.self, forKey: .type)
         func s(_ k: K) throws -> String { try c.decode(String.self, forKey: k) }
         func os(_ k: K) throws -> String? { try c.decodeIfPresent(String.self, forKey: k) }
+        // Anything can write to the socket: keep progress finite and in 0…1 (Int(progress * 100) would trap).
+        func progress() throws -> Double? {
+            guard let p = try c.decodeIfPresent(Double.self, forKey: .progress), p.isFinite else { return nil }
+            return min(1, max(0, p))
+        }
         switch type {
         case "activity.start":
             self = .activityStart(id: try s(.id), title: try s(.title), subtitle: try os(.subtitle),
-                                  progress: try c.decodeIfPresent(Double.self, forKey: .progress), url: try os(.url))
+                                  progress: try progress(), url: try os(.url))
         case "activity.update":
             self = .activityUpdate(id: try s(.id), title: try os(.title), subtitle: try os(.subtitle),
-                                   progress: try c.decodeIfPresent(Double.self, forKey: .progress))
+                                   progress: try progress())
         case "activity.end":
             let r = try s(.result)
             guard r == "success" || r == "failure" else { throw BridgeError.invalid("result") }

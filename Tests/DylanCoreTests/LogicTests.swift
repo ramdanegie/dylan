@@ -158,7 +158,7 @@ private let t0 = Date(timeIntervalSince1970: 3_000_000)
     @Test(arguments: [("45m", 2700.0), ("1h30", 5400), ("1h 30m", 5400), ("1j30m", 5400), ("90s", 90), ("10", 600), ("1:30", 90), ("2h", 7200)])
     func parse(_ s: String, _ v: Double) { #expect(DurationParser.parse(s) == v) }
 
-    @Test(arguments: ["", "abc", "0", "1:75", "m"])
+    @Test(arguments: ["", "abc", "0", "1:75", "m", "999999999999999999", "25h", "9999999m"])
     func parseRejects(_ s: String) { #expect(DurationParser.parse(s) == nil) }
 }
 

@@ -70,14 +70,22 @@ public struct CountdownTimer: Equatable, Sendable {
 
 /// Parses free timer input: `45m`, `1h30`, `1h 30m`, `90s`, `10` (minutes), `1:30` (m:ss).
 public enum DurationParser {
+    /// Timers longer than a day are rejected (and huge numbers can no longer overflow).
+    public static let maxDuration: TimeInterval = 24 * 3600
+
     public static func parse(_ input: String) -> TimeInterval? {
+        guard let t = parseUnbounded(input), t > 0, t <= maxDuration else { return nil }
+        return t
+    }
+
+    private static func parseUnbounded(_ input: String) -> TimeInterval? {
         let s = input.lowercased().replacingOccurrences(of: " ", with: "")
-        guard !s.isEmpty else { return nil }
-        if let m = Int(s) { return m > 0 ? TimeInterval(m * 60) : nil }
+        guard !s.isEmpty, s.count <= 12 else { return nil }
+        if let m = Int(s) { return TimeInterval(m) * 60 }
         if s.contains(":") {
             let p = s.split(separator: ":").compactMap { Int($0) }
             guard p.count == 2, p[1] < 60 else { return nil }
-            let t = TimeInterval(p[0] * 60 + p[1]); return t > 0 ? t : nil
+            return TimeInterval(p[0]) * 60 + TimeInterval(p[1])
         }
         // Tokens like `1h`, `30m`, `90s`; a bare number after hours means minutes (`1h30`).
         guard let re = try? NSRegularExpression(pattern: #"(\d+)([hjms]?)"#) else { return nil }
@@ -97,6 +105,6 @@ public enum DurationParser {
             lastUnit = unit
         }
         guard consumed == ns.length else { return nil }
-        return total > 0 ? total : nil
+        return total
     }
 }

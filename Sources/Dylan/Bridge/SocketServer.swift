@@ -47,6 +47,7 @@ final class SocketServer {
 /// One client. `reply` may be called later from the main actor (permission answers),
 /// so writes and close share a lock and a closed connection silently drops replies.
 nonisolated final class Connection: @unchecked Sendable {
+    let id = UUID()
     private let fd: Int32
     private let lock = NSLock()
     private var closed = false
@@ -68,7 +69,7 @@ nonisolated final class Connection: @unchecked Sendable {
                 let done = DispatchSemaphore(value: 0)
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
-                        AppModel.shared.handle(msg) { data in self.write(data) }
+                        AppModel.shared.handle(msg, connection: self.id) { data in self.write(data) }
                     }
                     done.signal()
                 }
@@ -89,5 +90,7 @@ nonisolated final class Connection: @unchecked Sendable {
         guard !closed else { return }
         closed = true
         close(fd)
+        let id = self.id
+        DispatchQueue.main.async { MainActor.assumeIsolated { AppModel.shared.connectionClosed(id) } }
     }
 }
