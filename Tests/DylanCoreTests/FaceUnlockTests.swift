@@ -32,6 +32,7 @@ private func facts(_ change: (inout FaceUnlockPolicy.Facts) -> Void = { _ in }) 
             (.tooManyFailures, { $0.consecutiveFailures = 5 }),
             (.alreadyTriedThisLock, { $0.passwordTypedThisLock = true }),
             (.lockedTooLong, { $0.lockedAt = now.addingTimeInterval(-3600) }),
+            (.lockedTooLong, { $0.lockedAt = nil }),
             (.justLockedManually, { $0.lockWasManual = true; $0.lockedAt = now.addingTimeInterval(-3) }),
         ]
         for (expected, change) in cases { #expect(policy.denial(facts(change)) == expected, "\(expected)") }
@@ -58,6 +59,11 @@ private func facts(_ change: (inout FaceUnlockPolicy.Facts) -> Void = { _ in }) 
         #expect(c.feed(S(time: 0.8, yaw: 20)) == .inProgress(step: 1))
         #expect(c.feed(S(time: 1.2, eyesOpen: 0.1)) == .inProgress(step: 1))
         #expect(c.feed(S(time: 1.4, eyesOpen: 0.9)) == .passed)
+    }
+
+    @Test func noStepsNeverPasses() {
+        var c = LivenessChallenge(steps: [])
+        #expect(c.feed(S(time: 0.2)) == .failed(.wrongOrder))
     }
 
     @Test func aStaticPhotoTimesOut() {

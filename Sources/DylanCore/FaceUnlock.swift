@@ -60,10 +60,9 @@ public struct FaceUnlockPolicy: Equatable, Sendable {
         if f.now.timeIntervalSince(lastPassword) >= Self.passwordMaxAge { return .passwordTooOld }
         if f.consecutiveFailures >= Self.maxFailures { return .tooManyFailures }
         if f.passwordTypedThisLock { return .alreadyTriedThisLock }
-        if let locked = f.lockedAt {
-            if f.now.timeIntervalSince(locked) >= TimeInterval(settings.maxLockedMinutes * 60) { return .lockedTooLong }
-            if f.lockWasManual && f.now.timeIntervalSince(locked) < Self.manualLockGrace { return .justLockedManually }
-        }
+        // Unknown lock time fails closed.
+        guard let locked = f.lockedAt, f.now.timeIntervalSince(locked) < TimeInterval(settings.maxLockedMinutes * 60) else { return .lockedTooLong }
+        if f.lockWasManual && f.now.timeIntervalSince(locked) < Self.manualLockGrace { return .justLockedManually }
         if settings.trustedNetworksOnly && !(f.network.map(settings.trustedNetworks.contains) ?? false) { return .untrustedNetwork }
         return nil
     }
@@ -114,6 +113,7 @@ public struct LivenessChallenge: Equatable, Sendable {
 
     public init(steps: [Step], identityThreshold: Double = 0.66) {
         self.steps = steps; self.identityThreshold = identityThreshold
+        if steps.isEmpty { outcome = .failed(.wrongOrder) }   // nothing to prove: never a pass
     }
 
     /// Two different random steps; at most one blink so the prompt stays quick.
