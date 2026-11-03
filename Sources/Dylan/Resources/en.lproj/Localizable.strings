@@ -560,3 +560,12 @@
 "weather.snow" = "Snow";
 "weather.storm" = "Thunderstorm";
 "weather.rainAt" = "Rain at %@";
+"feature.downloads" = "Download progress";
+"feature.downloads.hint" = "Downloads in ~/Downloads stay visible until done (macOS asks for folder access)";
+"downloads.done" = "Done";
+"downloads.finished" = "%@ finished";
+"downloads.progress" = "Downloading %1$@ · %2$@";
+"downloads.generic" = "Download";
+"downloads.show" = "Show";
+"downloads.toShelf" = "To Shelf";
+"keepAwake.untilDownloads" = "Keep awake until downloads finish";

@@ -560,3 +560,12 @@
 "weather.snow" = "Salju";
 "weather.storm" = "Badai petir";
 "weather.rainAt" = "Hujan %@";
+"feature.downloads" = "Progres download";
+"feature.downloads.hint" = "Download di ~/Downloads tampil sampai selesai (macOS minta izin folder)";
+"downloads.done" = "Selesai";
+"downloads.finished" = "%@ selesai";
+"downloads.progress" = "Mengunduh %1$@ · %2$@";
+"downloads.generic" = "Download";
+"downloads.show" = "Tampilkan";
+"downloads.toShelf" = "Ke Shelf";
+"keepAwake.untilDownloads" = "Tetap menyala sampai download selesai";

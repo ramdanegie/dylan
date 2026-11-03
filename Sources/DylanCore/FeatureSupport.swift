@@ -99,7 +99,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("keepAwake", .devices, [74], .v1_1, built: true),
         .init("focus", .devices, [72], .v1_1),
         .init("stats", .devices, [26], .v1_1, built: true),
-        .init("downloads", .devices, [76], .v1_2),
+        .init("downloads", .devices, [76], .v1_2, built: true),
         // Communication
         .init("discordVoice", .communication, [65, 67], .v1_1, req: true),
         .init("discordDM", .communication, [66], .v1_1, req: true),

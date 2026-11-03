@@ -63,6 +63,7 @@ enum NotchAction: Equatable {
     case mediaPrevious, mediaPlayPause, mediaNext
     case dismiss(String)
     case openStats, stopProcess(Int32)
+    case revealFile(String), shelveFile(String)
 }
 
 @Observable
@@ -267,6 +268,12 @@ final class AppModel {
     }
 
     func toggleKeepAwake() { keepAwake == nil ? startKeepAwake() : stopKeepAwake() }
+
+    /// Keep awake "until downloads finish" (FR-74).
+    @ObservationIgnored var keepAwakeUntilDownloads = false
+    func downloadFinished() {
+        if keepAwakeUntilDownloads, !DownloadsProvider.shared.active { keepAwakeUntilDownloads = false; stopKeepAwake() }
+    }
 
     // MARK: Color picker (FR-73)
 
@@ -589,6 +596,8 @@ final class AppModel {
         case .dismiss(let id): center.remove(id, now: Date(), toHistory: true)
         case .openStats: selectedTab = .stats; notchState = .expanded
         case .stopProcess(let pid): StatsProvider.shared.stop(pid)
+        case .revealFile(let p): NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)])
+        case .shelveFile(let p): ShelfProvider.shared.add([URL(fileURLWithPath: p)])
         }
     }
 
@@ -607,6 +616,11 @@ final class AppModel {
             return a.url.flatMap(URL.init(string:)).map { [(L("button.join"), .primaryNeutral, .join($0))] } ?? []
         case .battery where a.priority == .p0:
             return [(L("button.dismiss"), .normal, .dismiss(a.id))]
+        case .notify where a.url?.hasPrefix("dl:") == true:
+            let path = String(a.url!.dropFirst(3))
+            var acts: [(String, NotchButton.Kind, NotchAction)] = [(L("downloads.show"), .normal, .revealFile(path))]
+            if features.isEnabled(.shelf) { acts.append((L("downloads.toShelf"), .normal, .shelveFile(path))) }
+            return acts
         case .notify where a.url?.hasPrefix("pid:") == true:
             return [(L("stats.view"), .normal, .openStats), (L("stats.stop"), .destructive, .stopProcess(Int32(a.url!.dropFirst(4)) ?? 0))]
         case .script, .notify, .port:

@@ -350,6 +350,8 @@ struct UtilityButtons: View {
                         NotchButton(title: k.remaining(now: ctx.date).map { L("keepAwake.stopIn", DurationFormat.long($0, language: L10n.language)) }
                                     ?? L("keepAwake.stop")) { model.stopKeepAwake() }
                     }
+                } else if DownloadsProvider.shared.active {
+                    NotchButton(title: L("keepAwake.untilDownloads")) { model.keepAwakeUntilDownloads = true; model.startKeepAwake(minutes: 0) }
                 } else {
                     NotchButton(title: L("keepAwake.button")) { model.startKeepAwake() }
                 }
