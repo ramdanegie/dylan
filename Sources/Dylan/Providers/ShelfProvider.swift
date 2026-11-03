@@ -19,7 +19,8 @@ final class ShelfProvider {
 
     func start() {
         if let d = try? Data(contentsOf: Self.fileURL), let s = try? JSONDecoder().decode(Shelf.self, from: d) { shelf = s }
-        refreshMissing()
+        // Shelf paths are checked and read only while the Shelf tab is shown: touching files in
+        // ~/Desktop or ~/Documents at launch would raise a folder permission prompt out of nowhere.
         startScreenshotWatch()
     }
 
@@ -34,8 +35,8 @@ final class ShelfProvider {
         guard !paths.isEmpty else { return }
         shelf.add(paths, now: Date(), fromScreenshot: fromScreenshot)
         save()
-        refreshMissing()
-        loadThumbnails()
+        let m = AppModel.shared
+        if m.notchState == .expanded && m.selectedTab == .shelf { refreshMissing(); loadThumbnails() }
     }
 
     func remove(_ id: UUID) { shelf.remove(id); thumbnails[id] = nil; save() }
