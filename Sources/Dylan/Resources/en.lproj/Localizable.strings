@@ -698,3 +698,17 @@
 "mixer.volume" = "%@ volume";
 "feature.autoPresentation" = "Turn on while screen sharing";
 "feature.autoPresentation.hint" = "Experimental: Zoom, Teams, Meet; needs Accessibility";
+"feature.notifications" = "App notifications in the notch";
+"feature.notifications.hint" = "Read from macOS banners through Accessibility; contents stay in memory";
+"notifications.title" = "Notifications & calls";
+"notifications.apps" = "Apps";
+"notifications.appsHint" = "Comma separated. Empty = every app. Calls always show.";
+"notifications.allowAccessibility" = "Allow Accessibility";
+"notifications.reply" = "Reply";
+"notifications.group" = "%1$@ · %2$d messages";
+"notifications.generic" = "New message · %@";
+"calls.incoming" = "%1$@ is calling · %2$@";
+"calls.generic" = "Incoming call";
+"calls.accept" = "Accept";
+"calls.decline" = "Decline";
+"button.close" = "Close";

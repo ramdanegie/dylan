@@ -172,6 +172,19 @@ struct LiveActivitySettings: View {
             SwiftUI.Text(L("settings.presentationHint")).font(.caption).foregroundStyle(.secondary)
             FeatureToggles(features: [.autoPresentation])
         }
+        Section(L("notifications.title")) {
+            FeatureToggles(features: [.notifications])
+            if model.features.isEnabled(.notifications) {
+                if !AXIsProcessTrusted() {
+                    Button(L("notifications.allowAccessibility")) {
+                        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+                    }
+                }
+                TextField(L("notifications.apps"), text: Binding(get: { model.notificationApps.joined(separator: ", ") },
+                                                                set: { model.notificationApps = $0.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }))
+                SwiftUI.Text(L("notifications.appsHint")).font(.caption).foregroundStyle(.secondary)
+            }
+        }
         Section(L("settings.history")) {
             Button(L("button.clearHistory")) { model.center.clearHistory() }
         }

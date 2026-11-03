@@ -8,7 +8,7 @@ public enum Profile: String, Codable, Sendable, CaseIterable {
 /// Features that can be switched on and off. `[Dev]` features never run under the general profile.
 public enum Feature: String, Codable, Sendable, CaseIterable {
     // Everyone
-    case media, meeting, timer, battery, bluetooth, privacy, presentation, keepAwake, colorPicker, clipboard, stats, shelf, lyrics, reminders, weather, downloads, mirror, scratchpad, discord, hud, focus, timeToLeave, visualizer, appVolume, autoPresentation
+    case media, meeting, timer, battery, bluetooth, privacy, presentation, keepAwake, colorPicker, clipboard, stats, shelf, lyrics, reminders, weather, downloads, mirror, scratchpad, discord, hud, focus, timeToLeave, visualizer, appVolume, autoPresentation, notifications
     // Developer Mode
     case agents, commands, cli, ports, docker, github, widgets
 
@@ -20,7 +20,7 @@ public enum Feature: String, Codable, Sendable, CaseIterable {
     }
 
     /// Off unless the user turns it on: Bluetooth asks for a permission, lyrics use the network.
-    public var defaultOn: Bool { ![.bluetooth, .lyrics, .weather, .downloads, .github, .hud, .timeToLeave, .visualizer, .appVolume].contains(self) }
+    public var defaultOn: Bool { ![.bluetooth, .lyrics, .weather, .downloads, .github, .hud, .timeToLeave, .visualizer, .appVolume, .notifications].contains(self) }
 }
 
 public struct FeatureSet: Codable, Equatable, Sendable {

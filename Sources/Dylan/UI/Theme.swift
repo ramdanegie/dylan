@@ -127,7 +127,8 @@ extension AnyTransition {
 
 /// Capsule button inside the notch (design "Tombol di dalam notch").
 struct NotchButton: View {
-    enum Kind { case normal, primaryAction, primaryNeutral, destructive, quiet }
+    /// confirm = green (accept a call, design D28): the button follows the meaning of the action.
+    enum Kind { case normal, primaryAction, primaryNeutral, destructive, confirm, quiet }
     var title: String
     var kind: Kind = .normal
     var height: CGFloat = 24
@@ -153,7 +154,7 @@ struct NotchButton: View {
         switch kind {
         case .primaryAction: return .black
         case .primaryNeutral: return .black
-        case .destructive: return .white
+        case .destructive, .confirm: return .white
         case .quiet: return DY.fg2
         case .normal: return .white
         }
@@ -164,6 +165,7 @@ struct NotchButton: View {
         case .primaryAction: return hover ? DY.action.opacity(0.85) : DY.action
         case .primaryNeutral: return hover ? .white.opacity(0.85) : .white
         case .destructive: return hover ? DY.fail.opacity(0.85) : DY.fail
+        case .confirm: return hover ? DY.ok.opacity(0.85) : DY.ok
         case .quiet: return .clear
         case .normal: return hover ? DY.controlHover : DY.control
         }

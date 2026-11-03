@@ -103,9 +103,9 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         // Communication
         .init("discordVoice", .communication, [65, 67], .v1_1, built: true, req: true),
         .init("discordDM", .communication, [66], .v1_1, built: true, req: true),
-        .init("notifications", .communication, [68], .v1_2, req: true),
-        .init("replies", .communication, [69], .v1_2),
-        .init("calls", .communication, [82], .v1_2),
+        .init("notifications", .communication, [68], .v1_2, built: true, req: true),
+        .init("replies", .communication, [69], .v1_2, built: true),
+        .init("calls", .communication, [82], .v1_2, built: true),
         .init("meetingControls", .communication, [83], .v1_2, built: true, req: true),
         // Files & clipboard
         .init("clipboard", .files, [20], .v1_1, built: true),

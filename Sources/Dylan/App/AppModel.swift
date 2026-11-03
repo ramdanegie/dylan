@@ -67,6 +67,8 @@ enum NotchAction: Equatable {
     case revealFile(String), shelveFile(String)
     case discordMute, discordDeafen, discordLeave, discordKeybindMute, openDiscord(URL)
     case meetingControl(MeetingControls.Control)
+    /// open / close / reply / accept / decline on a Notification Center banner.
+    case banner(String, String)
 }
 
 @Observable
@@ -152,6 +154,8 @@ final class AppModel {
     var smallCompact: Bool { didSet { defaults.set(smallCompact, forKey: "smallCompact") } }
     /// Bundle IDs that hide the notch while in front (games, Keynote…).
     var hideForApps: [String] { didSet { defaults.set(hideForApps, forKey: "hideForApps") } }
+    /// Apps whose notifications show in the notch (FR-68); empty = all.
+    var notificationApps: [String] { didSet { defaults.set(notificationApps, forKey: "notificationApps") } }
     var hiddenForFrontApp = false
     var scratchpadOpen = false
     @ObservationIgnored private var keepAwakeAssertion: IOPMAssertionID = 0
@@ -191,6 +195,7 @@ final class AppModel {
         glassPill = d.bool(forKey: "glassPill")
         smallCompact = d.bool(forKey: "smallCompact")
         hideForApps = d.stringArray(forKey: "hideForApps") ?? []
+        notificationApps = d.stringArray(forKey: "notificationApps") ?? NotificationRules.defaultApps
         quickPlay = d.data(forKey: "quickPlay").flatMap { try? JSONDecoder().decode([QuickPlayItem].self, from: $0) } ?? []
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
@@ -674,6 +679,7 @@ final class AppModel {
         case .discordLeave: DiscordProvider.shared.leave()
         case .discordKeybindMute: DiscordProvider.shared.sendKeybind(discordMuteKey)
         case .meetingControl(let c): MeetingCallProvider.shared.press(c)
+        case .banner(let action, let id): NotificationProvider.shared.perform(action, bannerID: id)
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -702,6 +708,14 @@ final class AppModel {
                     (L("discord.leave"), .destructive, .discordLeave)]
         case .discord:
             return [(L("discord.toggleMute"), .normal, .discordKeybindMute)]
+        case .notify where a.url?.hasPrefix("call:") == true:
+            let id = String(a.url!.dropFirst(5))
+            return [(L("calls.decline"), .destructive, .banner("decline", id)), (L("calls.accept"), .confirm, .banner("accept", id))]
+        case .notify where a.url?.hasPrefix("notif:") == true:
+            let id = String(a.url!.dropFirst(6))
+            var acts: [(String, NotchButton.Kind, NotchAction)] = [(L("button.close"), .quiet, .banner("close", id)), (L("button.open"), .normal, .banner("open", id))]
+            if NotificationProvider.shared.banner(id)?.canReply == true, !presentationMode { acts.append((L("notifications.reply"), .normal, .banner("reply", id))) }
+            return acts
         case .notify where a.url?.hasPrefix("discord://") == true:
             return a.url.flatMap(URL.init(string:)).map { [(L("button.open"), .normal, .openDiscord($0))] } ?? []
         case .battery where a.priority == .p0:

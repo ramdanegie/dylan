@@ -698,3 +698,17 @@
 "mixer.volume" = "Volume %@";
 "feature.autoPresentation" = "Nyalakan otomatis saat share layar";
 "feature.autoPresentation.hint" = "Eksperimental: Zoom, Teams, Meet; butuh Accessibility";
+"feature.notifications" = "Notifikasi app di notch";
+"feature.notifications.hint" = "Dibaca dari banner macOS lewat Accessibility; isi hanya di memori";
+"notifications.title" = "Notifikasi & panggilan";
+"notifications.apps" = "App";
+"notifications.appsHint" = "Pisahkan dengan koma. Kosong = semua app. Panggilan selalu tampil.";
+"notifications.allowAccessibility" = "Izinkan Accessibility";
+"notifications.reply" = "Balas";
+"notifications.group" = "%1$@ · %2$d pesan";
+"notifications.generic" = "Pesan baru · %@";
+"calls.incoming" = "%1$@ menelepon · %2$@";
+"calls.generic" = "Panggilan masuk";
+"calls.accept" = "Terima";
+"calls.decline" = "Tolak";
+"button.close" = "Tutup";
