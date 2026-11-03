@@ -30,7 +30,8 @@ import Testing
     }
 
     @Test(arguments: [("https://github.com/ramdanegie/dylan.git", "ramdanegie/dylan"), ("git@github.com:ramdanegie/dylan.git", "ramdanegie/dylan"),
-                      ("https://github.com/a/b", "a/b")])
+                      ("https://github.com/a/b", "a/b"), ("git@github.com:alice/alice.github.io.git", "alice/alice.github.io"),
+                      ("https://github.com/a/gitops.github", "a/gitops.github"), ("https://github.com/a/b/", "a/b")])
     func remotes(_ url: String, _ repo: String) { #expect(GitHubCI.repo(fromRemote: url) == repo) }
 
     @Test func nonGitHubRemote() { #expect(GitHubCI.repo(fromRemote: "https://gitlab.com/a/b.git") == nil) }

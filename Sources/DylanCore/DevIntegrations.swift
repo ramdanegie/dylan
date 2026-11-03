@@ -54,10 +54,9 @@ public enum GitHubCI {
     /// Owner/name from a git remote URL (https or ssh); nil for non-GitHub remotes.
     public static func repo(fromRemote url: String) -> String? {
         let s = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let r = s.range(of: #"github\.com[:/]([^/]+)/([^/]+?)(\.git)?$"#, options: .regularExpression) else { return nil }
-        let tail = s[r].replacingOccurrences(of: "github.com", with: "").drop { $0 == ":" || $0 == "/" }
-        let parts = tail.replacingOccurrences(of: ".git", with: "").split(separator: "/")
-        return parts.count == 2 ? "\(parts[0])/\(parts[1])" : nil
+        // Only a trailing ".git" goes: "alice/alice.github.io.git" → "alice/alice.github.io".
+        guard let m = s.firstMatch(of: #/github\.com[:\/]([^\/]+)\/([^\/]+?)(?:\.git)?\/?$/#) else { return nil }
+        return "\(m.1)/\(m.2)"
     }
 
     /// Runs whose state just turned into a failure, compared with the previous poll.
