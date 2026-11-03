@@ -33,7 +33,7 @@ struct DiscordAvatar: View {
             if !model.presentationMode, let s = member.avatarURL, let u = URL(string: s) {
                 AsyncImage(url: u) { $0.resizable().aspectRatio(contentMode: .fill) } placeholder: { Color.clear }.clipShape(Circle())
             }
-            if model.presentationMode || member.avatarURL == nil {
+            if !model.presentationMode, member.avatarURL == nil {
                 SwiftUI.Text(String(member.name.prefix(1)).uppercased()).font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white)
             }
         }

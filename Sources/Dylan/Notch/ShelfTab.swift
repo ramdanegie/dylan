@@ -51,7 +51,7 @@ struct ShelfTab: View {
         return VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
                 Group {
-                    if let t = provider.thumbnails[item.id] { Image(nsImage: t).resizable().aspectRatio(contentMode: .fit) }
+                    if !model.presentationMode, let t = provider.thumbnails[item.id] { Image(nsImage: t).resizable().aspectRatio(contentMode: .fit) }
                     else { Image(nsImage: NSWorkspace.shared.icon(forFile: item.path)).resizable().aspectRatio(contentMode: .fit) }
                 }
                 .frame(width: 48, height: 48)

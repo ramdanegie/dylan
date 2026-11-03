@@ -25,6 +25,8 @@ final class NotchController {
     private var monitors: [Any] = []
     private var hoverWork: DispatchWorkItem?
     private var leaveWork: DispatchWorkItem?
+    /// Drag pasteboard count at mouse-down: it keeps the last drag's types, so only a change means a new file drag.
+    private var dragStartCount = 0
     private var inside = false
     private var lastState: NotchState = .closed
 
@@ -76,7 +78,10 @@ final class NotchController {
             return e
         } as Any)
         monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
-            MainActor.assumeIsolated { NotchController.shared.clickedOutside() }
+            MainActor.assumeIsolated {
+                NotchController.shared.dragStartCount = NSPasteboard(name: .drag).changeCount
+                NotchController.shared.clickedOutside()
+            }
         } as Any)
         monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
             MainActor.assumeIsolated { FloatingBasket.shared.dragEnded() }
@@ -194,8 +199,9 @@ final class NotchController {
     /// A file dragged close to the notch opens the Shelf as a drop zone (PRD §F1).
     private func fileDragMoved() {
         let m = AppModel.shared
-        guard m.features.isEnabled(.shelf), m.notchState != .expanded,
-              let types = NSPasteboard(name: .drag).types, types.contains(.fileURL) else { return }
+        let pb = NSPasteboard(name: .drag)
+        guard m.features.isEnabled(.shelf), m.notchState != .expanded, pb.changeCount != dragStartCount,
+              let types = pb.types, types.contains(.fileURL) else { return }
         let zone = NotchRootView.islandFrame(m, layout.geometry).insetBy(dx: -80, dy: -60)
         guard zone.contains(NSEvent.mouseLocation) else { FloatingBasket.shared.dragMoved(at: NSEvent.mouseLocation); return }
         m.selectedTab = .shelf
