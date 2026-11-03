@@ -90,7 +90,7 @@ final class DiscordProvider {
     nonisolated private static func readLoop(_ fd: Int32) {
         var decoder = DiscordFrame.Decoder()
         var buf = [UInt8](repeating: 0, count: 16384)
-        UnixSocket.setTimeouts(fd, 0)
+        UnixSocket.setReceiveTimeout(fd, 0)
         while true {
             let n = read(fd, &buf, buf.count)
             if n <= 0 {
@@ -123,7 +123,7 @@ final class DiscordProvider {
 
     private func send(_ frame: DiscordFrame) {
         guard fd >= 0 else { return }
-        try? UnixSocket.write(fd, frame.encoded)
+        do { try UnixSocket.write(fd, frame.encoded) } catch { disconnect() }   // Discord stopped reading (1 s send timeout)
     }
 
     private func command(_ json: Data) { send(DiscordFrame(opcode: .frame, json: json)) }

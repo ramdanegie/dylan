@@ -104,4 +104,10 @@ public enum UnixSocket {
     }
 
     public static func setTimeouts(_ fd: Int32, _ seconds: TimeInterval) { setTimeout(fd, seconds) }
+
+    /// Receive timeout only (0 = block); sends keep their timeout so a peer that stops reading cannot hang the writer.
+    public static func setReceiveTimeout(_ fd: Int32, _ seconds: TimeInterval) {
+        var tv = timeval(tv_sec: Int(seconds), tv_usec: Int32((seconds - floor(seconds)) * 1_000_000))
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+    }
 }
