@@ -31,3 +31,26 @@ import Testing
         #expect(Shelf.zipName(for: s.items, now: t0).hasSuffix(".zip"))
     }
 }
+
+@Suite struct ShakeTests {
+    @Test func shakeDetected() {
+        var s = ShakeDetector()
+        let xs: [CGFloat] = [100, 140, 100, 140, 100]
+        var fired = false
+        for (i, x) in xs.enumerated() { fired = s.feed(x: x, time: Double(i) * 0.1) || fired }
+        #expect(fired)
+    }
+
+    @Test func normalDragIsNotAShake() {
+        var s = ShakeDetector()
+        var fired = false
+        for i in 0..<20 { fired = s.feed(x: CGFloat(i * 15), time: Double(i) * 0.05) || fired }   // straight line
+        #expect(!fired)
+        var slow = ShakeDetector()
+        for (i, x) in ([100, 140, 100, 140, 100] as [CGFloat]).enumerated() { fired = slow.feed(x: x, time: Double(i) * 0.4) || fired }
+        #expect(!fired)                                                                           // too slow
+        var small = ShakeDetector()
+        for (i, x) in ([100, 110, 100, 110, 100] as [CGFloat]).enumerated() { fired = small.feed(x: x, time: Double(i) * 0.1) || fired }
+        #expect(!fired)                                                                           // jitter, not a shake
+    }
+}

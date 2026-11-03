@@ -112,10 +112,10 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("secrets", .files, [22], .v1_1, built: true),
         .init("shelf", .files, [23], .v1_1, built: true),
         .init("screenshotShelf", .files, [24], .v1_1, built: true),
-        .init("transforms", .files, [43], .v1_3),
+        .init("transforms", .files, [43], .v1_3, built: true),
         .init("removeBackground", .files, [77], .v1_3, built: true, req: true),
         .init("ocr", .files, [87], .v1_3, built: true),
-        .init("floatingBasket", .files, [86], .v1_3),
+        .init("floatingBasket", .files, [86], .v1_3, built: true),
         // Utilities
         .init("colorPicker", .utilities, [73], .v1_1, built: true),
         .init("scratchpad", .utilities, [46], .v1_3, built: true),

@@ -664,3 +664,8 @@
 "theme.blackNotch" = "Di notch fisik bentuknya selalu hitam supaya menyatu dengan hardware.";
 "theme.hideFor" = "Sembunyikan notch saat app ini di depan";
 "theme.pickApp" = "App";
+"basket.drop" = "Lepas ke Shelf";
+"transform.convert" = "Konversi";
+"transform.half" = "JPEG 50%";
+"transform.compress" = "Kompres";
+"transform.mergePDF" = "Gabung PDF";

@@ -78,6 +78,9 @@ final class NotchController {
         monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
             MainActor.assumeIsolated { NotchController.shared.clickedOutside() }
         } as Any)
+        monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
+            MainActor.assumeIsolated { FloatingBasket.shared.dragEnded() }
+        } as Any)
         monitors.append(NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { e in
             if e.keyCode == 53 {   // Esc
                 MainActor.assumeIsolated { NotchController.shared.collapse() }
@@ -194,7 +197,7 @@ final class NotchController {
         guard m.features.isEnabled(.shelf), m.notchState != .expanded,
               let types = NSPasteboard(name: .drag).types, types.contains(.fileURL) else { return }
         let zone = NotchRootView.islandFrame(m, layout.geometry).insetBy(dx: -80, dy: -60)
-        guard zone.contains(NSEvent.mouseLocation) else { return }
+        guard zone.contains(NSEvent.mouseLocation) else { FloatingBasket.shared.dragMoved(at: NSEvent.mouseLocation); return }
         m.selectedTab = .shelf
         m.notchState = .expanded
     }

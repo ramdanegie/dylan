@@ -664,3 +664,8 @@
 "theme.blackNotch" = "On a physical notch the shape is always black so it blends with the hardware.";
 "theme.hideFor" = "Hide the notch while these apps are in front";
 "theme.pickApp" = "App";
+"basket.drop" = "Drop to Shelf";
+"transform.convert" = "Convert";
+"transform.half" = "JPEG 50%";
+"transform.compress" = "Compress";
+"transform.mergePDF" = "Merge PDFs";

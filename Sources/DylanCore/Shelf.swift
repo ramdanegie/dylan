@@ -43,3 +43,33 @@ public struct Shelf: Codable, Equatable, Sendable {
         return "Shelf \(f.string(from: now)).zip"
     }
 }
+
+/// "Shake while dragging" for the floating basket (FR-86): ≥ 3 direction changes of ≥ 30 pt within 0.6 s.
+public struct ShakeDetector: Sendable {
+    public var window: TimeInterval = 0.6
+    public var minTravel: CGFloat = 30
+    public var reversals = 3
+    private var samples: [(x: CGFloat, t: TimeInterval)] = []
+    public init() {}
+
+    public mutating func reset() { samples.removeAll() }
+
+    /// Feed pointer x positions while a file drag is in progress; true once a shake is seen.
+    public mutating func feed(x: CGFloat, time: TimeInterval) -> Bool {
+        samples.append((x, time))
+        samples.removeAll { time - $0.t > window }
+        var turns = 0
+        var direction: CGFloat = 0
+        var anchor = samples.first?.x ?? x
+        for s in samples.dropFirst() {
+            let d = s.x - anchor
+            guard abs(d) >= minTravel else { continue }
+            let dir: CGFloat = d > 0 ? 1 : -1
+            if direction != 0 && dir != direction { turns += 1 }
+            direction = dir
+            anchor = s.x
+        }
+        if turns >= reversals { samples.removeAll(); return true }
+        return false
+    }
+}

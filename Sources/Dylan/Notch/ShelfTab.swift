@@ -84,6 +84,12 @@ struct ShelfTab: View {
             NotchButton(title: L("shelf.copyPath")) { provider.copyPath(item) }
             NotchButton(title: L("shelf.openEditor")) { provider.openInEditor(item) }
             if VisionTools.isImage(item.path) {
+                Menu(L("transform.convert")) {
+                    Button("PNG") { run { await FileTransforms.convert(provider.url(item), to: .png) } }
+                    Button("JPEG") { run { await FileTransforms.convert(provider.url(item), to: .jpeg) } }
+                    Button(L("transform.half")) { run { await FileTransforms.convert(provider.url(item), to: .jpeg, scale: 0.5) } }
+                }
+                .menuStyle(.borderlessButton).fixedSize().font(DY.font(12)).foregroundStyle(.white)
                 NotchButton(title: L("vision.copyText")) {
                     Task { if let img = NSImage(contentsOfFile: item.path).flatMap(VisionTools.cgImage) { _ = await VisionTools.copyText(from: img) } }
                 }
@@ -91,11 +97,25 @@ struct ShelfTab: View {
                     Task { if let out = await VisionTools.removeBackground(provider.url(item)) { provider.add([out]) } }
                 }
             }
+            if FileTransforms.isVideo(item.path) {
+                NotchButton(title: L("transform.compress")) { run { await FileTransforms.compressVideo(provider.url(item)) } }
+            }
+            if FileTransforms.isPDF(item.path), provider.shelf.items.filter({ FileTransforms.isPDF($0.path) }).count >= 2 {
+                NotchButton(title: L("transform.mergePDF")) {
+                    let pdfs = provider.shelf.items.filter { FileTransforms.isPDF($0.path) }.map(provider.url)
+                    run { await FileTransforms.mergePDFs(pdfs) }
+                }
+            }
             NotchButton(title: "AirDrop") { provider.airDrop([item]) }
             NotchButton(title: "Zip") { provider.zip(provider.shelf.items) }
             Button { provider.remove(item.id) } label: { Image(systemName: "xmark").font(.system(size: 10)).foregroundStyle(DY.fg2) }
                 .buttonStyle(.plain).accessibilityLabel(L("shelf.remove"))
         }
+    }
+
+    /// Runs a transform and puts its result on the shelf.
+    private func run(_ work: @escaping @MainActor () async -> URL?) {
+        Task { @MainActor in if let out = await work() { ShelfProvider.shared.add([out]) } }
     }
 
     private func allItemsProvider() -> NSItemProvider {
