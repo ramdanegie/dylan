@@ -25,6 +25,18 @@ enum HookSetup {
         var diff: [LineDiff.Line]
         var newData: Data
         var summary: String
+        /// File content the diff was computed from; apply refuses if the file changed since.
+        var base: Data?
+    }
+
+    enum SetupError: LocalizedError {
+        case changedSinceReview, unreadable(String)
+        var errorDescription: String? {
+            switch self {
+            case .changedSinceReview: return L("hooks.changed")
+            case .unreadable(let f): return L("setup.unreadable", f)
+            }
+        }
     }
 
     static func previewInstall() throws -> Preview {
@@ -32,7 +44,7 @@ enum HookSetup {
         let r = try HookInstaller.install(into: old, command: command)
         let before = String(decoding: try HookInstaller.normalized(old), as: UTF8.self)
         return Preview(diff: LineDiff.diff(old: before, new: String(decoding: r.json, as: UTF8.self)), newData: r.json,
-                       summary: L("hooks.summary", r.added + r.updated, 0))
+                       summary: L("hooks.summary", r.added + r.updated, 0), base: old)
     }
 
     static func previewUninstall() throws -> Preview {
@@ -40,62 +52,88 @@ enum HookSetup {
         let r = try HookInstaller.uninstall(from: old)
         let before = String(decoding: try HookInstaller.normalized(old), as: UTF8.self)
         return Preview(diff: LineDiff.diff(old: before, new: String(decoding: r.json, as: UTF8.self)), newData: r.json,
-                       summary: L("hooks.summary", 0, r.removed))
+                       summary: L("hooks.summary", 0, r.removed), base: old)
     }
 
     /// Writes after the user approved the diff. Returns the backup path.
     @discardableResult
     static func apply(_ p: Preview) throws -> URL? {
         let fm = FileManager.default
-        try fm.createDirectory(at: settingsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // Claude Code may have written the file while the diff was open: never overwrite unseen changes.
+        guard (try? Data(contentsOf: settingsURL)) == p.base else { throw SetupError.changedSinceReview }
+        // Dotfile setups symlink settings.json; write through to the real file instead of replacing the link.
+        let target = settingsURL.resolvingSymlinksInPath()
+        try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         var backup: URL?
-        if fm.fileExists(atPath: settingsURL.path) {
+        if fm.fileExists(atPath: target.path) {
             let f = DateFormatter()
             f.dateFormat = "yyyy-MM-dd-HHmmss"
             let b = settingsURL.deletingLastPathComponent()
                 .appendingPathComponent("settings.json.dylan-backup-\(f.string(from: Date()))")
-            try fm.copyItem(at: settingsURL, to: b)
+            try fm.copyItem(at: target, to: b)
             backup = b
         }
         // Validate before writing: must parse back as a JSON object.
         _ = try HookInstaller.normalized(p.newData)
-        try p.newData.write(to: settingsURL, options: .atomic)
+        try p.newData.write(to: target, options: .atomic)
         return backup
     }
 
     // MARK: Shell integration (PRD §F4)
 
     static var zshrcURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".zshrc") }
-    static let zshLine = #"eval "$(dylan shell-init zsh)""#
 
-    static var shellIntegrationInstalled: Bool {
-        ((try? String(contentsOf: zshrcURL, encoding: .utf8)) ?? "").contains("dylan shell-init")
+    /// Absolute, quoted CLI path: `~/.local/bin` is not on the default macOS PATH, and `[[ -x ]]`
+    /// keeps new shells quiet if the app is moved or deleted.
+    static var zshLine: String {
+        let q = "'" + cliPath.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        return "[[ -x \(q) ]] && eval \"$(\(q) shell-init zsh)\""
     }
 
-    /// Appends the eval line (with backup) and links the CLI into ~/.local/bin.
+    static var shellIntegrationInstalled: Bool {
+        (try? Data(contentsOf: zshrcURL))?.range(of: Data("shell-init zsh".utf8)) != nil
+    }
+
+    /// Appends the eval line (with a backup). Never rewrites the user's file: an unreadable
+    /// `.zshrc` is an error, and appending goes through symlinks (dotfiles) untouched.
     static func installShellIntegration() throws {
-        try linkCLI()
+        try? linkCLI()
         let fm = FileManager.default
-        var text = (try? String(contentsOf: zshrcURL, encoding: .utf8)) ?? ""
-        guard !text.contains("dylan shell-init") else { return }
+        var existing = Data()
         if fm.fileExists(atPath: zshrcURL.path) {
-            let b = zshrcURL.deletingLastPathComponent().appendingPathComponent(".zshrc.dylan-backup")
-            try? fm.removeItem(at: b)
-            try fm.copyItem(at: zshrcURL, to: b)
+            guard let d = try? Data(contentsOf: zshrcURL) else { throw SetupError.unreadable("~/.zshrc") }
+            existing = d
         }
-        if !text.isEmpty && !text.hasSuffix("\n") { text += "\n" }
-        text += "\n# Dylan: lacak perintah panjang di notch\ncommand -v dylan >/dev/null && \(zshLine)\n"
-        try text.write(to: zshrcURL, atomically: true, encoding: .utf8)
+        guard existing.range(of: Data("shell-init zsh".utf8)) == nil else { return }
+        if !existing.isEmpty {
+            let b = zshrcURL.resolvingSymlinksInPath().deletingLastPathComponent().appendingPathComponent(".zshrc.dylan-backup")
+            try? fm.removeItem(at: b)
+            try existing.write(to: b)
+        }
+        let needsNewline = !existing.isEmpty && existing.last != 0x0A
+        let block = (needsNewline ? "\n" : "") + "\n# Dylan: track long commands in the notch\n\(zshLine)\n"
+        if !fm.fileExists(atPath: zshrcURL.path) { fm.createFile(atPath: zshrcURL.path, contents: nil, attributes: [.posixPermissions: 0o644]) }
+        let h = try FileHandle(forWritingTo: zshrcURL)
+        defer { try? h.close() }
+        try h.seekToEnd()
+        try h.write(contentsOf: Data(block.utf8))
     }
 
     static var localBinCLI: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/dylan") }
 
+    /// Links ~/.local/bin/dylan. Only replaces a link that already points at a Dylan build (or nowhere);
+    /// a real file or someone else's link is left alone.
     static func linkCLI() throws {
         let fm = FileManager.default
         try fm.createDirectory(at: localBinCLI.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if let dest = try? fm.destinationOfSymbolicLink(atPath: localBinCLI.path), dest == cliPath { return }
-        if (try? fm.destinationOfSymbolicLink(atPath: localBinCLI.path)) != nil { try fm.removeItem(at: localBinCLI) }
-        guard !fm.fileExists(atPath: localBinCLI.path) else { return }   // never overwrite a real file
+        if let dest = try? fm.destinationOfSymbolicLink(atPath: localBinCLI.path) {
+            if dest == cliPath { return }
+            let dangling = !fm.fileExists(atPath: dest)
+            guard dangling || dest.contains("Dylan.app/") || dest.hasSuffix("/dylan-cli") else { throw SetupError.unreadable(localBinCLI.path) }
+            try fm.removeItem(at: localBinCLI)
+        } else if fm.fileExists(atPath: localBinCLI.path) {
+            throw SetupError.unreadable(localBinCLI.path)
+        }
         try fm.createSymbolicLink(atPath: localBinCLI.path, withDestinationPath: cliPath)
     }
 }

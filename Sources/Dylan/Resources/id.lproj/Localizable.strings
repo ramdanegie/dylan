@@ -399,3 +399,5 @@
 "support.widgets" = "Script widget";
 "support.widgets.desc" = "Output JSON script jadi tile.";
 "permission.automationOpenApp" = "Buka Spotify atau Music dulu, lalu klik Izinkan lagi. Bisa juga nanti: macOS bertanya saat kamu pertama mengontrol musik.";
+"hooks.changed" = "settings.json berubah sejak diff dibuka. Buka diff lagi untuk melihat versi terbaru.";
+"setup.unreadable" = "%@ tidak bisa dibaca atau sudah dipakai file lain, jadi tidak diubah.";

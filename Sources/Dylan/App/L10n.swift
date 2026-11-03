@@ -2,9 +2,9 @@ import Foundation
 
 /// UI strings live in Resources/{id,en}.lproj/Localizable.strings and are copied into the app bundle.
 /// (String Catalogs need `xcstringstool`, which only ships with Xcode; .strings files work with SwiftPM + CLT.)
-enum L10n {
+nonisolated enum L10n {
     /// Bundle with the .lproj folders: the app bundle, or the source tree when run with `swift run`.
-    static let bundle: Bundle = {
+    nonisolated(unsafe) static let bundle: Bundle = {
         if Bundle.main.path(forResource: "Localizable", ofType: "strings") != nil { return .main }
         let src = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Resources")
@@ -32,7 +32,7 @@ enum L10n {
 }
 
 /// `L("agent.editing", file)` → "Claude mengedit AuthService.swift".
-func L(_ key: String, _ args: CVarArg...) -> String {
+nonisolated func L(_ key: String, _ args: CVarArg...) -> String {
     let format = L10n.string(key)
     return args.isEmpty ? format : String(format: format, locale: L10n.locale, arguments: args)
 }
