@@ -48,12 +48,12 @@ public struct ActivityCenter: Sendable {
         activities[id] = a
     }
 
-    /// Adds a one-shot result (e.g. `dylan notify`, "CI failed") that expires like any other result.
+    /// Adds a one-shot item (e.g. `dylan notify`, "battery 20%") that expires like a result.
+    /// Its state (and colour) is kept: a warning stays amber, a disconnect stays neutral.
     public mutating func post(_ activity: Activity, now: Date) {
         var a = activity
         a.endedAt = now
         a.updatedAt = now
-        if !a.state.isResult { a.state = .success }
         activities[a.id] = a
     }
 

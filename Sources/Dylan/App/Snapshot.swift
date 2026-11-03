@@ -85,6 +85,12 @@ enum Snapshot {
             ("D23-expanded-media", { music(); m.selectedTab = .media; m.notchState = .expanded }),
             ("D9-expanded-agents", { agentWorking(); m.selectedTab = .agents; m.notchState = .expanded }),
             ("D14-presentation", { agentWorking(); m.presentationMode = true; m.notchState = .compact }),
+            ("D14-presentation-script", {
+                m.handle(.activityStart(id: "d", title: "deploy client-x", subtitle: "prod", progress: 0.4, url: nil)) { _ in }
+                m.handle(.hook(source: "claude", env: [:], payload: try! JSONDecoder().decode(JSONValue.self, from: Data(
+                    #"{"hook_event_name":"PermissionRequest","session_id":"s9","tool_name":"Bash","tool_input":{"command":"cat secret-client.env"}}"#.utf8)))) { _ in }
+                m.presentationMode = true; m.notchState = .peek
+            }),
             ("D30-charging", {
                 m.center.post(Activity(id: "battery", kind: .battery, priority: .p1, state: .success, symbol: "bolt.fill", label: "",
                                        value: "64%", detail: L("battery.chargingFull", 64, DurationFormat.long(4800, language: lang)), startedAt: now), now: now)

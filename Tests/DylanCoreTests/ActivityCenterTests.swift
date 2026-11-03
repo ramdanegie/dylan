@@ -60,6 +60,13 @@ private func act(_ id: String, _ p: Priority, _ state: ActivityState = .running,
         #expect(c.tick(now: t0.addingTimeInterval(15)) == ["ok"])
     }
 
+    @Test func postKeepsStateAndExpires() {
+        var c = ActivityCenter()
+        c.post(act("bat", .p1, .needsAction), now: t0)
+        #expect(c.activities["bat"]?.state == .needsAction)
+        #expect(c.tick(now: t0.addingTimeInterval(5)) == ["bat"])
+    }
+
     @Test func p0NeverExpires() {
         var c = ActivityCenter()
         var a = act("perm", .p0, .needsAction); a.endedAt = t0

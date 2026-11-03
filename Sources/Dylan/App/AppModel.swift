@@ -215,7 +215,7 @@ final class AppModel {
             let key = "script-\(id)"
             if center.activities[key] == nil {
                 center.upsert(Activity(id: key, kind: .script, priority: .p2, state: .running, symbol: "terminal",
-                                       label: id, startedAt: now))
+                                       label: id, genericDetail: L("generic.script"), startedAt: now))
             }
             let label = center.activities[key]?.label ?? id
             // Right ear only fits short results ("48s", "exit 1"); longer details go to Peek.
@@ -484,21 +484,40 @@ final class AppModel {
         }
     }
 
+    /// Kinds whose labels/details can carry file names, commands, script titles or meeting titles (PRD §F12).
+    static let sensitiveKinds: Set<ActivityKind> = [.agent, .command, .script, .notify, .meeting]
+
     func displayDetail(_ a: Activity) -> String {
-        presentationMode ? (a.genericDetail ?? a.detail) : a.detail
+        guard presentationMode else { return a.detail }
+        if let g = a.genericDetail { return g }
+        switch a.kind {
+        case .agent: return L("generic.agent")
+        case .command: return L("generic.command")
+        case .script: return L("generic.script")
+        case .notify: return L("generic.notify")
+        case .meeting: return L("generic.meeting")
+        default: return a.detail
+        }
     }
 
+    /// In Presentation Mode only durations, counts and exit codes survive ("4m 12s", "64%", "exit 1").
     func displayValue(_ a: Activity) -> String {
-        presentationMode && a.genericDetail != nil && (a.kind == .agent || a.kind == .command) && a.state == .running ? "" : a.value
+        guard presentationMode, Self.sensitiveKinds.contains(a.kind) else { return a.value }
+        return Self.isNeutralValue(a.value) ? a.value : ""
+    }
+
+    nonisolated static func isNeutralValue(_ v: String) -> Bool {
+        v.range(of: #"^(exit )?[0-9:.,%hms ]*$"#, options: .regularExpression) != nil
     }
 
     func displayLabel(_ a: Activity) -> String {
-        guard presentationMode, a.genericDetail != nil else { return a.label }
+        guard presentationMode, Self.sensitiveKinds.contains(a.kind) else { return a.label }
         switch a.kind {
         case .agent where a.state == .running: return L("compact.working")
-        case .command: return ""
+        case .agent: return a.label   // "Izin", "Selesai", "Error": generic already
         case .meeting: return L("compact.meeting")
-        default: return a.label
+        case .notify: return L("generic.notify")
+        default: return ""            // command & script titles can be anything
         }
     }
 
