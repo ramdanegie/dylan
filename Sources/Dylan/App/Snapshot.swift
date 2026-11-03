@@ -5,7 +5,11 @@ import SwiftUI
 /// `Dylan --snapshot <dir> [--lang id|en]`: renders notch states to PNG without Screen Recording
 /// (PRD Bagian 4 debug tools). Used for visual review and to check text length in both languages.
 enum Snapshot {
+    /// Views that use AppKit layers draw a static SwiftUI stand-in while this is set.
+    static var rendering = false
+
     static func render(to dir: URL) {
+        rendering = true
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let suite = "io.github.ramdanegie.dylan.snapshot"
         AppModel.store = UserDefaults(suiteName: suite)!

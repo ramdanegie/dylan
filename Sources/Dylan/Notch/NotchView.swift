@@ -406,16 +406,19 @@ struct MediaButtons: View {
 
 // MARK: Small animated pieces
 
-/// Spinner drawn in SwiftUI (renders in snapshots, stops for Reduce Motion).
+// Spinner and equalizer are Core Animation layers: the render server animates them, so a long agent
+// run or song costs no per-frame SwiftUI layout (the TimelineView version cost ~9% CPU on an M1 Pro).
 struct Spinner: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { ctx in
-            Circle().trim(from: 0.15, to: 0.85)
-                .stroke(DY.fg, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
-                .frame(width: 10, height: 10)
-                .rotationEffect(.degrees(reduceMotion ? 0 : ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360))
+        Group {
+            if Snapshot.rendering {   // ImageRenderer cannot draw AppKit layers
+                Circle().trim(from: 0.15, to: 0.85).stroke(DY.fg, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+            } else {
+                LayerAnimation(kind: .spinner, color: NSColor(DY.fg), animating: !reduceMotion)
+            }
         }
+        .frame(width: 10, height: 10)
         .accessibilityHidden(true)
     }
 }
@@ -426,17 +429,94 @@ struct Equalizer: View {
     var color: Color
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !playing || reduceMotion)) { ctx in
-            let t = ctx.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: 2) {
-                ForEach(0..<4, id: \.self) { i in
-                    let h = playing && !reduceMotion ? 0.3 + 0.7 * abs(sin(t * (3.1 + Double(i) * 1.3) + Double(i))) : 0.3
-                    Capsule().fill(color).frame(width: 2.5, height: 14 * h)
+        Group {
+            if Snapshot.rendering {
+                HStack(alignment: .center, spacing: 2) {
+                    ForEach(0..<4, id: \.self) { i in Capsule().fill(color).frame(width: 2.5, height: 14 * (playing ? [0.5, 0.9, 0.6, 0.8][i] : 0.3)) }
                 }
+            } else {
+                LayerAnimation(kind: .equalizer, color: NSColor(color), animating: playing && !reduceMotion)
             }
-            .frame(height: 14)
         }
+        .frame(width: 16, height: 14)
         .accessibilityHidden(true)
+    }
+}
+
+private struct LayerAnimation: NSViewRepresentable {
+    enum Kind { case spinner, equalizer }
+    var kind: Kind
+    var color: NSColor
+    var animating: Bool
+    func makeNSView(context: Context) -> LayerAnimationView { LayerAnimationView(kind: kind) }
+    func updateNSView(_ v: LayerAnimationView, context: Context) { v.update(color: color.cgColor, animating: animating) }
+}
+
+private final class LayerAnimationView: NSView {
+    private let kind: LayerAnimation.Kind
+    private var shapes: [CAShapeLayer] = []
+    private var animating = false
+
+    init(kind: LayerAnimation.Kind) {
+        self.kind = kind
+        super.init(frame: .zero)
+        wantsLayer = true
+        for _ in 0..<(kind == .spinner ? 1 : 4) {
+            let s = CAShapeLayer()
+            layer?.addSublayer(s)
+            shapes.append(s)
+        }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (i, s) in shapes.enumerated() {
+            switch kind {
+            case .spinner:
+                s.frame = bounds
+                s.path = CGPath(ellipseIn: bounds.insetBy(dx: 0.8, dy: 0.8), transform: nil)
+                s.fillColor = nil; s.lineWidth = 1.6; s.lineCap = .round; s.strokeStart = 0.15; s.strokeEnd = 0.85
+            case .equalizer:
+                s.frame = CGRect(x: CGFloat(i) * 4.5, y: 0, width: 2.5, height: bounds.height)
+                s.path = CGPath(roundedRect: s.bounds, cornerWidth: 1.25, cornerHeight: 1.25, transform: nil)
+            }
+        }
+        CATransaction.commit()
+    }
+
+    func update(color: CGColor, animating: Bool) {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for s in shapes { if kind == .spinner { s.strokeColor = color } else { s.fillColor = color } }
+        CATransaction.commit()
+        guard animating != self.animating || shapes.first?.animation(forKey: "dy") == nil else { return }
+        self.animating = animating
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (i, s) in shapes.enumerated() {
+            s.removeAnimation(forKey: "dy")
+            if kind == .equalizer { s.transform = animating ? CATransform3DIdentity : CATransform3DMakeScale(1, 0.3, 1) }
+            guard animating else { continue }
+            let a: CABasicAnimation
+            switch kind {
+            case .spinner:
+                a = CABasicAnimation(keyPath: "transform.rotation.z")
+                a.fromValue = 0; a.toValue = -2 * Double.pi   // clockwise (AppKit layers are y-up)
+                a.duration = 1
+            case .equalizer:
+                a = CABasicAnimation(keyPath: "transform.scale.y")
+                a.fromValue = 0.3; a.toValue = 1
+                a.duration = [0.42, 0.55, 0.36, 0.48][i]
+                a.autoreverses = true
+                a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                a.beginTime = CACurrentMediaTime() - Double(i) * 0.13
+            }
+            a.repeatCount = .infinity
+            a.isRemovedOnCompletion = false
+            s.add(a, forKey: "dy")
+        }
+        CATransaction.commit()
     }
 }
 
