@@ -133,10 +133,10 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("touchID", .developer, [29], .v1_1, built: true),
         .init("github", .developer, [30], .v1_2, built: true, req: true),
         .init("widgets", .developer, [31], .v1_2, built: true),
-        .init("codex", .developer, [32], .v1_2),
+        .init("codex", .developer, [32], .v1_2, built: true),
         .init("docker", .developer, [33], .v1_2, built: true),
         .init("otherAgents", .developer, [34], .v1_2),
         .init("terminal", .developer, [41], .v1_3),
-        .init("mcp", .developer, [42], .v1_3),
+        .init("mcp", .developer, [42], .v1_3, built: true),
     ]
 }

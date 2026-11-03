@@ -24,7 +24,8 @@ func usage() -> Never {
       dylan shelf add <file…>           put files on the shelf
       dylan run -- <command…>           run as an activity; passes the exit code through
       dylan shell-init zsh              print the zsh integration
-      dylan hook claude                 called by Claude Code hooks
+      dylan hook claude | codex         called by Claude Code hooks / Codex notify
+      dylan mcp                         MCP server (stdio) with notify, activity, shelf_add
       dylan doctor                      check the app, socket, hooks and shell integration
       dylan debug emit <file.json>      send a fake hook payload (testing)
       dylan debug state                 print the activities on screen (JSON)
@@ -85,6 +86,14 @@ func parseProgress(_ s: String?) -> Double? {
 // MARK: hook
 
 func hook(source: String) -> Never {
+    // Codex passes the event as one JSON argument (notify program), not on stdin.
+    if source == "codex" {
+        let raw = args.dropFirst().last.map { Data($0.utf8) } ?? FileHandle.standardInput.readDataToEndOfFile()
+        if let payload = try? JSONDecoder().decode(JSONValue.self, from: raw) {
+            send(.hook(source: "codex", env: terminalEnv(), payload: HookPayload.slimCodex(payload)), timeout: 0.2)
+        }
+        exit(0)
+    }
     // Fail-open: any problem → exit 0 without output so Claude Code continues normally.
     let input = FileHandle.standardInput.readDataToEndOfFile()
     guard source == "claude", let payload = try? JSONDecoder().decode(JSONValue.self, from: input) else { exit(0) }
@@ -224,6 +233,14 @@ case "hook":
     hook(source: args.first ?? "")
 case "doctor":
     doctor()
+case "mcp":
+    // MCP server over stdio for Claude Code: `claude mcp add dylan -- <path to dylan> mcp`.
+    let server = MCPServer(version: version) { send($0) }
+    while let line = readLine(strippingNewline: true) {
+        guard !line.isEmpty, let out = server.handle(Data(line.utf8)) else { continue }
+        FileHandle.standardOutput.write(out)
+    }
+    exit(0)
 case "debug" where args.first == "state":
     guard let fd = try? UnixSocket.connect(path: socketPath, timeout: 0.5) else { stderr("dylan: the Dylan app is not running"); exit(0) }
     defer { close(fd) }

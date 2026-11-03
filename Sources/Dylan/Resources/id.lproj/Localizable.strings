@@ -602,3 +602,10 @@
 "widgets.hint" = "Script executable yang mencetak JSON {title, value, state, progress, url, activity}. Interval lewat komentar # dylan: interval=60s.";
 "widgets.timeout" = "tidak selesai dalam 10 dtk";
 "widgets.badJSON" = "output bukan JSON widget";
+"codex.title" = "Codex CLI";
+"codex.install" = "Pasang notify…";
+"codex.summaryInstall" = "Menambahkan notify Dylan; notify milikmu yang lain diganti (ada backup)";
+"codex.summaryRemove" = "Menghapus notify Dylan";
+"codex.done" = "Codex selesai · %@";
+"mcp.title" = "MCP server";
+"mcp.body" = "Claude Code bisa mengirim notifikasi, aktivitas, dan file ke notch. Jalankan perintah ini sekali di terminal:";

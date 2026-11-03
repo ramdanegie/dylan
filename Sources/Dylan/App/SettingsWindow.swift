@@ -320,6 +320,8 @@ struct TouchIDSudoCard: View {
 
 struct AgentSettings: View {
     @StateBox private var preview: HookSetup.Preview?
+    @StateBox private var codexPreview: HookSetup.Preview?
+    @StateBox private var codexInstalled = HookSetup.codexInstalled
     @StateBox private var status = HookSetup.status()
     @StateBox private var message: String?
     private var model: AppModel { AppModel.shared }
@@ -334,6 +336,22 @@ struct AgentSettings: View {
                 if status != .notInstalled { Button(L("hooks.uninstall")) { open(HookSetup.previewUninstall) } }
             }
             if let message { SwiftUI.Text(message).font(.caption).foregroundStyle(.secondary) }
+        }
+        Section(L("codex.title")) {
+            LabeledContent("notify · ~/.codex/config.toml") {
+                SwiftUI.Text(codexInstalled ? L("hooks.installed") : L("hooks.notInstalled")).foregroundStyle(codexInstalled ? .green : .secondary)
+            }
+            Button(codexInstalled ? L("hooks.uninstall") : L("codex.install")) {
+                do { (codexPreview, _) = try HookSetup.previewCodex(install: !codexInstalled) } catch { message = error.localizedDescription }
+            }
+        }
+        Section(L("mcp.title")) {
+            SwiftUI.Text(L("mcp.body")).font(.caption).foregroundStyle(.secondary)
+            HStack {
+                SwiftUI.Text(HookSetup.mcpCommand).font(.system(size: 11, design: .monospaced)).textSelection(.enabled).lineLimit(2)
+                Spacer()
+                Button(L("button.copy")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(HookSetup.mcpCommand, forType: .string) }
+            }
         }
         Section(L("settings.permissions")) {
             Toggle(L("settings.answerFromNotch"), isOn: Binding(get: { model.answerPermissionsFromNotch }, set: { model.answerPermissionsFromNotch = $0 }))
@@ -352,6 +370,15 @@ struct AgentSettings: View {
                 }
                 preview = nil
                 status = HookSetup.status()
+            }
+        }
+        .sheet(item: Binding(get: { codexPreview.map(IdentifiedPreview.init) }, set: { codexPreview = $0?.p })) { p in
+            DiffSheet(preview: p.p, title: "~/.codex/config.toml") { approved in
+                if approved {
+                    do { try HookSetup.applyCodex(p.p); message = L("hooks.written") } catch { message = error.localizedDescription }
+                }
+                codexPreview = nil
+                codexInstalled = HookSetup.codexInstalled
             }
         }
     }
@@ -376,10 +403,11 @@ struct IdentifiedPreview: Identifiable {
 
 struct DiffSheet: View {
     var preview: HookSetup.Preview
+    var title = "~/.claude/settings.json"
     var done: (Bool) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SwiftUI.Text("~/.claude/settings.json").font(.headline)
+            SwiftUI.Text(title).font(.headline)
             SwiftUI.Text(preview.summary).foregroundStyle(.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {

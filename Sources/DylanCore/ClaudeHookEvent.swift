@@ -242,6 +242,12 @@ public enum HookPayload {
         return .object(out)
     }
 
+    /// Codex notify JSON: keep the event type, cwd and the (clipped) last message only.
+    public static func slimCodex(_ payload: JSONValue) -> JSONValue {
+        guard case .object(let o) = payload else { return .null }
+        return .object(o.filter { ["type", "cwd", "turn-id", "last-assistant-message"].contains($0.key) }.mapValues(clip))
+    }
+
     private static func clip(_ v: JSONValue) -> JSONValue {
         if case .string(let s) = v, s.count > 2000 { return .string(String(s.prefix(2000))) }
         if case .object = v { return .null }   // nested objects outside tool_input are never read

@@ -366,6 +366,13 @@ final class AppModel {
             let d = DurationFormat.result(f.duration)
             center.finish(key, success: status == 0, value: status == 0 ? d : "exit \(status)",
                           detail: status == 0 ? L("command.done", name, d) : L("command.failed", name, status, d), now: now)
+        case let .hook(source, env, payload) where source == "codex":
+            guard features.isEnabled(.agents), let message = CodexConfig.lastMessage(payload) else { break }
+            let project = payload["cwd"]?.string.map { ProjectName.resolve(cwd: $0) } ?? "Codex"
+            center.post(Activity(id: "codex-\(payload["turn-id"]?.string ?? UUID().uuidString)", kind: .agent, priority: .p1, state: .success,
+                                 symbol: "checkmark", label: L("compact.done"), value: "Codex",
+                                 detail: L("codex.done", project) + " · " + TextRules.firstSentence(message),
+                                 genericDetail: L("generic.agentDone"), url: env["__CFBundleIdentifier"].map { "app:" + $0 }, startedAt: now), now: now)
         case let .hook(source, env, payload):
             guard source == "claude", features.isEnabled(.agents), let e = ClaudeHookEvent(payload: payload) else { break }
             applyAgentEvent(e, env: env, now: now)

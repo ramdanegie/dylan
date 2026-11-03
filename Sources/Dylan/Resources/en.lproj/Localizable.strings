@@ -602,3 +602,10 @@
 "widgets.hint" = "Executable scripts printing JSON {title, value, state, progress, url, activity}. Set the interval with # dylan: interval=60s.";
 "widgets.timeout" = "did not finish within 10 s";
 "widgets.badJSON" = "output is not widget JSON";
+"codex.title" = "Codex CLI";
+"codex.install" = "Install notify…";
+"codex.summaryInstall" = "Adds Dylan's notify; an existing top-level notify is replaced (backed up)";
+"codex.summaryRemove" = "Removes Dylan's notify";
+"codex.done" = "Codex finished · %@";
+"mcp.title" = "MCP server";
+"mcp.body" = "Claude Code can post notifications, activities and files to the notch. Run this once in a terminal:";

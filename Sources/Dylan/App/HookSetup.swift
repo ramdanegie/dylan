@@ -79,6 +79,43 @@ enum HookSetup {
         return backup
     }
 
+    // MARK: Codex CLI (FR-32)
+
+    static var codexURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/config.toml") }
+    static var codexInstalled: Bool { CodexConfig.isInstalled((try? String(contentsOf: codexURL, encoding: .utf8)) ?? "") }
+    static var codexAvailable: Bool { Tool.path("codex") != nil || FileManager.default.fileExists(atPath: codexURL.deletingLastPathComponent().path) }
+
+    static func previewCodex(install: Bool) throws -> (Preview, URL) {
+        let fm = FileManager.default
+        var oldText = ""
+        if fm.fileExists(atPath: codexURL.path) {
+            guard let t = try? String(contentsOf: codexURL, encoding: .utf8) else { throw SetupError.unreadable("~/.codex/config.toml") }
+            oldText = t
+        }
+        let new = install ? CodexConfig.install(oldText, cliPath: cliPath) : CodexConfig.uninstall(oldText)
+        let p = Preview(diff: LineDiff.diff(old: oldText, new: new), newData: Data(new.utf8),
+                        summary: install ? L("codex.summaryInstall") : L("codex.summaryRemove"), base: oldText.isEmpty ? nil : Data(oldText.utf8))
+        return (p, codexURL)
+    }
+
+    /// Backup + re-check + atomic write, like settings.json.
+    static func applyCodex(_ p: Preview) throws {
+        let fm = FileManager.default
+        guard (try? Data(contentsOf: codexURL)) == p.base else { throw SetupError.changedSinceReview }
+        let target = codexURL.resolvingSymlinksInPath()
+        try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if fm.fileExists(atPath: target.path) {
+            let b = target.deletingLastPathComponent().appendingPathComponent("config.toml.dylan-backup")
+            try? fm.removeItem(at: b)
+            try fm.copyItem(at: target, to: b)
+        }
+        try p.newData.write(to: target, options: .atomic)
+    }
+
+    static var mcpCommand: String {
+        "claude mcp add dylan -- '" + cliPath.replacingOccurrences(of: "'", with: "'\\''") + "' mcp"
+    }
+
     // MARK: Shell integration (PRD §F4)
 
     static var zshrcURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".zshrc") }
