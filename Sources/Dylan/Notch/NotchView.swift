@@ -30,6 +30,7 @@ struct NotchRootView: View {
         case .home: return m.isDeveloper && !m.agents.active.isEmpty ? 300 : 270
         case .media: return 300
         case .clipboard: return 380
+        case .shelf: return 236
         case .stats: return 366
         case .dev: return 316
         case .agents: return 312
@@ -70,6 +71,11 @@ struct NotchRootView: View {
             }
             .contentShape(shape(radius: radius, hasNotch: g.hasNotch))
             .onTapGesture { if state != .expanded { withAnimation(anim) { model.notchState = .expanded } } }
+            // Files dropped on the island go to the shelf (PRD §F1: the notch is a drop zone).
+            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                guard model.features.isEnabled(.shelf) else { return false }
+                ShelfDrop.accept(providers); return true
+            }
             .accessibilityElement(children: .contain)
             .padding(.top, g.hasNotch ? 0 : NotchGeometry.pillTop)
             Spacer(minLength: 0)

@@ -21,6 +21,7 @@ func usage() -> Never {
       dylan activity update <id> [--title <t>] [--subtitle <s>] [--progress 0..1]
       dylan activity end <id> --success | --failure [--detail <d>]
       dylan notify <title> [body]
+      dylan shelf add <file…>           put files on the shelf
       dylan run -- <command…>           run as an activity; passes the exit code through
       dylan shell-init zsh              print the zsh integration
       dylan hook claude                 called by Claude Code hooks
@@ -192,6 +193,10 @@ case "activity":
         sendOrWarn(.activityEnd(id: id, success: ok, detail: option("--detail")))
     default: usage()
     }
+case "shelf":
+    guard args.first == "add", args.count >= 2 else { stderr("usage: dylan shelf add <file…>"); exit(64) }
+    let paths = args.dropFirst().map { URL(fileURLWithPath: $0).standardizedFileURL.path }
+    sendOrWarn(.shelfAdd(paths: Array(paths)))
 case "notify":
     guard let title = args.first else { usage() }
     sendOrWarn(.notify(title: title, body: args.count > 1 ? args[1] : nil))

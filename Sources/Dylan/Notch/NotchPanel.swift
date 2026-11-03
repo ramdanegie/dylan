@@ -62,8 +62,12 @@ final class NotchController {
         p.orderFrontRegardless()
         panel = p
 
-        monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { _ in
-            MainActor.assumeIsolated { NotchController.shared.mouseMoved() }
+        monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { e in
+            let dragging = e.type == .leftMouseDragged
+            MainActor.assumeIsolated {
+                NotchController.shared.mouseMoved()
+                if dragging { NotchController.shared.fileDragMoved() }
+            }
         } as Any)
         monitors.append(NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { e in
             MainActor.assumeIsolated { NotchController.shared.mouseMoved() }
@@ -174,6 +178,17 @@ final class NotchController {
             leaveWork = w
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: w)
         }
+    }
+
+    /// A file dragged close to the notch opens the Shelf as a drop zone (PRD §F1).
+    private func fileDragMoved() {
+        let m = AppModel.shared
+        guard m.features.isEnabled(.shelf), m.notchState != .expanded,
+              let types = NSPasteboard(name: .drag).types, types.contains(.fileURL) else { return }
+        let zone = NotchRootView.islandFrame(m, layout.geometry).insetBy(dx: -80, dy: -60)
+        guard zone.contains(NSEvent.mouseLocation) else { return }
+        m.selectedTab = .shelf
+        m.notchState = .expanded
     }
 
     private func clickedOutside() {

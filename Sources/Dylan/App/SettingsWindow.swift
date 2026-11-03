@@ -213,7 +213,11 @@ struct ClipboardSettings: View {
 struct UtilitySettings: View {
     private var model: AppModel { AppModel.shared }
     var body: some View {
-        FeatureToggles(features: [.colorPicker])
+        FeatureToggles(features: [.shelf, .colorPicker])
+        Section("Shelf") {
+            Toggle(L("shelf.screenshots"), isOn: Binding(get: { model.screenshotsToShelf }, set: { model.screenshotsToShelf = $0 }))
+            LabeledContent("CLI", value: "dylan shelf add <file…>")
+        }
         Section(L("color.title")) {
             LabeledContent(L("color.hotkey"), value: "⌃⌥C")
             Picker(L("color.format"), selection: Binding(get: { model.colorFormat }, set: { model.colorFormat = $0 })) {

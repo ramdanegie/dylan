@@ -110,8 +110,8 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         // Files & clipboard
         .init("clipboard", .files, [20], .v1_1, built: true),
         .init("secrets", .files, [22], .v1_1, built: true),
-        .init("shelf", .files, [23], .v1_1),
-        .init("screenshotShelf", .files, [24], .v1_1),
+        .init("shelf", .files, [23], .v1_1, built: true),
+        .init("screenshotShelf", .files, [24], .v1_1, built: true),
         .init("transforms", .files, [43], .v1_3),
         .init("removeBackground", .files, [77], .v1_3, req: true),
         .init("ocr", .files, [87], .v1_3),

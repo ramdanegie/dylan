@@ -5,13 +5,14 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, clipboard, stats, agents, dev
+    case home, media, shelf, clipboard, stats, agents, dev
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .home: return "house"
         case .media: return "music.note"
         case .clipboard: return "doc.on.clipboard"
+        case .shelf: return "tray.and.arrow.down"
         case .stats: return "chart.bar"
         case .agents: return "sparkle"
         case .dev: return "hammer"
@@ -125,6 +126,9 @@ final class AppModel {
     var clipboardRevision = 0
     @ObservationIgnored var focusClipboardSearch = false
     var clearClipboardOnQuit: Bool { didSet { defaults.set(clearClipboardOnQuit, forKey: "clearClipboardOnQuit") } }
+    var screenshotsToShelf: Bool {
+        didSet { defaults.set(screenshotsToShelf, forKey: "screenshotsToShelf"); ShelfProvider.shared.restartScreenshotWatch() }
+    }
     var keepAwake: KeepAwake?
     @ObservationIgnored private var keepAwakeAssertion: IOPMAssertionID = 0
 
@@ -152,6 +156,7 @@ final class AppModel {
         colorFormat = d.string(forKey: "colorFormat") ?? "hex"
         colorHistory = d.stringArray(forKey: "colorHistory") ?? []
         clearClipboardOnQuit = d.bool(forKey: "clearClipboardOnQuit")
+        screenshotsToShelf = d.object(forKey: "screenshotsToShelf") as? Bool ?? true
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = LanguageChoice.from(appleLanguages: d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])
         center.config.maxSlots = duo ? 2 : 1
@@ -166,6 +171,7 @@ final class AppModel {
 
     var tabs: [Tab] {
         var t: [Tab] = [.home, .media]
+        if features.isEnabled(.shelf) { t.append(.shelf) }
         if features.isEnabled(.clipboard) { t.append(.clipboard) }
         if features.isEnabled(.stats) { t.append(.stats) }
         if isDeveloper && features.isEnabled(.agents) { t.append(.agents) }
@@ -350,8 +356,9 @@ final class AppModel {
             handlePermissionAsk(requestID: requestID, env: env, payload: payload, connection: connection, now: now) { r in
                 if var d = try? JSONEncoder().encode(r) { d.append(0x0A); reply(d) }
             }
-        case .shelfAdd:
-            break   // Shelf ships in v1.1
+        case let .shelfAdd(paths):
+            guard features.isEnabled(.shelf) else { break }
+            ShelfProvider.shared.add(paths.map { URL(fileURLWithPath: $0) })
         case .debugState:
             let state: [String: Any] = [
                 "notch": NotchRootView.displayState(self).rawValue,

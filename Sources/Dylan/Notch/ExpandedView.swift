@@ -17,6 +17,7 @@ struct ExpandedView: View {
                 case .home: HomeTab()
                 case .media: MediaTab()
                 case .clipboard: ClipboardTab()
+                case .shelf: ShelfTab()
                 case .stats: StatsTab()
                 case .dev: DevTab()
                 case .agents: AgentsTab()
@@ -32,8 +33,8 @@ struct ExpandedView: View {
     private var tabBar: some View {
         let tabs = model.tabs
         // Design: Home · Media (· Discord · Shelf) left of the notch, Clipboard (· Stats) · Agents (· Dev) right.
-        let left = tabs.filter { [.home, .media].contains($0) }
-        let right = tabs.filter { ![.home, .media].contains($0) }
+        let left = tabs.filter { [.home, .media, .shelf].contains($0) }
+        let right = tabs.filter { ![.home, .media, .shelf].contains($0) }
         return HStack(spacing: 0) {
             HStack(spacing: 4) { ForEach(left) { tabButton($0) } }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 16)
