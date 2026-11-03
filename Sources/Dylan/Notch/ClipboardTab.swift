@@ -217,7 +217,12 @@ struct DetectCard: View {
                 code(nil, t)
                 button(L("button.copy"), t)
             default:
-                EmptyCard(symbol: "wand.and.stars", text: L("clipboard.noDetect"))
+                if item.kind == .image, let img = ClipboardProvider.shared.images[item.id].flatMap(VisionTools.cgImage) {
+                    title(L("clipboard.image"), item.text)
+                    NotchButton(title: L("vision.copyText")) { Task { _ = await VisionTools.copyText(from: img) } }
+                } else {
+                    EmptyCard(symbol: "wand.and.stars", text: L("clipboard.noDetect"))
+                }
             }
         }
         .padding(12)

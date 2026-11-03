@@ -569,3 +569,13 @@
 "downloads.show" = "Tampilkan";
 "downloads.toShelf" = "Ke Shelf";
 "keepAwake.untilDownloads" = "Tetap menyala sampai download selesai";
+"feature.mirror" = "Kamera cermin";
+"feature.mirror.hint" = "Cek penampilan sebelum meeting; mati sendiri setelah 60 detik";
+"feature.scratchpad" = "Scratchpad";
+"feature.scratchpad.hint" = "Satu catatan cepat, tersimpan otomatis";
+"mirror.button" = "Cermin";
+"mirror.stop" = "Tutup cermin";
+"scratchpad.button" = "Catatan";
+"scratchpad.title" = "Scratchpad";
+"vision.copyText" = "Salin teks";
+"vision.removeBg" = "Hapus background";

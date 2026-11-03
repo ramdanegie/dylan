@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import DylanCore
 import SwiftUI
 
@@ -81,6 +82,20 @@ struct HomeTab: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            if model.mirrorOn { MirrorView().frame(maxHeight: .infinity) }
+            else if model.scratchpadOpen { ScratchpadView().frame(maxHeight: .infinity) }
+            else { columns }
+            if model.features.isEnabled(.reminders) { QuickAddField() }
+            if model.isDeveloper { RunningChips() }
+            HStack(spacing: 6) {
+                BatteryLine()
+                UtilityButtons()
+            }
+        }
+        .onDisappear { MirrorCamera.shared.stop() }
+    }
+
+    private var columns: some View {
             HStack(alignment: .top, spacing: 14) {
                 NowPlayingCard().frame(maxWidth: .infinity, alignment: .leading)
                 Divider().overlay(Color.white.opacity(0.08))
@@ -93,14 +108,34 @@ struct HomeTab: View {
                 .frame(width: 150)
             }
             .frame(maxHeight: .infinity, alignment: .top)
-            if model.features.isEnabled(.reminders) { QuickAddField() }
-            if model.isDeveloper { RunningChips() }
-            HStack(spacing: 6) {
-                BatteryLine()
-                UtilityButtons()
-            }
-        }
     }
+}
+
+struct ScratchpadView: View {
+    @StateBox private var text = Scratchpad.load()
+    var body: some View {
+        TextEditor(text: $text)
+            .font(DY.font(12.5, .regular)).foregroundStyle(.white)
+            .scrollContentBackground(.hidden)
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
+            .onChange(of: text) { Scratchpad.save(text) }
+            .accessibilityLabel(L("scratchpad.title"))
+    }
+}
+
+struct MirrorView: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        v.wantsLayer = true
+        let layer = AVCaptureVideoPreviewLayer(session: MirrorCamera.shared.session)
+        layer.videoGravity = .resizeAspectFill
+        layer.cornerRadius = 12
+        layer.setAffineTransform(CGAffineTransform(scaleX: -1, y: 1))   // mirror image
+        v.layer = layer
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 struct NowPlayingCard: View {
@@ -343,6 +378,14 @@ struct UtilityButtons: View {
         HStack(spacing: 6) {
             if model.features.isEnabled(.colorPicker) {
                 NotchButton(title: L("color.pick")) { model.pickColor() }
+            }
+            if model.features.isEnabled(.mirror) {
+                NotchButton(title: model.mirrorOn ? L("mirror.stop") : L("mirror.button")) {
+                    model.mirrorOn ? MirrorCamera.shared.stop() : MirrorCamera.shared.start()
+                }
+            }
+            if model.features.isEnabled(.scratchpad) {
+                NotchButton(title: model.scratchpadOpen ? L("button.done") : L("scratchpad.button")) { model.scratchpadOpen.toggle() }
             }
             if model.features.isEnabled(.keepAwake) {
                 if let k = model.keepAwake {

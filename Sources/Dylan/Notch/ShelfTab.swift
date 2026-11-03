@@ -83,6 +83,14 @@ struct ShelfTab: View {
             NotchButton(title: L("shelf.quickLook")) { provider.quickLook(item) }
             NotchButton(title: L("shelf.copyPath")) { provider.copyPath(item) }
             NotchButton(title: L("shelf.openEditor")) { provider.openInEditor(item) }
+            if VisionTools.isImage(item.path) {
+                NotchButton(title: L("vision.copyText")) {
+                    Task { if let img = NSImage(contentsOfFile: item.path).flatMap(VisionTools.cgImage) { _ = await VisionTools.copyText(from: img) } }
+                }
+                NotchButton(title: L("vision.removeBg")) {
+                    Task { if let out = await VisionTools.removeBackground(provider.url(item)) { provider.add([out]) } }
+                }
+            }
             NotchButton(title: "AirDrop") { provider.airDrop([item]) }
             NotchButton(title: "Zip") { provider.zip(provider.shelf.items) }
             Button { provider.remove(item.id) } label: { Image(systemName: "xmark").font(.system(size: 10)).foregroundStyle(DY.fg2) }

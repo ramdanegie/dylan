@@ -113,13 +113,13 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("shelf", .files, [23], .v1_1, built: true),
         .init("screenshotShelf", .files, [24], .v1_1, built: true),
         .init("transforms", .files, [43], .v1_3),
-        .init("removeBackground", .files, [77], .v1_3, req: true),
-        .init("ocr", .files, [87], .v1_3),
+        .init("removeBackground", .files, [77], .v1_3, built: true, req: true),
+        .init("ocr", .files, [87], .v1_3, built: true),
         .init("floatingBasket", .files, [86], .v1_3),
         // Utilities
         .init("colorPicker", .utilities, [73], .v1_1, built: true),
-        .init("scratchpad", .utilities, [46], .v1_3),
-        .init("mirror", .utilities, [79], .v1_3, req: true),
+        .init("scratchpad", .utilities, [46], .v1_3, built: true),
+        .init("mirror", .utilities, [79], .v1_3, built: true, req: true),
         .init("lockScreen", .utilities, [80], .v1_3, experimental: true, req: true),
         // Security
         .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, experimental: true, req: true),

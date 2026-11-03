@@ -133,6 +133,8 @@ final class AppModel {
         didSet { defaults.set(screenshotsToShelf, forKey: "screenshotsToShelf"); ShelfProvider.shared.restartScreenshotWatch() }
     }
     var keepAwake: KeepAwake?
+    var mirrorOn = false
+    var scratchpadOpen = false
     @ObservationIgnored private var keepAwakeAssertion: IOPMAssertionID = 0
 
     /// Snapshot mode swaps this for a throwaway suite so rendering never touches the user's settings.

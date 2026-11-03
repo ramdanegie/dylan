@@ -2,3 +2,4 @@
 "NSAppleEventsUsageDescription" = "Dylan controls Spotify and Apple Music from the notch.";
 "NSBluetoothAlwaysUsageDescription" = "Dylan shows AirPods and other Bluetooth devices when they connect.";
 "NSRemindersFullAccessUsageDescription" = "Dylan shows today's reminders and lets you check them off from the notch.";
+"NSCameraUsageDescription" = "Dylan shows a camera mirror so you can check how you look before a meeting. Nothing is recorded.";

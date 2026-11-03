@@ -5,5 +5,6 @@
 	<!-- Hardened runtime, no sandbox (PRD §2.7): Dylan reads ~/.claude, runs git, and owns a unix socket. -->
 	<key>com.apple.security.automation.apple-events</key><true/>
 	<key>com.apple.security.personal-information.calendars</key><true/>
+	<key>com.apple.security.device.camera</key><true/>
 </dict>
 </plist>

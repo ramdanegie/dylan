@@ -19,6 +19,7 @@
 	<key>NSCalendarsFullAccessUsageDescription</key><string>Dylan shows a countdown and a Join button before your meetings.</string>
 	<key>NSAppleEventsUsageDescription</key><string>Dylan controls Spotify and Apple Music from the notch.</string>
 	<key>NSRemindersFullAccessUsageDescription</key><string>Dylan shows today's reminders and lets you check them off from the notch.</string>
+	<key>NSCameraUsageDescription</key><string>Dylan shows a camera mirror so you can check how you look before a meeting. Nothing is recorded.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key><string>Dylan shows AirPods and other Bluetooth devices when they connect.</string>
 </dict>
 </plist>

@@ -2,3 +2,4 @@
 "NSAppleEventsUsageDescription" = "Dylan mengontrol Spotify dan Apple Music dari notch.";
 "NSBluetoothAlwaysUsageDescription" = "Dylan menampilkan AirPods dan perangkat Bluetooth lain saat tersambung.";
 "NSRemindersFullAccessUsageDescription" = "Dylan menampilkan reminder hari ini dan bisa mencentangnya dari notch.";
+"NSCameraUsageDescription" = "Dylan menampilkan kamera cermin supaya kamu bisa cek penampilan sebelum meeting. Tidak ada yang direkam.";

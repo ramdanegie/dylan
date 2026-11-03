@@ -569,3 +569,13 @@
 "downloads.show" = "Show";
 "downloads.toShelf" = "To Shelf";
 "keepAwake.untilDownloads" = "Keep awake until downloads finish";
+"feature.mirror" = "Camera mirror";
+"feature.mirror.hint" = "Check how you look before a meeting; turns off after 60 s";
+"feature.scratchpad" = "Scratchpad";
+"feature.scratchpad.hint" = "One quick note, saved as you type";
+"mirror.button" = "Mirror";
+"mirror.stop" = "Close mirror";
+"scratchpad.button" = "Note";
+"scratchpad.title" = "Scratchpad";
+"vision.copyText" = "Copy text";
+"vision.removeBg" = "Remove background";
