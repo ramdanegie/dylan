@@ -684,3 +684,8 @@
 "agentsOther.body" = "Cursor and OpenCode show in the notch like Claude Code. Watch only: Dylan never answers another agent’s permission prompts.";
 "agentsOther.summaryInstall" = "Add the Dylan hook for %@";
 "agentsOther.summaryRemove" = "Remove the Dylan hook from %@";
+"feature.timeToLeave" = "Time to leave";
+"feature.timeToLeave.hint" = "Needs Location Services; travel times from Apple Maps";
+"leave.short" = "Leave";
+"leave.minutes" = "%d min";
+"leave.detail" = "Time to leave for %1$@ · %2$@ · %3$d min away";

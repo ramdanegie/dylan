@@ -9,9 +9,19 @@ public enum MeetingSchedule {
         public var end: Date
         public var link: MeetingLink?
         public var isAllDay: Bool
-        public init(id: String, title: String, start: Date, end: Date, link: MeetingLink?, isAllDay: Bool = false) {
+        /// A physical place (not a meeting link), for "time to leave" (FR-81).
+        public var place: String?
+        public var coordinate: Coordinate?
+        public init(id: String, title: String, start: Date, end: Date, link: MeetingLink?, isAllDay: Bool = false,
+                    place: String? = nil, coordinate: Coordinate? = nil) {
             self.id = id; self.title = title; self.start = start; self.end = end; self.link = link; self.isAllDay = isAllDay
+            self.place = place; self.coordinate = coordinate
         }
+    }
+
+    public struct Coordinate: Equatable, Sendable {
+        public var latitude: Double, longitude: Double
+        public init(latitude: Double, longitude: Double) { self.latitude = latitude; self.longitude = longitude }
     }
 
     public enum Phase: Equatable, Sendable {

@@ -3,3 +3,5 @@
 "NSBluetoothAlwaysUsageDescription" = "Dylan shows AirPods and other Bluetooth devices when they connect.";
 "NSRemindersFullAccessUsageDescription" = "Dylan shows today's reminders and lets you check them off from the notch.";
 "NSCameraUsageDescription" = "Dylan shows a camera mirror so you can check how you look before a meeting. Nothing is recorded.";
+"NSLocationUsageDescription" = "Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).";
+"NSLocationWhenInUseUsageDescription" = "Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).";

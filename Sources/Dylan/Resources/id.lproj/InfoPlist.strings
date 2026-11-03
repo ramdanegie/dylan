@@ -3,3 +3,5 @@
 "NSBluetoothAlwaysUsageDescription" = "Dylan menampilkan AirPods dan perangkat Bluetooth lain saat tersambung.";
 "NSRemindersFullAccessUsageDescription" = "Dylan menampilkan reminder hari ini dan bisa mencentangnya dari notch.";
 "NSCameraUsageDescription" = "Dylan menampilkan kamera cermin supaya kamu bisa cek penampilan sebelum meeting. Tidak ada yang direkam.";
+"NSLocationUsageDescription" = "Dylan memberi tahu kapan harus berangkat ke meeting di lokasi fisik (Waktunya berangkat, mati secara default).";
+"NSLocationWhenInUseUsageDescription" = "Dylan memberi tahu kapan harus berangkat ke meeting di lokasi fisik (Waktunya berangkat, mati secara default).";

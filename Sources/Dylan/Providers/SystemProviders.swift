@@ -58,9 +58,13 @@ final class CalendarProvider {
             MeetingSchedule.Event(id: e.calendarItemIdentifier + "\(e.startDate.timeIntervalSince1970)",
                                   title: e.title ?? "", start: e.startDate, end: e.endDate,
                                   link: MeetingLink.find(in: [e.url?.absoluteString, e.location, e.notes]),
-                                  isAllDay: e.isAllDay)
+                                  isAllDay: e.isAllDay, place: TimeToLeave.physicalPlace(e.location),
+                                  coordinate: e.structuredLocation?.geoLocation.map {
+                                      .init(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)
+                                  })
         }
         AppModel.shared.refreshMeeting()
+        TravelProvider.shared.refresh()
         AppModel.shared.scheduleTick()
     }
 }

@@ -74,7 +74,7 @@ struct SettingsView: View {
         case .appearance: AppearanceSettings()
         case .liveActivity: LiveActivitySettings()
         case .media:
-            FeatureToggles(features: [.media, .lyrics, .meeting, .reminders, .timer])
+            FeatureToggles(features: [.media, .lyrics, .meeting, .timeToLeave, .reminders, .timer])
             QuickPlaySettings()
         case .devices:
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .focus, .keepAwake, .hud])

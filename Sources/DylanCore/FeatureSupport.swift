@@ -90,7 +90,7 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("reminders", .calendar, [75], .v1_2, built: true, req: true),
         .init("quickAdd", .calendar, [85], .v1_2, built: true),
         .init("weather", .calendar, [45], .v1_2, built: true, req: true),
-        .init("timeToLeave", .calendar, [81], .v1_3, req: true),
+        .init("timeToLeave", .calendar, [81], .v1_3, built: true, req: true),
         // Devices & system
         .init("battery", .devices, [70], .v1_0, built: true),
         .init("bluetooth", .devices, [44], .v1_0, built: true, req: true),

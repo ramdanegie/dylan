@@ -265,7 +265,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | Latensi | Hover → Peek < 100 ms setelah delay; event hook → tampil < 300 ms |
 | Hook Claude Code | `dylan hook` selesai < 50 ms untuk event biasa. **Fail-open:** bila Dylan mati atau hang, hook langsung keluar tanpa output dan tidak pernah mengganggu Claude Code |
 | Stabilitas | Bertahan saat sleep/wake, ganti layar, ganti Space, dan restart Dylan. Crash Dylan tidak memengaruhi terminal/agent |
-| Privasi | Tanpa telemetry/analytics. Tanpa jaringan kecuali yang opt-in: GitHub, cuaca (nama kota dikirim ke geocoding Open-Meteo sekali, lalu koordinat dibulatkan 2 desimal), lirik (LRCLIB, judul + artis), Spotify Web API/oEmbed, tukar token OAuth Discord ke `discord.com`. Data Discord sendiri lewat socket lokal ke app Discord; Dylan tidak punya server |
+| Privasi | Tanpa telemetry/analytics. Tanpa jaringan kecuali yang opt-in: GitHub, cuaca (nama kota dikirim ke geocoding Open-Meteo sekali, lalu koordinat dibulatkan 2 desimal), lirik (LRCLIB, judul + artis), waktu tempuh Apple Maps untuk "Waktunya berangkat" (lokasi kamu + tujuan event), Spotify Web API/oEmbed, tukar token OAuth Discord ke `discord.com`. Data Discord sendiri lewat socket lokal ke app Discord; Dylan tidak punya server |
 | Keamanan | Socket hanya bisa diakses user sendiri (0600). Dylan tidak menjalankan perintah yang datang lewat socket. Edit file config selalu dengan backup |
 | Aksesibilitas | Label VoiceOver di semua kontrol; navigasi keyboard di Expanded; kontras teks ≥ 4,5:1 |
 | Kompatibilitas | macOS 15+, diuji di macOS 27, Apple Silicon (Intel tidak ditargetkan) |

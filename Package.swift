@@ -38,6 +38,8 @@ let package = Package(
                 .linkedFramework("CoreAudio"),
                 .linkedFramework("CoreMediaIO"),
                 .linkedFramework("Carbon"),
+                .linkedFramework("CoreLocation"),
+                .linkedFramework("MapKit"),
                 .linkedFramework("ServiceManagement"),
             ]
         ),
