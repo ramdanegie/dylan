@@ -47,10 +47,11 @@ final class RemindersProvider {
     }
 
     func reload() {
-        guard status == .fullAccess else { return }
+        guard status == .fullAccess, AppModel.shared.features.isEnabled(.reminders) else { return }
         let end = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date()))
         let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: end, calendars: nil)
-        store.fetchReminders(matching: predicate) { reminders in
+        // @Sendable: EventKit calls this on a background queue; a main-actor closure traps there.
+        store.fetchReminders(matching: predicate) { @Sendable reminders in
             let now = Date()
             let mapped: [Item] = (reminders ?? []).compactMap { r in
                 guard let dc = r.dueDateComponents, let due = Calendar.current.date(from: dc) else { return nil }
