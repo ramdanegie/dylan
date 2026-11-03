@@ -275,6 +275,7 @@
 "support.floatingBasket.desc" = "Shake the pointer while dragging to get a basket.";
 "support.focus" = "Focus";
 "support.focus.desc" = "A short note when Focus turns on or off.";
+"support.focus.req" = "May need Full Disk Access";
 "support.footer" = "The roadmap may change. Experimental features are off by default and can be turned off any time. Some features depend on your macOS version or a permission; the requirement is shown on the right.";
 "support.fullscreen" = "Stays out of the way in fullscreen";
 "support.fullscreen.desc" = "The notch hides; only urgent things appear.";
@@ -656,6 +657,11 @@
 "settings.section.discord" = "Discord";
 "feature.hud" = "Volume HUD in the notch";
 "feature.hud.hint" = "In addition; the macOS HUD still shows";
+"feature.focus" = "Focus on/off";
+"feature.focus.hint" = "If macOS blocks reading the Focus state, give Dylan Full Disk Access";
+"focus.on" = "Focus on";
+"focus.onNamed" = "%@ on";
+"focus.off" = "Focus off";
 "hud.volume" = "Volume %ld%%";
 "theme.title" = "Theme";
 "theme.accent" = "Accent colour from artwork";

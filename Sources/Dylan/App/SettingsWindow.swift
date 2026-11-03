@@ -77,7 +77,7 @@ struct SettingsView: View {
             FeatureToggles(features: [.media, .lyrics, .meeting, .reminders, .timer])
             QuickPlaySettings()
         case .devices:
-            FeatureToggles(features: [.battery, .bluetooth, .privacy, .keepAwake, .hud])
+            FeatureToggles(features: [.battery, .bluetooth, .privacy, .focus, .keepAwake, .hud])
             KeepAwakeSettings()
         case .utilities: UtilitySettings()
         case .discord: DiscordSettings()

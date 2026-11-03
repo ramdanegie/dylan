@@ -1,0 +1,4 @@
+{"data":[{"storeAssertionRecords":[
+ {"assertionUUID":"A","assertionStartDateTimestamp":815400000.0,"assertionDetails":{"assertionDetailsIdentifier":"com.apple.controlcenter.dnd","assertionDetailsModeIdentifier":"com.apple.donotdisturb.mode.default"}},
+ {"assertionUUID":"B","assertionStartDateTimestamp":815406300.3,"assertionDetails":{"assertionDetailsIdentifier":"com.apple.focus.activity-manager","assertionDetailsModeIdentifier":"com.apple.focus.work"}}],
+ "storeInvalidationRecords":[]}]}

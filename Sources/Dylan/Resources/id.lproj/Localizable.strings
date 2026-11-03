@@ -275,6 +275,7 @@
 "support.floatingBasket.desc" = "Goyang kursor saat drag, keranjang muncul.";
 "support.focus" = "Focus";
 "support.focus.desc" = "Pemberitahuan singkat saat Focus menyala atau mati.";
+"support.focus.req" = "Bisa butuh Full Disk Access";
 "support.footer" = "Roadmap bisa berubah. Fitur eksperimental mati secara default dan bisa dimatikan kapan saja. Beberapa fitur bergantung pada versi macOS atau izin; syaratnya tertulis di kanan.";
 "support.fullscreen" = "Tetap rapi saat fullscreen";
 "support.fullscreen.desc" = "Notch sembunyi; hanya hal penting yang muncul.";
@@ -656,6 +657,11 @@
 "settings.section.discord" = "Discord";
 "feature.hud" = "HUD volume di notch";
 "feature.hud.hint" = "Tambahan; HUD bawaan macOS tetap muncul";
+"feature.focus" = "Focus menyala/mati";
+"feature.focus.hint" = "Bila macOS menolak membaca status Focus, beri Dylan Full Disk Access";
+"focus.on" = "Focus aktif";
+"focus.onNamed" = "%@ aktif";
+"focus.off" = "Focus mati";
 "hud.volume" = "Volume %ld%%";
 "theme.title" = "Tema";
 "theme.accent" = "Warna aksen dari artwork";
