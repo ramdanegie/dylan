@@ -30,7 +30,7 @@ final class VisualizerProvider {
         stop()
         let spectrum = SpectrumBox()
         lastSound = Date()
-        tap = AudioTap(pid: app.processIdentifier, mode: .observe) { samples, rate in
+        tap = AudioTap(pid: app.processIdentifier, processes: AudioTap.processObjects(of: app.processIdentifier), mode: .observe) { samples, rate in
             guard let levels = spectrum.feed(samples, rate) else { return }
             DispatchQueue.main.async { MainActor.assumeIsolated { VisualizerProvider.shared.push(levels) } }
         }
@@ -102,7 +102,10 @@ final class AppVolumeProvider {
 
     func refresh() {
         taps = taps.filter { NSRunningApplication(processIdentifier: $0.key) != nil }
-        var list = AudioTap.playingApps().map { App(id: $0.processIdentifier, name: $0.localizedName ?? "", icon: $0.icon) }
+        var list: [App] = []
+        for p in AudioTap.processes() where p.playing && !list.contains(where: { $0.id == p.app.processIdentifier }) {
+            list.append(App(id: p.app.processIdentifier, name: p.app.localizedName ?? "", icon: p.app.icon))
+        }
         // A muted-at-source app may not report output; keep the ones Dylan is controlling.
         for pid in taps.keys where !list.contains(where: { $0.id == pid }) {
             if let a = NSRunningApplication(processIdentifier: pid) { list.append(App(id: pid, name: a.localizedName ?? "", icon: a.icon)) }
@@ -117,7 +120,7 @@ final class AppVolumeProvider {
         volumes[pid] = v
         if v >= 0.995 { taps[pid]?.destroy(); taps[pid] = nil; volumes[pid] = nil; return }
         if let t = taps[pid] { t.gain.value = v; return }
-        guard let t = AudioTap(pid: pid, mode: .gain) else { volumes[pid] = nil; return }
+        guard let t = AudioTap(pid: pid, processes: AudioTap.processObjects(of: pid), mode: .gain) else { volumes[pid] = nil; return }
         t.gain.value = v
         taps[pid] = t
     }

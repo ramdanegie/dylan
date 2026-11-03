@@ -27,6 +27,7 @@ public final class Spectrum {
     @discardableResult
     public func feed(_ samples: UnsafeBufferPointer<Float>, sampleRate: Double) -> [Float]? {
         let n = Self.size
+        guard sampleRate.isFinite, sampleRate > 0 else { return nil }
         // Keep the newest n samples.
         if samples.count >= n {
             ring = Array(samples.suffix(n)); filled = n
@@ -51,7 +52,9 @@ public final class Spectrum {
         let binHz = sampleRate / Double(n)
         var out = [Float](repeating: 0, count: 4)
         for b in 0..<4 {
-            let lo = max(1, Int(Self.edges[b] / binHz)), hi = min(n / 2 - 1, max(lo + 1, Int(Self.edges[b + 1] / binHz)))
+            // At low rates (8 kHz call audio) the upper bands lie above Nyquist: leave them at 0.
+            let lo = max(1, Int(Self.edges[b] / binHz)), hi = min(n / 2, Int(Self.edges[b + 1] / binHz))
+            guard hi > lo else { continue }
             var sum: Float = 0
             vDSP_sve(Array(power[lo..<hi]), 1, &sum, vDSP_Length(hi - lo))
             // Normalised by window and FFT size; 0 dB ≈ a full-scale sine in the band.

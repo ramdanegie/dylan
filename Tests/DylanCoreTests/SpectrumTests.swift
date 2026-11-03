@@ -33,4 +33,12 @@ import Testing
         [Float](repeating: 0, count: 1024).withUnsafeBufferPointer { _ = sp.feed($0, sampleRate: 48_000) }
         #expect(sp.levels[0] < peak && sp.levels[0] > 0)    // slow decay, not a drop to zero
     }
+
+    @Test func lowAndInvalidSampleRates() {
+        let sp = Spectrum()
+        let s = (0..<2048).map { Float(sin(2 * Double.pi * 300 * Double($0) / 8_000)) }
+        let l = s.withUnsafeBufferPointer { sp.feed($0, sampleRate: 8_000) }
+        #expect(l?.count == 4 && l?[3] == 0)
+        #expect(s.withUnsafeBufferPointer { Spectrum().feed($0, sampleRate: 0) } == nil)
+    }
 }

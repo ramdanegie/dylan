@@ -28,13 +28,16 @@ nonisolated final class AudioTap: @unchecked Sendable {
     private var procID: AudioDeviceIOProcID?
     private let queue = DispatchQueue(label: "dylan.audiotap", qos: .userInteractive)
 
-    init?(pid: pid_t, mode: Mode, onMono: (@Sendable (UnsafeBufferPointer<Float>, Double) -> Void)? = nil) {
+    /// `processes`: every Core Audio process object of the app (browsers and Electron apps play from helpers).
+    init?(pid: pid_t, processes: [AudioObjectID], mode: Mode, onMono: (@Sendable (UnsafeBufferPointer<Float>, Double) -> Void)? = nil) {
         self.pid = pid
-        guard let process = Self.processObject(pid), let outputUID = Self.defaultOutputUID() else { return nil }
-        let desc = CATapDescription(stereoMixdownOfProcesses: [process])
+        guard !processes.isEmpty, let outputUID = Self.defaultOutputUID() else { return nil }
+        let desc = CATapDescription(stereoMixdownOfProcesses: processes)
         desc.uuid = UUID()
         desc.isPrivate = true
-        desc.muteBehavior = mode == .gain ? .muted : .unmuted
+        // mutedWhenTapped: silent at the source only while Dylan reads the tap, so a stalled or dead IO never
+        // leaves the app muted.
+        desc.muteBehavior = mode == .gain ? .mutedWhenTapped : .unmuted
         guard AudioHardwareCreateProcessTap(desc, &tapID) == noErr else { return nil }
         let config: [String: Any] = [
             kAudioAggregateDeviceNameKey: "Dylan",
@@ -48,28 +51,19 @@ nonisolated final class AudioTap: @unchecked Sendable {
         ]
         guard AudioHardwareCreateAggregateDevice(config as CFDictionary, &aggregateID) == noErr else { destroy(); return nil }
         let rate = Self.sampleRate(aggregateID)
+        // The tap's stream comes after any input streams of the output device (a headset mic): use the last ones.
+        let tapBuffers = Self.tapBufferCount(tapID)
         let gainBox = gain
         let passThrough = mode == .gain
-        var mono = [Float](repeating: 0, count: 4096)
+        var left = [Float](repeating: 0, count: 8192), right = [Float](repeating: 0, count: 8192)
         let status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, queue) { _, inInput, _, outOutput, _ in
             let input = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inInput))
             let output = UnsafeMutableAudioBufferListPointer(outOutput)
-            if passThrough {
-                Self.copy(input, to: output, gain: gainBox.value)
-            } else {
-                for b in output { if let d = b.mData { memset(d, 0, Int(b.mDataByteSize)) } }
-            }
-            if let onMono, let first = input.first, let data = first.mData {
-                // Mono mix of the first buffer (interleaved stereo, or channel 1 when non-interleaved).
-                let ch = max(1, Int(first.mNumberChannels))
-                let frames = min(mono.count, Int(first.mDataByteSize) / MemoryLayout<Float>.size / ch)
-                let p = data.assumingMemoryBound(to: Float.self)
-                for i in 0..<frames {
-                    var s: Float = 0
-                    for c in 0..<ch { s += p[i * ch + c] }
-                    mono[i] = s / Float(ch)
-                }
-                mono.withUnsafeBufferPointer { onMono(UnsafeBufferPointer(rebasing: $0[0..<frames]), rate) }
+            let frames = AudioMix.readTap(input, buffers: tapBuffers, left: &left, right: &right)
+            AudioMix.render(left, right, frames: frames, gain: passThrough ? gainBox.value : 0, to: output)
+            if let onMono, frames > 0 {
+                for i in 0..<frames { left[i] = (left[i] + right[i]) / 2 }
+                left.withUnsafeBufferPointer { onMono(UnsafeBufferPointer(rebasing: $0[0..<frames]), rate) }
             }
         }
         guard status == noErr, AudioDeviceStart(aggregateID, procID) == noErr else { destroy(); return nil }
@@ -87,23 +81,12 @@ nonisolated final class AudioTap: @unchecked Sendable {
         if tapID != kAudioObjectUnknown { AudioHardwareDestroyProcessTap(tapID); tapID = AudioObjectID(kAudioObjectUnknown) }
     }
 
-    /// Copies matching buffers × gain; zeroes what does not match so nothing is played twice or as noise.
-    static func copy(_ input: UnsafeMutableAudioBufferListPointer, to output: UnsafeMutableAudioBufferListPointer, gain: Float) {
-        for (i, out) in output.enumerated() {
-            guard let od = out.mData else { continue }
-            let outCount = Int(out.mDataByteSize) / MemoryLayout<Float>.size
-            guard i < input.count, let id = input[i].mData, input[i].mNumberChannels == out.mNumberChannels else {
-                memset(od, 0, Int(out.mDataByteSize)); continue
-            }
-            let n = min(outCount, Int(input[i].mDataByteSize) / MemoryLayout<Float>.size)
-            var g = gain
-            vDSPScale(id.assumingMemoryBound(to: Float.self), od.assumingMemoryBound(to: Float.self), &g, n)
-            if n < outCount { memset(od.advanced(by: n * MemoryLayout<Float>.size), 0, (outCount - n) * MemoryLayout<Float>.size) }
-        }
-    }
-
-    private static func vDSPScale(_ src: UnsafePointer<Float>, _ dst: UnsafeMutablePointer<Float>, _ g: inout Float, _ n: Int) {
-        for i in 0..<n { dst[i] = src[i] * g }
+    static func tapBufferCount(_ tap: AudioObjectID) -> Int {
+        var addr = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var f = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        guard AudioObjectGetPropertyData(tap, &addr, 0, nil, &size, &f) == noErr else { return 1 }
+        return f.mFormatFlags & kAudioFormatFlagIsNonInterleaved != 0 ? max(1, Int(f.mChannelsPerFrame)) : 1
     }
 
     // MARK: Core Audio lookups
@@ -141,28 +124,32 @@ nonisolated final class AudioTap: @unchecked Sendable {
         return rate
     }
 
-    /// Apps currently playing audio (Core Audio process objects), mapped to their app (browser helpers included).
-    @MainActor static func playingApps() -> [NSRunningApplication] {
+    /// Every Core Audio process object with its app (browser and Electron helpers mapped to the app).
+    @MainActor static func processes() -> [(object: AudioObjectID, app: NSRunningApplication, playing: Bool)] {
         var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyProcessObjectList,
                                               mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size) == noErr else { return [] }
         var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &ids) == noErr else { return [] }
-        var seen = Set<pid_t>(), apps: [NSRunningApplication] = []
-        for p in ids {
-            var a = AudioObjectPropertyAddress(mSelector: kAudioProcessPropertyIsRunningOutput,
-                                               mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-            var on: UInt32 = 0
-            var s = UInt32(MemoryLayout<UInt32>.size)
-            guard AudioObjectGetPropertyData(p, &a, 0, nil, &s, &on) == noErr, on != 0 else { continue }
+        return ids.compactMap { p in
             var pa = AudioObjectPropertyAddress(mSelector: kAudioProcessPropertyPID, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
             var pid: pid_t = 0
             var ps = UInt32(MemoryLayout<pid_t>.size)
             guard AudioObjectGetPropertyData(p, &pa, 0, nil, &ps, &pid) == noErr, pid != getpid(),
-                  let app = PrivacyProvider.owningApp(pid: pid, processObject: p), seen.insert(app.processIdentifier).inserted else { continue }
-            apps.append(app)
+                  let app = PrivacyProvider.owningApp(pid: pid, processObject: p) else { return nil }
+            var a = AudioObjectPropertyAddress(mSelector: kAudioProcessPropertyIsRunningOutput,
+                                               mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+            var on: UInt32 = 0
+            var s = UInt32(MemoryLayout<UInt32>.size)
+            let playing = AudioObjectGetPropertyData(p, &a, 0, nil, &s, &on) == noErr && on != 0
+            return (p, app, playing)
         }
-        return apps
+    }
+
+    /// The process objects of one app, for its tap.
+    @MainActor static func processObjects(of pid: pid_t) -> [AudioObjectID] {
+        let list = processes().filter { $0.app.processIdentifier == pid }.map(\.object)
+        return list.isEmpty ? processObject(pid).map { [$0] } ?? [] : list
     }
 }
