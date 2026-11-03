@@ -16,3 +16,7 @@ xcuserdata/
 # Local
 .env
 *.local
+
+# Test scratch path (see scripts/build.sh)
+.build-test/
+Resources/Dylan.icns
