@@ -4,7 +4,7 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 
 ## Otomatis
 
-`./scripts/build.sh --test` → **144 unit test lulus** (36 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
+`./scripts/build.sh --test` → **178 unit test lulus** (49 suite) + bundel `build/Dylan.app` ter-sign (ad-hoc, hardened runtime).
 
 | Area | Yang diuji |
 |---|---|
@@ -20,6 +20,13 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 | Dev | `docker ps`, `gh run list`, remote → repo (termasuk `alice.github.io`), kegagalan CI baru, interval polling, widget (interval, JSON), `Shell.run` dengan output 200 KB dan timeout |
 | Discord | Reducer READY → AUTHORIZE → AUTHENTICATE → voice, urutan pembicara, keluar channel, DM, perintah RPC, handshake lewat unix socket dengan server Discord palsu |
 | Face Unlock | 11 aturan penolakan (waktu kunci tidak diketahui = tolak), jaringan tepercaya, tantangan liveness (foto statis timeout, gerakan salah, ganti wajah, dua wajah, orang lain), audit log |
+| Perangkat & Focus | Baterai AirPods/Bluetooth dari JSON `system_profiler` (fixture), Focus aktif dari `Assertions.json` + nama/ikon dari `ModeConfigurations.json` |
+| Meeting & panggilan | Deteksi Zoom/Teams/Meet (termasuk helper Chrome/Safari), shortcut + modifier AX, deteksi share layar dari judul jendela, banner Notification Center asli macOS 27.2 (app, judul, aksi), allow-list, panggilan Terima/Tolak, waktu berangkat (lokasi fisik vs link) |
+| Agent lain | Sesi Cursor lewat pipeline Claude (kerja → file berubah → selesai), StopFailure, event yang tidak diamati, installer `hooks.json` idempoten dan menjaga hook user, event OpenCode |
+| Audio | 4 band FFT mengikuti frekuensi (100 Hz / 500 Hz / 6 kHz), hening → 0, decay pelan |
+| Spotify | PKCE (vektor uji RFC 7636), URL authorize, body token, callback (state palsu ditolak), parser playlist/antrean/library, **loopback diuji dengan request HTTP sungguhan** |
+| Terminal | Buffer (`\r` progress, backspace, erase, warna/judul dibuang, UTF-8 & escape terpotong antar-read, batas baris), **PTY asli**: controlling tty, Ctrl-C menghentikan job, ukuran 90×14, cwd terbaca |
+| Face Unlock | Ambang dari sebaran pendaftaran, foto diam (tanpa sebaran) ditolak, orang lain < 0,66, keterbukaan mata dari landmark, tracker IoU, vault AES-GCM (kunci salah dan perubahan data terdeteksi) |
 | Lainnya | Keep awake, format warna, Touch ID sudo, profil, bahasa (key & argumen id/en sama, semua `L("…")` ada), katalog fitur mencakup semua FR di PRD |
 
 ## Live di Mac ini
@@ -40,6 +47,10 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 | HUD | Volume +2% → bar di telinga (volume dikembalikan) |
 | Vision | OCR dan hapus background (foto `Whiterose.heic`) dengan API yang sama |
 | Format data asli | LRCLIB, Open-Meteo, `gh run list`, `lsof` cocok dengan parser |
+| Cursor & OpenCode | `dylan hook cursor` → "Cursor is running npm test" → "Cursor finished"; app mati → tetap mencetak `{"continue":true}`, exit 0; OpenCode → "OpenCode finished" |
+| Notifikasi (spike T3.5) | Struktur AX banner asli dibaca (`AXNotificationCenterBanner`, title/subtitle/body, aksi); `AXObserver` memberi event saat banner muncul |
+| SkyLight | Keenam simbol untuk widget lock screen ada di macOS 27.2 (dlsym, tidak dipanggil) |
+| Plugin OpenCode | JS yang dihasilkan lolos `node --check`, termasuk path dengan kutip |
 
 ## Bug yang ditemukan dan diperbaiki
 - 3 crash isolasi Swift 6 (socket accept, simpan clipboard di background, dan pola yang sama dicegah di provider lain).
@@ -51,4 +62,6 @@ Mesin: MacBook Pro 14" M1 Pro, macOS 27.2, Swift 6.4 (Command Line Tools, tanpa 
 - Prompt izin yang sengaja tidak dipicu: Kalender, Reminders, Bluetooth, kamera (cermin), folder Downloads, Accessibility.
 - Discord asli (butuh Client ID), jawab izin dari notch pada sesi Claude asli (opt-in), video compress, floating basket, screenshot otomatis ke shelf.
 - Mode Presentasi saat share layar di Zoom/Meet, monitor eksternal, 120 fps.
-- Fitur yang belum dibuat: lihat Settings → Fitur yang didukung.
+- Butuh layar terkunci (dilakukan bersama kamu, untuk Face Unlock di akun uji): widget lock screen (T4.1), Face Unlock end-to-end (T5.0), arah tanda yaw Vision.
+- Butuh izin/perangkat: tap audio (equalizer langsung, volume per app), Location + Apple Maps, AirPods tersambung, panggilan FaceTime dan banner WhatsApp/Pesan dengan aksi Balas, share layar Zoom/Teams/Meet, akun Spotify dengan Client ID.
+- Pemutar lain (YouTube/Safari/VLC lewat MediaRemote) belum dibuat: perlu persetujuan kamu untuk mem-build `mediaremote-adapter` (BSD-3).
