@@ -74,7 +74,11 @@ final class DevIntegrations {
         pollGitHub()
     }
 
-    func stopGitHub() { githubTimer?.invalidate(); githubTimer = nil; runs = []; reviewRequests = nil }
+    func stopGitHub() {
+        githubTimer?.invalidate(); githubTimer = nil; runs = []; reviewRequests = nil
+        firstGitHubPoll = true; lastStates = [:]
+        AppModel.shared.removeIfPresent("ci-running", now: Date())
+    }
 
     private func schedule(_ interval: TimeInterval) {
         githubTimer?.invalidate()
@@ -105,6 +109,8 @@ final class DevIntegrations {
     }
 
     private func gitHubPolled(_ list: [(String, GitHubCI.Run)], reviews: Int?) {
+        // A poll that was in flight when GitHub was turned off.
+        guard AppModel.shared.features.isEnabled(.github) else { return }
         runs = list.map { (repo: $0.0, run: $0.1) }
         reviewRequests = reviews
         let m = AppModel.shared
@@ -155,6 +161,7 @@ final class DevIntegrations {
 
     func stopWidgets() {
         widgetTimers.values.forEach { $0.invalidate() }
+        for path in widgetTimers.keys { AppModel.shared.removeIfPresent("widget-\(path)", now: Date()) }
         widgetTimers = [:]
         widgets = [:]
         widgetErrors = [:]
@@ -172,6 +179,7 @@ final class DevIntegrations {
     private func widgetRan(_ path: String, _ o: ScriptWidget.Output?, failed: Bool) {
         let id = "widget-\(path)"
         let m = AppModel.shared
+        guard widgetTimers[path] != nil else { return }   // stopped or removed while it ran
         guard let o else {
             widgets[path] = nil
             widgetErrors[path] = failed ? L("widgets.timeout") : L("widgets.badJSON")

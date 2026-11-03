@@ -449,7 +449,7 @@ final class AppModel {
     }
 
     /// Removing a missing id still counts as a write for Observation; skip it.
-    private func removeIfPresent(_ id: String, now: Date) {
+    func removeIfPresent(_ id: String, now: Date) {
         if center.activities[id] != nil { center.remove(id, now: now) }
     }
 
