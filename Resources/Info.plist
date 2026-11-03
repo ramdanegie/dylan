@@ -22,6 +22,7 @@
 	<key>NSCameraUsageDescription</key><string>Dylan shows a camera mirror so you can check how you look before a meeting. Nothing is recorded.</string>
 	<key>NSLocationUsageDescription</key><string>Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).</string>
 	<key>NSLocationWhenInUseUsageDescription</key><string>Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).</string>
+	<key>NSAudioCaptureUsageDescription</key><string>Dylan reads the sound of your music app for a live equalizer, and of the apps you turn down for volume per app. Nothing is recorded.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key><string>Dylan shows AirPods and other Bluetooth devices when they connect.</string>
 </dict>
 </plist>

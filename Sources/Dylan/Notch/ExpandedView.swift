@@ -472,7 +472,12 @@ struct MediaTab: View {
                         .buttonStyle(.plain).accessibilityLabel(L("media.output"))
                     }
                     .frame(maxWidth: .infinity)
-                    if showOutputs { OutputList { showOutputs = false } }
+                    if showOutputs {
+                        HStack(alignment: .top, spacing: 8) {
+                            OutputList { showOutputs = false }
+                            if model.features.isEnabled(.appVolume) { AppMixer() }
+                        }
+                    }
                     else if let lyrics = LyricsProvider.shared.lyrics { LyricsBlock(lyrics: lyrics, media: m) }
                     if let v = m.volume {
                         HStack(spacing: 8) {
@@ -554,6 +559,31 @@ struct OutputList: View {
         }
         .padding(6)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.08)))
+    }
+}
+
+/// Volume per app (FR-84, design: under the output list in the same layer).
+struct AppMixer: View {
+    private var mix: AppVolumeProvider { AppVolumeProvider.shared }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            SwiftUI.Text(L("mixer.title")).font(DY.font(10.5, .semibold)).foregroundStyle(DY.fg2)
+            if mix.apps.isEmpty { SwiftUI.Text(L("mixer.empty")).font(DY.font(11)).foregroundStyle(DY.fg2) }
+            ForEach(mix.apps.prefix(5)) { app in
+                HStack(spacing: 8) {
+                    if let i = app.icon { Image(nsImage: i).resizable().frame(width: 14, height: 14) }
+                    SwiftUI.Text(app.name).font(DY.font(11.5, .regular)).foregroundStyle(.white).lineLimit(1).frame(width: 74, alignment: .leading)
+                    ScrubBar(fraction: Double(mix.volume(app.id)), color: .white, label: L("mixer.volume", app.name)) { f, _ in
+                        mix.set(app.id, Float(f))
+                    }
+                    SwiftUI.Text(verbatim: "\(Int((mix.volume(app.id) * 100).rounded()))%").font(DY.mono).foregroundStyle(DY.fg2).frame(width: 34, alignment: .trailing)
+                }
+                .frame(height: 20)
+            }
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.08)))
+        .onAppear { mix.refresh() }
     }
 }
 

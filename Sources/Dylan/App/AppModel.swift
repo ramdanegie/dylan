@@ -108,7 +108,7 @@ final class AppModel {
     var selectedTab: Tab = .home
     var fullscreen = false
     var presentationMode = false
-    var media: MediaState?
+    var media: MediaState? { didSet { if media?.isPlaying != oldValue?.isPlaying || media?.source != oldValue?.source { VisualizerProvider.shared.update() } } }
     var mediaAccent: Color = DY.fg
     var meetings: [MeetingSchedule.Event] = []
     var dismissedMeetings: Set<String> = []

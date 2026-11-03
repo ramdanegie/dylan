@@ -452,7 +452,7 @@ private struct LayerAnimation: NSViewRepresentable {
     func updateNSView(_ v: LayerAnimationView, context: Context) { v.update(color: color.cgColor, animating: animating) }
 }
 
-private final class LayerAnimationView: NSView {
+private final class LayerAnimationView: NSView, LevelView {
     private let kind: LayerAnimation.Kind
     private var shapes: [CAShapeLayer] = []
     private var animating = false
@@ -466,6 +466,29 @@ private final class LayerAnimationView: NSView {
             layer?.addSublayer(s)
             shapes.append(s)
         }
+        if kind == .equalizer { VisualizerProvider.shared.register(self) }
+    }
+
+    private var showingLevels = false
+
+    /// Real levels (FR-63) replace the decorative animation while they arrive.
+    func show(levels: [Float]) {
+        guard kind == .equalizer, animating || showingLevels else { return }
+        showingLevels = true
+        CATransaction.begin(); CATransaction.setAnimationDuration(1.0 / 30)
+        for (i, s) in shapes.enumerated() {
+            s.removeAnimation(forKey: "dy")
+            s.transform = CATransform3DMakeScale(1, CGFloat(0.25 + 0.75 * Double(levels[safe: i] ?? 0)), 1)
+        }
+        CATransaction.commit()
+    }
+
+    func stopLevels() {
+        guard showingLevels else { return }
+        showingLevels = false
+        let was = animating
+        animating = !was   // force update() to rebuild the animation
+        if let c = shapes.first?.fillColor { update(color: c, animating: was) }
     }
 
     required init?(coder: NSCoder) { nil }
@@ -491,7 +514,8 @@ private final class LayerAnimationView: NSView {
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for s in shapes { if kind == .spinner { s.strokeColor = color } else { s.fillColor = color } }
         CATransaction.commit()
-        guard animating != self.animating || shapes.first?.animation(forKey: "dy") == nil else { return }
+        guard animating != self.animating || (shapes.first?.animation(forKey: "dy") == nil && !showingLevels) else { return }
+        if showingLevels && animating { self.animating = animating; return }   // live levels drive the bars
         self.animating = animating
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for (i, s) in shapes.enumerated() {

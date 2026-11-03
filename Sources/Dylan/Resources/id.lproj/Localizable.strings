@@ -689,3 +689,10 @@
 "leave.short" = "Berangkat";
 "leave.minutes" = "%d mnt";
 "leave.detail" = "Waktunya berangkat ke %1$@ · %2$@ · %3$d mnt perjalanan";
+"feature.visualizer" = "Equalizer mengikuti musik";
+"feature.visualizer.hint" = "Butuh izin rekam audio; tanpa izin tetap animasi";
+"feature.appVolume" = "Volume per app";
+"feature.appVolume.hint" = "Butuh izin rekam audio; di bawah pilihan output";
+"mixer.title" = "Volume per app";
+"mixer.empty" = "Belum ada app yang memutar suara";
+"mixer.volume" = "Volume %@";

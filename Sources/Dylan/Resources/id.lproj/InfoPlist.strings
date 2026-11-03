@@ -5,3 +5,4 @@
 "NSCameraUsageDescription" = "Dylan menampilkan kamera cermin supaya kamu bisa cek penampilan sebelum meeting. Tidak ada yang direkam.";
 "NSLocationUsageDescription" = "Dylan memberi tahu kapan harus berangkat ke meeting di lokasi fisik (Waktunya berangkat, mati secara default).";
 "NSLocationWhenInUseUsageDescription" = "Dylan memberi tahu kapan harus berangkat ke meeting di lokasi fisik (Waktunya berangkat, mati secara default).";
+"NSAudioCaptureUsageDescription" = "Dylan membaca suara app musik untuk equalizer langsung, dan app yang kamu kecilkan untuk volume per app. Tidak ada yang direkam.";

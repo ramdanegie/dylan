@@ -689,3 +689,10 @@
 "leave.short" = "Leave";
 "leave.minutes" = "%d min";
 "leave.detail" = "Time to leave for %1$@ · %2$@ · %3$d min away";
+"feature.visualizer" = "Equalizer follows the music";
+"feature.visualizer.hint" = "Needs audio capture permission; animated without it";
+"feature.appVolume" = "Volume per app";
+"feature.appVolume.hint" = "Needs audio capture permission; under the output picker";
+"mixer.title" = "Volume per app";
+"mixer.empty" = "No app is playing sound";
+"mixer.volume" = "%@ volume";
