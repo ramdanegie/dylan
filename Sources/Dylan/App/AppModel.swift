@@ -117,6 +117,8 @@ final class AppModel {
     private var tickTimer: Timer?
     private var permissionTimers: [String: Timer] = [:]
     private var deadShellSince: [Int: Date] = [:]
+    /// Sessions whose "waiting for you" notice was already shown (P1: once, then history).
+    @ObservationIgnored private var waitingNotified: Set<String> = []
 
     private init() {
         let d = AppModel.store
@@ -344,6 +346,7 @@ final class AppModel {
     }
 
     func refreshAgentActivity(now: Date) {
+        waitingNotified = waitingNotified.filter { agents.sessions[$0]?.status == .waitingInput }
         let active = agents.active
         guard features.isEnabled(.agents), let first = active.first else { removeIfPresent("agents", now: now); return }
         var a = Activity(id: "agents", kind: .agent, priority: .p2, state: .running, symbol: "sparkle", label: "",
@@ -371,11 +374,17 @@ final class AppModel {
                 a.detail = agentSentence(tool: tool, detail: detail) + " · " + first.project
                 a.genericDetail = L("generic.agent")
             case .waitingInput:
+                // P1 shows 5 s and goes to history; it does not stay until Claude gets an answer.
+                guard !waitingNotified.contains(first.id) else { return }
+                waitingNotified.insert(first.id)
                 a.priority = .p1
                 a.state = .info
                 a.label = L("compact.waiting")
                 a.detail = L("agent.waiting") + " · " + first.project
                 a.genericDetail = L("agent.waiting")
+                a.url = first.id
+                center.post(a, now: now)
+                return
             default:
                 removeIfPresent("agents", now: now); return
             }
