@@ -49,11 +49,17 @@ import Testing
         #expect(await waiting.value == "AQB")
     }
 
-    @Test func wrongStateGivesNothing() async throws {
+    @Test func forgedOrSilentRequestsDoNotCancel() async throws {
         let port: UInt16 = 47_898
-        let waiting = Task.detached { SpotifyAPI.waitForCallback(state: "s1", port: port, timeout: 5) }
+        let waiting = Task.detached { SpotifyAPI.waitForCallback(state: "s1", port: port, timeout: 8) }
         try await Task.sleep(for: .milliseconds(200))
-        _ = try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/callback?code=AQB&state=forged")!)
-        #expect(await waiting.value == nil)
+        // A connection that never sends anything, then a page trying a forged state, then the real redirect.
+        let silent = socket(AF_INET, SOCK_STREAM, 0)
+        var addr = sockaddr_in(); addr.sin_family = sa_family_t(AF_INET); addr.sin_port = port.bigEndian; addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        _ = withUnsafePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(silent, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) } }
+        defer { close(silent) }
+        _ = try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/callback?code=EVIL&state=forged")!)
+        _ = try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/callback?code=AQB&state=s1")!)
+        #expect(await waiting.value == "AQB")
     }
 }

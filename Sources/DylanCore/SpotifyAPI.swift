@@ -60,11 +60,15 @@ public enum SpotifyAPI {
 
     /// The loopback callback's request line → the code, if the state matches. Errors (access_denied) → nil.
     public static func callbackCode(requestLine: String, state: String) -> String? {
+        guard let q = callbackParams(requestLine), q["state"] == state, let code = q["code"], !code.isEmpty else { return nil }
+        return code
+    }
+
+    /// Query of a `GET /callback?…` request line, or nil for anything else.
+    static func callbackParams(_ requestLine: String) -> [String: String]? {
         let parts = requestLine.split(separator: " ")
         guard parts.count >= 2, parts[0] == "GET", let c = URLComponents(string: "http://127.0.0.1" + parts[1]), c.path == "/callback" else { return nil }
-        let q = Dictionary((c.queryItems ?? []).map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { a, _ in a })
-        guard q["state"] == state, let code = q["code"], !code.isEmpty else { return nil }
-        return code
+        return Dictionary((c.queryItems ?? []).map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { a, _ in a })
     }
 
     // MARK: Endpoints
@@ -121,11 +125,17 @@ public enum SpotifyAPI {
             guard poll(&p, 1, Int32(max(0, deadline.timeIntervalSinceNow) * 1000)) > 0 else { return nil }
             let c = accept(fd, nil, nil)
             guard c >= 0 else { continue }
+            // A connection that sends nothing (browser preconnect) must not stall the sign-in.
+            var tv = timeval(tv_sec: 2, tv_usec: 0)
+            setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+            var one: Int32 = 1
+            setsockopt(c, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
             var buf = [UInt8](repeating: 0, count: 8192)
             let n = read(c, &buf, buf.count)
             let line = n > 0 ? String(decoding: buf[0..<n], as: UTF8.self).components(separatedBy: "\r\n").first ?? "" : ""
             let code = SpotifyAPI.callbackCode(requestLine: line, state: state)
-            let isCallback = line.hasPrefix("GET /callback")
+            // Only our own redirect (matching state) ends the wait; anything else on the port is answered and ignored.
+            let isCallback = SpotifyAPI.callbackParams(line)?["state"] == state
             let html = isCallback ? (code != nil ? "Dylan is connected to Spotify. You can close this tab." : "Spotify sign-in was cancelled.") : "Not found"
             let response = "HTTP/1.1 \(isCallback ? "200 OK" : "404 Not Found")\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\nContent-Length: \(html.utf8.count)\r\n\r\n\(html)"
             _ = response.withCString { write(c, $0, strlen($0)) }

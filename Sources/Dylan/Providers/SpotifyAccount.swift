@@ -16,6 +16,8 @@ final class SpotifyAccount {
     @ObservationIgnored private var access: (token: String, until: Date)?
     @ObservationIgnored private var currentURI: String?
     @ObservationIgnored private var connecting = false
+    /// Callers waiting for the refresh in flight: one refresh at a time, or a rotated refresh token is lost.
+    @ObservationIgnored private var refreshWaiters: [@MainActor (String) -> Void]?
 
     var clientID: String { AppModel.shared.spotifyClientID.trimmingCharacters(in: .whitespaces) }
 
@@ -60,6 +62,7 @@ final class SpotifyAccount {
             Task { @MainActor in
                 let s = SpotifyAccount.shared
                 guard let token else {
+                    s.refreshWaiters = nil
                     // invalid_grant: the refresh token was revoked; sign in again.
                     if code == 400 { s.disconnect() }
                     s.status = L("spotify.signInFailed")
@@ -69,13 +72,18 @@ final class SpotifyAccount {
                 s.access = (token.access, Date().addingTimeInterval(token.expiresIn - 60))
                 if !s.connected { s.connected = true; s.status = nil; s.loadPlaylists() }
                 then?(token.access)
+                let waiters = s.refreshWaiters ?? []
+                s.refreshWaiters = nil
+                waiters.forEach { $0(token.access) }
             }
         }.resume()
     }
 
     private func withToken(_ f: @escaping @MainActor (String) -> Void) {
         if let a = access, a.until > Date() { f(a.token); return }
+        if refreshWaiters != nil { refreshWaiters?.append(f); return }
         guard let r = Keychain.get("spotify.refresh"), !clientID.isEmpty else { return }
+        refreshWaiters = []
         post(SpotifyAPI.refreshBody(refreshToken: r, clientID: clientID), then: f)
     }
 
