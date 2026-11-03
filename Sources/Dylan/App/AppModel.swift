@@ -719,7 +719,8 @@ final class AppModel {
     }
 
     /// Kinds whose labels/details can carry file names, commands, script titles or meeting titles (PRD §F12).
-    static let sensitiveKinds: Set<ActivityKind> = [.agent, .command, .script, .notify, .meeting, .discord]
+    /// Port and CI values carry project, branch and workflow names.
+    static let sensitiveKinds: Set<ActivityKind> = [.agent, .command, .script, .notify, .meeting, .discord, .port, .ci]
 
     /// FR-67: without RPC, show "Discord is using the microphone" with a keybind toggle.
     func refreshDiscordSimple() {
@@ -763,6 +764,7 @@ final class AppModel {
         case .agent: return a.label   // "Izin", "Selesai", "Error": generic already
         case .meeting: return L("compact.meeting")
         case .notify: return L("generic.notify")
+        case .port, .ci: return a.label   // ":5173", "CI"
         default: return ""            // command & script titles can be anything
         }
     }

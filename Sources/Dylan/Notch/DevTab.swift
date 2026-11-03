@@ -67,7 +67,7 @@ struct DockerSection: View {
             ForEach(d.containers.prefix(3)) { c in
                 HStack(spacing: 8) {
                     Circle().fill(c.running ? DY.ok : DY.fg2).frame(width: 6, height: 6)
-                    SwiftUI.Text(c.name).font(DY.font(12, .regular)).foregroundStyle(DY.fg).lineLimit(1)
+                    SwiftUI.Text(model.presentationMode ? "" : c.name).font(DY.font(12, .regular)).foregroundStyle(DY.fg).lineLimit(1)
                     SwiftUI.Text(c.status).font(DY.font(10.5)).foregroundStyle(DY.fg2).lineLimit(1)
                     Spacer()
                     NotchButton(title: c.running ? L("docker.restart") : L("docker.start")) { d.docker(c.running ? "restart" : "start", c) }
@@ -100,9 +100,11 @@ struct GitHubSection: View {
                         }
                     }
                     .font(.system(size: 10, weight: .bold)).frame(width: 14)
-                    SwiftUI.Text(item.repo.split(separator: "/").last.map(String.init) ?? item.repo).font(DY.font(12, .regular)).foregroundStyle(DY.fg)
-                    SwiftUI.Text(item.run.branch).font(DY.mono).foregroundStyle(DY.fg2).lineLimit(1)
-                    SwiftUI.Text(item.run.name).font(DY.font(11, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
+                    if !model.presentationMode {
+                        SwiftUI.Text(item.repo.split(separator: "/").last.map(String.init) ?? item.repo).font(DY.font(12, .regular)).foregroundStyle(DY.fg)
+                        SwiftUI.Text(item.run.branch).font(DY.mono).foregroundStyle(DY.fg2).lineLimit(1)
+                        SwiftUI.Text(item.run.name).font(DY.font(11, .regular)).foregroundStyle(DY.fg2).lineLimit(1)
+                    }
                     Spacer()
                     if let u = URL(string: item.run.url) { NotchButton(title: L("button.open")) { model.perform(.openURL(u)) } }
                 }
@@ -116,7 +118,8 @@ struct WidgetSection: View {
     private var d: DevIntegrations { DevIntegrations.shared }
     private var model: AppModel { AppModel.shared }
     var body: some View {
-        if model.features.isEnabled(.widgets), !(d.widgets.isEmpty && d.widgetErrors.isEmpty) {
+        // Widget titles and values are whatever the script prints: hidden while presenting.
+        if model.features.isEnabled(.widgets), !model.presentationMode, !(d.widgets.isEmpty && d.widgetErrors.isEmpty) {
             SectionHeader(title: L("widgets.title"), trailing: "~/.config/dylan/widgets")
             HStack(spacing: 8) {
                 ForEach(d.widgets.keys.sorted(), id: \.self) { k in

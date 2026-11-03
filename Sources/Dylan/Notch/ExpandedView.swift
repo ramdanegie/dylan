@@ -84,7 +84,7 @@ struct HomeTab: View {
     var body: some View {
         VStack(spacing: 12) {
             if model.mirrorOn { MirrorView().frame(maxHeight: .infinity) }
-            else if model.scratchpadOpen { ScratchpadView().frame(maxHeight: .infinity) }
+            else if model.scratchpadOpen, !model.presentationMode { ScratchpadView().frame(maxHeight: .infinity) }
             else { columns }
             if model.features.isEnabled(.reminders) { QuickAddField() }
             if model.isDeveloper { RunningChips() }
@@ -641,7 +641,7 @@ struct PermissionCard: View {
             HStack(spacing: 6) {
                 Image(systemName: "sparkle").foregroundStyle(DY.action)
                 SwiftUI.Text(L("agent.needsPermission")).font(DY.font(13, .semibold)).foregroundStyle(.white)
-                SwiftUI.Text("\(session.project) · \(appName(session))").font(DY.font(11.5, .regular)).foregroundStyle(DY.fg2)
+                SwiftUI.Text(model.presentationMode ? appName(session) : "\(session.project) · \(appName(session))").font(DY.font(11.5, .regular)).foregroundStyle(DY.fg2)
                 Spacer()
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     let left = max(0, Int(model.permissionTimeout - ctx.date.timeIntervalSince(pending.createdAt)))
@@ -672,7 +672,7 @@ struct SessionRow: View {
             status.frame(width: 16)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    SwiftUI.Text(session.project).font(DY.font(12.5, .semibold)).foregroundStyle(.white)
+                    SwiftUI.Text(model.presentationMode ? L("generic.agent") : session.project).font(DY.font(12.5, .semibold)).foregroundStyle(.white)
                     SwiftUI.Text(appName(session)).font(DY.font(11, .regular)).foregroundStyle(DY.fg2)
                 }
                 SwiftUI.Text(line).font(DY.mono).foregroundStyle(DY.fg2).lineLimit(1)
