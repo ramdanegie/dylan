@@ -107,6 +107,7 @@ enum Snapshot {
                                        value: L("faceUnlock.off"), detail: L("faceUnlock.offTooMany"), url: "faceunlock:history", startedAt: now), now: now)
                 m.notchState = .peek
             }),
+            ("whats-new", {}),
             ("D19-enroll-1", { Snapshot.enrollStep = 0 }),
             ("D19-enroll-3", { Snapshot.enrollStep = 2 }),
             ("D19-enroll-4", { Snapshot.enrollStep = 3 }),
@@ -154,6 +155,18 @@ enum Snapshot {
                 .frame(width: g.panelFrame.width, height: g.panelFrame.height)
                 .background(LinearGradient(colors: [Color(white: 0.85), Color(white: 0.7)], startPoint: .top, endPoint: .bottom))
                 .transaction { $0.animation = nil }
+            if name == "whats-new" {
+                // The bundled CHANGELOG is not next to a bare binary; read the repo copy.
+                let md = (try? String(contentsOfFile: lang == "id" ? "CHANGELOG.id.md" : "CHANGELOG.md", encoding: .utf8)) ?? ""
+                let r = ImageRenderer(content: ChangelogText(markdown: Changelog.section(md, version: "0.1.2") ?? "").padding(20)
+                    .frame(width: 480, alignment: .topLeading).background(Color(nsColor: .windowBackgroundColor)))
+                r.scale = 2
+                if let cg = r.cgImage, let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
+                    try? png.write(to: dir.appendingPathComponent("\(name)-\(lang).png"))
+                    print("✓ \(name)-\(lang).png")
+                }
+                continue
+            }
             if let step = Snapshot.enrollStep {
                 Snapshot.enrollStep = nil
                 let r = ImageRenderer(content: FaceEnrollView(done: {}, step: step).background(Color(nsColor: .windowBackgroundColor)))

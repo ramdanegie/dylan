@@ -35,6 +35,7 @@ cp Resources/io.github.ramdanegie.dylan.fan.plist "$APP/Contents/Library/LaunchD
 cp "$BIN/dylan-cli" "$APP/Contents/Helpers/dylan"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp -R Sources/Dylan/Resources/*.lproj "$APP/Contents/Resources/"
+cp CHANGELOG.md CHANGELOG.id.md "$APP/Contents/Resources/"   # What's New after an update
 
 ICONSET="design/Dyland Notch Mockups/icon/Dylan.iconset"
 # Rebuilt whenever an iconset file is newer than the .icns, so a new icon never stays stale.

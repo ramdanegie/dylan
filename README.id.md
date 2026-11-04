@@ -64,6 +64,8 @@ Developer mendapat **Mode Developer**: pantau agent AI, perintah yang lama, CI, 
 2. Buka, lalu seret **Dylan** ke **Applications**.
 3. Buka Dylan. Build uji belum dinotarisasi, jadi macOS tidak bisa memeriksanya: klik **Done**, lalu buka **System Settings → Privacy & Security** dan klik **Open Anyway**. (Atau jalankan `xattr -dr com.apple.quarantine /Applications/Dylan.app`.)
 
+Dylan bisa memberi tahu saat ada versi baru (Settings → Tentang → Periksa pembaruan) dan menampilkan perubahan setelah tiap update; lihat [CHANGELOG.id.md](CHANGELOG.id.md).
+
 Dylan ada di menu bar dan di notch. Izin (Screen Recording, Accessibility, Kalender…) hanya diminta saat kamu menyalakan fitur yang membutuhkannya.
 
 ## Live Activity API
@@ -96,7 +98,7 @@ cd dylan
 ## Privasi
 
 - Lokal: tanpa telemetry, analytics, akun, atau server.
-- Akses jaringan opt-in per fitur: GitHub (lewat `gh`), cuaca, lirik, Spotify, tukar token Discord, waktu tempuh Apple Maps.
+- Akses jaringan opt-in per fitur: GitHub (lewat `gh`), cuaca, lirik, Spotify, tukar token Discord, waktu tempuh Apple Maps, dan cek update (Settings → Tentang; hanya mengambil daftar rilis).
 - Fitur developer mati secara default dan tidak meminta izin apa pun sampai Mode Developer dinyalakan.
 - CPU saat idle di bawah 1%.
 
