@@ -131,6 +131,8 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("thermal", .devices, [95], .v1_1, built: true),
         .init("fanPresets", .devices, [96, 98, 99], .v1_1, built: true, req: true),
         .init("fanAlerts", .devices, [97], .v1_1, built: true),
+        .init("storage", .devices, [100, 101, 102, 103], .v1_1, built: true),
+        .init("settingsGroups", .notch, [104], .v1_1, built: true),
         // Security
         .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, built: true, experimental: true, req: true),
         // Developer

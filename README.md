@@ -37,6 +37,7 @@ Developers get a **Developer Mode** on top: watch AI coding agents, long-running
 - 🎧 **Discord.** Who is talking in voice, mute, deafen, and leave from the notch.
 - 🔋 **Devices.** Volume and brightness HUD, charging animation, AirPods battery, camera and microphone indicators, Focus status.
 - 🗓️ **Everyday helpers.** Meeting countdown with a Join button, "time to leave" for in-person meetings, reminders, timer, a file shelf with AirDrop, clipboard history, color picker, keep awake, weather, download progress.
+- 🧹 **Optimize Storage.** Scan caches, logs, old downloads, large files, and iPhone backups (plus Xcode data and old `node_modules` in Developer Mode), then check what to remove. Each item shows its size, location, and what happens if you remove it. Things that rebuild themselves are deleted; your own files go to the Trash. The notch warns you when the disk is almost full.
 - 🙈 **Presentation Mode.** Hides sensitive content while you share your screen, and can turn on by itself when sharing starts.
 - 🌏 **English and Bahasa Indonesia**, following your system language or your choice.
 

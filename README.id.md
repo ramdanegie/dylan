@@ -37,6 +37,7 @@ Developer mendapat **Mode Developer**: pantau agent AI, perintah yang lama, CI, 
 - 🎧 **Discord.** Siapa yang sedang bicara di voice, mute, deafen, dan keluar dari notch.
 - 🔋 **Perangkat.** HUD volume dan brightness, animasi charging, baterai AirPods, indikator kamera dan mikrofon, status Focus.
 - 🗓️ **Bantuan sehari-hari.** Countdown meeting dengan tombol Join, "waktunya berangkat" untuk meeting di lokasi fisik, reminder, timer, shelf file dengan AirDrop, riwayat clipboard, color picker, keep awake, cuaca, progres download.
+- 🧹 **Optimasi Penyimpanan.** Pindai cache, log, Downloads lama, file besar, dan cadangan iPhone (plus data Xcode dan `node_modules` lama di Mode Developer), lalu centang yang mau dihapus. Tiap item menampilkan ukuran, lokasi, dan dampaknya. Yang dibuat ulang otomatis dihapus; file milikmu dipindah ke Trash. Notch memberi tahu saat disk hampir penuh.
 - 🙈 **Mode Presentasi.** Menyembunyikan isi sensitif saat share layar, dan bisa menyala sendiri ketika share dimulai.
 - 🌏 **Bahasa Indonesia dan English**, mengikuti bahasa sistem atau pilihanmu.
 

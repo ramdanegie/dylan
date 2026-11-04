@@ -248,6 +248,11 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-97 | Status kipas di notch (D47): Compact P3 saat mode manual; Peek P1 "terlalu panas" saat ≥ 95 °C selama 30 dtk, menyebut proses terberat dan tombol Kipas maks (muncul lagi paling cepat 15 menit); Compact P2 "Kembali ke Otomatis"; status manual dan "Kembali ke Otomatis" bisa disembunyikan dari notch (Settings) | Should |
 | FR-98 | Settings Suhu & Kipas (D48): mode per kipas (Otomatis, RPM tetap, Kurva), kurva 4 titik pada sensor pilihan dengan respons Cepat/Halus (rata-rata 10 dtk), kembali otomatis saat suhu turun (< 65 °C selama 5 menit), ambang peringatan, suhu di menu bar, °C/°F | Should |
 | FR-99 | Helper kipas (D49): daemon `SMAppService` yang menulis `F<n>Md`/`F<n>Tg` ke SMC, dipasang sekali dengan password admin; hanya menerima Dylan yang ditandatangani tim yang sama; tidak pernah di bawah RPM minimum pabrik; kembali ke Otomatis bila Dylan keluar, crash, sleep, atau diam 10 dtk; tidak menyentuh kipas yang diatur app lain | Should |
+| FR-100 | **Optimasi penyimpanan:** pindai folder rumah (hanya baca) dan tampilkan daftar bercentang per kategori; tiap item punya judul, ukuran, lokasi (bisa dibuka di Finder), dan dampak bila dihapus (Rendah/Sedang/Tinggi + penjelasan) | Should |
+| FR-101 | Kategori: cache app, log, Trash, file besar & lama di Downloads, file besar milik user, cadangan iPhone, capture Dylan; [Dev] Xcode DerivedData/Archives/DeviceSupport, cache simulator, cache npm/Gradle, `node_modules` lama | Should |
+| FR-102 | Bersihkan dengan konfirmasi: yang bisa dibuat ulang (cache, log, build) dihapus permanen; file milik user dipindah ke Trash; default hanya item berdampak rendah yang dicentang; cache app yang sedang berjalan tidak dicentang | Should |
+| FR-103 | Peringatan di notch saat ruang kosong tinggal sedikit (default < 10 GB atau < 10 %), dicek tiap 30 menit, dengan tombol Bersihkan | Should |
+| FR-104 | Settings dikelompokkan per kegunaan di sidebar (Notch, Sistem, Alat, Developer) | Should |
 | FR-46 | Scratchpad: catatan cepat dalam satu hover | Could |
 | FR-79 | Kamera cermin: preview kamera depan di Expanded untuk cek penampilan sebelum meeting; kamera hanya aktif selama panel terbuka | Could |
 | FR-81 | "Waktunya berangkat": untuk event dengan lokasi fisik, hitung waktu tempuh (MapKit) dan beri P1 saat harus berangkat | Could |
@@ -847,6 +852,12 @@ Protokol dan perintah ada di §2.6.
 - **Hasil**: disalin ke clipboard (bisa diatur), file asli disimpan di riwayat `~/Library/Application Support/Dylan/Captures` (0700), opsional juga ke `~/Pictures/Dylan`. Notch P2 dengan thumbnail yang bisa diseret.
 - **Studio & editor** memakai file yang sama; ekspor tidak pernah menimpa file asli, jadi edit bisa diulang.
 - **Privasi**: semua lokal, tanpa jaringan; blur otomatis (opsional, default mati) memakai detektor rahasia yang sama dengan Clipboard; riwayat dihapus otomatis setelah masa simpan.
+
+### F25 — Optimasi penyimpanan (FR-100 s/d FR-103)
+- **Pindai** hanya di folder rumah user, tanpa root dan tanpa mengikuti symlink. Ukuran = ukuran yang dialokasikan di disk. Package (mis. Photos Library, Music Library, `.app`) tidak pernah dipecah dan tidak pernah dianggap "file besar". Folder yang dilindungi macOS (butuh Full Disk Access) dilewati dengan keterangan.
+- **Dampak:** Rendah = dibuat ulang otomatis (cache, log, build); Sedang = perlu unduh/build ulang atau tidak bisa dipulihkan tapi bukan karya user (Trash, Archives); Tinggi = data milik user (Downloads, file besar, cadangan iPhone).
+- **Hapus:** item berdampak Rendah dihapus permanen supaya ruangnya benar-benar kembali; item Sedang/Tinggi dipindah ke Trash (bisa dikembalikan), kecuali "Kosongkan Trash" itu sendiri. Path dicek ulang tepat sebelum dihapus (masih di dalam folder rumah, bukan symlink, bukan folder rumah itu sendiri).
+- **Default:** hanya item Rendah yang dicentang, kecuali cache app yang sedang berjalan.
 
 ### F24 — Suhu & Kipas (FR-95 s/d FR-99, design D45–D49)
 - **Baca** tanpa root: suhu dari sensor IOHID (`PMU tdie*` CPU, `PMU TP*g` GPU, `NAND` SSD, `gas gauge battery`), kipas dari SMC (`FNum`, `F<n>Ac/Mn/Mx/Md/Tg`). Polling 2 dtk saat tab Suhu terbuka, 10 dtk di latar hanya bila mode bukan Otomatis atau peringatan panas aktif. Spike M1 Pro (macOS 27.2): `F<n>Md` ui8, `F<n>Tg` flt, tanpa key `Ftst`.

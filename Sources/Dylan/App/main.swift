@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Hotkeys.setScreenshotKeys(f.isEnabled(.screenshot))
         f.isEnabled(.thermal) ? FanProvider.shared.start() : FanProvider.shared.stop()
         Hotkeys.setFanKeys(f.isEnabled(.thermal) && FanProvider.shared.hasFans)
+        f.isEnabled(.storage) ? StorageProvider.shared.start() : StorageProvider.shared.stop()
         refreshStatusItem()
         f.isEnabled(.lockScreen) ? LockScreenProvider.shared.start() : LockScreenProvider.shared.stop()
         FaceUnlockProvider.shared.start()
@@ -151,6 +152,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(NSMenuItem(title: L("faceUnlock.turnOff"), action: #selector(disableFaceUnlock), keyEquivalent: ""))
         }
         menu.addItem(.separator())
+        if AppModel.shared.features.isEnabled(.storage) {
+            menu.addItem(NSMenuItem(title: L("storage.menu"), action: #selector(openStorage), keyEquivalent: ""))
+        }
         menu.addItem(NSMenuItem(title: L("about.menu"), action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("update.check"), action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
@@ -222,6 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showAbout() { About.showPanel() }
+    @objc private func openStorage() { StorageWindow.show() }
     @objc private func checkForUpdates() { UpdateService.shared.check(manual: true); UpdateWindow.show() }
     @objc private func pickFanPreset(_ sender: NSMenuItem) { FanProvider.shared.setPreset(FanPreset.allCases[sender.tag]) }
     @objc private func openFanSettings() { SettingsWindow.show(section: .thermal) }
@@ -281,6 +286,52 @@ let arguments = CommandLine.arguments
 if let i = arguments.firstIndex(of: "--snapshot"), i + 1 < arguments.count {
     if let l = arguments.firstIndex(of: "--lang"), l + 1 < arguments.count { L10n.forcedLanguage = arguments[l + 1] }
     Snapshot.render(to: URL(fileURLWithPath: arguments[i + 1]))
+    exit(0)
+}
+// Self-test of the Clean path on a throwaway home folder in /private/tmp (never the user's files or Trash).
+if arguments.contains("--storage-selftest") {
+    let fm = FileManager.default
+    let base = "/private/tmp/dylan-storage-selftest-\(getpid())"
+    func mk(_ rel: String, _ bytes: Int = 4096) {
+        let path = base + "/" + rel
+        try? fm.createDirectory(atPath: (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+        fm.createFile(atPath: path, contents: Data(count: bytes))
+    }
+    mk("Library/Caches/com.test.app/blob", 2_000_000)
+    mk(".Trash/old.bin")
+    mk("Downloads/keep.txt")
+    try? fm.createSymbolicLink(atPath: base + "/Library/Caches/link", withDestinationPath: base + "/Downloads")
+    let scanner = StorageScanner(home: base, running: [], capturesDir: base + "/none")
+    let trashRow = scanner.scan(.trash).0
+    mk(".Trash/new.bin")   // arrives after the scan: must survive "Empty Trash"
+    let cache = StorageItem(category: .appCaches, title: "test", path: base + "/Library/Caches/com.test.app", size: 1)
+    let link = StorageItem(category: .appCaches, title: "link", path: base + "/Library/Caches/link", size: 1)
+    let r = StorageCleaner(home: base).clean([cache] + trashRow + [link])
+    let checks: [(String, Bool)] = [
+        ("cache deleted", !fm.fileExists(atPath: cache.path)),
+        ("trash member removed", !fm.fileExists(atPath: base + "/.Trash/old.bin")),
+        ("file trashed after the scan kept", fm.fileExists(atPath: base + "/.Trash/new.bin")),
+        ("symlink refused", r.failed == 1 && fm.fileExists(atPath: base + "/Downloads/keep.txt")),
+        ("trash folder kept", fm.fileExists(atPath: base + "/.Trash")),
+    ]
+    for (name, ok) in checks { print(ok ? "PASS" : "FAIL", name) }
+    try? fm.removeItem(atPath: base)
+    exit(checks.allSatisfy(\.1) ? 0 : 1)
+}
+// Read-only: prints what Optimize Storage would offer, deletes nothing.
+if arguments.contains("--storage-scan") {
+    let s = StorageScanner(home: NSHomeDirectory(), running: Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)),
+                           capturesDir: ScreenshotService.historyDir.path)
+    for c in StorageCategory.allCases {
+        let t0 = Date()
+        let (items, denied) = s.scan(c)
+        print(String(format: "  (%.1f s)", Date().timeIntervalSince(t0)))
+        let total = items.reduce(Int64(0)) { $0 + $1.size }
+        print("\(c.rawValue) [\(c.impact) → \(c.action)] \(items.count) items, \(StorageProvider.bytes(total))\(denied ? " (no access)" : "")")
+        for i in items.sorted(by: { $0.size > $1.size }).prefix(5) {
+            print("   \(i.selectedByDefault ? "[x]" : "[ ]") \(StorageProvider.bytes(i.size))  \(i.title)  \((i.path as NSString).abbreviatingWithTildeInPath)\(i.note.map { "  (\($0))" } ?? "")")
+        }
+    }
     exit(0)
 }
 

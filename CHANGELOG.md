@@ -2,6 +2,15 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Added
+- Optimize Storage (menu bar, Settings → Storage): scan caches, logs, old downloads, large files, iPhone backups and, in Developer Mode, Xcode data, package caches and old node_modules. Check what to remove; each item shows its size, location and what happens if you remove it. Things that rebuild themselves are deleted, your own files go to the Trash.
+- A notch warning when the disk is almost full, with a Clean up button.
+
+### Changed
+- Settings sidebar grouped by purpose: Notch, System, Tools, Developer, Info.
+
 ## [0.1.4] - 2026-11-04
 
 ### Added

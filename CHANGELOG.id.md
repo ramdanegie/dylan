@@ -2,6 +2,15 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Ditambahkan
+- Optimasi Penyimpanan (menu bar, Settings → Penyimpanan): pindai cache, log, Downloads lama, file besar, cadangan iPhone, dan di Mode Developer data Xcode, cache paket, serta node_modules lama. Centang yang mau dihapus; tiap item menampilkan ukuran, lokasi, dan dampaknya. Yang dibuat ulang otomatis dihapus, file milikmu dipindah ke Trash.
+- Peringatan di notch saat disk hampir penuh, dengan tombol Bersihkan.
+
+### Diubah
+- Sidebar Settings dikelompokkan per kegunaan: Notch, Sistem, Alat, Developer, Info.
+
 ## [0.1.4] - 2026-11-04
 
 ### Ditambahkan
