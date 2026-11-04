@@ -1057,3 +1057,6 @@
 "update.notNotarized" = "This build is not notarized: after installing, open System Settings → Privacy & Security → Open Anyway.";
 "shot.openInFinder" = "Click to open in Finder";
 "shot.finder" = "Finder";
+"about.madeBy" = "Made by";
+"about.madeByName" = "Made by %@";
+"about.menu" = "About Dylan";

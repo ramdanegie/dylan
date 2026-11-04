@@ -2,6 +2,11 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Added
+- About shows the author, Egie Ramdan, with links to GitHub and the source code (Settings → About, and "About Dylan" in the menu bar).
+
 ## [0.1.3] - 2026-11-04
 
 ### Added

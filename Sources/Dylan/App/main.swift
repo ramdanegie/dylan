@@ -151,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(NSMenuItem(title: L("faceUnlock.turnOff"), action: #selector(disableFaceUnlock), keyEquivalent: ""))
         }
         menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: L("about.menu"), action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("update.check"), action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: L("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -220,6 +221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return m
     }
 
+    @objc private func showAbout() { About.showPanel() }
     @objc private func checkForUpdates() { UpdateService.shared.check(manual: true); UpdateWindow.show() }
     @objc private func pickFanPreset(_ sender: NSMenuItem) { FanProvider.shared.setPreset(FanPreset.allCases[sender.tag]) }
     @objc private func openFanSettings() { SettingsWindow.show(section: .thermal) }

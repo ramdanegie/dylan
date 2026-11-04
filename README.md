@@ -124,6 +124,10 @@ Issues and pull requests are welcome, from bug reports to new notch activities.
 
 If Dylan is useful to you, a ⭐ helps other people find it.
 
+## Author
+
+Made by **Egie Ramdan** · [github.com/ramdanegie](https://github.com/ramdanegie)
+
 ## License
 
 [MIT](LICENSE)
