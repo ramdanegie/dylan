@@ -240,7 +240,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-89 | Hasil capture di notch sebagai P2 (D40): thumbnail bisa diseret ke app lain atau Shelf, langsung disalin; tombol Percantik, Simpan, Pin (jendela melayang), Teks. Riwayat lokal (default 30 hari) dan ⌥⇧E membuka capture terakhir | Should |
 | FR-90 | Capture teks (OCR) ⌥⇧T: teks area langsung disalin (Vision, Indonesia & English, di Mac); QR code yang terbaca ditawarkan sebagai link | Should |
 | FR-91 | Scrolling capture ⌥⇧4 (D42): pilih area lalu scroll; potongan disambung, header lengket dibuang, batas 20.000 px, Esc menyimpan yang sudah terambil | Could |
-| FR-92 | Editor anotasi (D41): panah, kotak, teks, sorot, blur/piksel, nomor urut, crop, ambil warna; undo/redo; blur otomatis data sensitif (detektor rahasia Clipboard); ekspor PNG @2x / JPG / WebP | Could |
+| FR-92 | Editor anotasi (D41): panah, kotak, teks, sorot, blur/piksel, nomor urut, crop, ambil warna; undo/redo; Salin ⌘C langsung; blur otomatis data sensitif opsional (detektor rahasia Clipboard, default mati supaya Salin tidak menunggu OCR); ekspor PNG @2x / JPG / WebP | Could |
 | FR-93 | Studio percantik (D44): bingkai (macOS, browser, kaca), sudut, bayangan, rasio + preset sosial (X, Instagram, LinkedIn), latar gradien/mesh + grain, tata letak 3D, jumlah salinan, ukuran; Salin hasil siap tempel | Could |
 | FR-94 | Rekam layar dari menu Screenshot (D38: "Segera") | Won't (v1.x) |
 | FR-95 | **Suhu & Kipas:** tab Suhu di notch (D45) dengan suhu CPU, GPU, SSD, baterai (IOHID, tanpa root), RPM tiap kipas dan grafik CPU; hanya muncul di Mac yang punya kipas dan bisa disembunyikan | Should |
@@ -846,7 +846,7 @@ Protokol dan perintah ada di §2.6.
 - **Mode** dipilih di bar berbentuk notch (Area 1, Jendela 2, Layar 3, Scroll 4, Teks 5; Spasi ganti mode, Esc batal, ⇧ kunci rasio, ⌥ dari tengah, panah geser 1 px). Timer menunda pembekuan layar.
 - **Hasil**: disalin ke clipboard (bisa diatur), file asli disimpan di riwayat `~/Library/Application Support/Dylan/Captures` (0700), opsional juga ke `~/Pictures/Dylan`. Notch P2 dengan thumbnail yang bisa diseret.
 - **Studio & editor** memakai file yang sama; ekspor tidak pernah menimpa file asli, jadi edit bisa diulang.
-- **Privasi**: semua lokal, tanpa jaringan; blur otomatis memakai detektor rahasia yang sama dengan Clipboard; riwayat dihapus otomatis setelah masa simpan.
+- **Privasi**: semua lokal, tanpa jaringan; blur otomatis (opsional, default mati) memakai detektor rahasia yang sama dengan Clipboard; riwayat dihapus otomatis setelah masa simpan.
 
 ### F24 — Suhu & Kipas (FR-95 s/d FR-99, design D45–D49)
 - **Baca** tanpa root: suhu dari sensor IOHID (`PMU tdie*` CPU, `PMU TP*g` GPU, `NAND` SSD, `gas gauge battery`), kipas dari SMC (`FNum`, `F<n>Ac/Mn/Mx/Md/Tg`). Polling 2 dtk saat tab Suhu terbuka, 10 dtk di latar hanya bila mode bukan Otomatis atau peringatan panas aktif. Spike M1 Pro (macOS 27.2): `F<n>Md` ui8, `F<n>Tg` flt, tanpa key `Ftst`.

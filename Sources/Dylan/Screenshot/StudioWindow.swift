@@ -511,7 +511,10 @@ struct StudioView: View {
             }
             .frame(width: 80)
             Button(L("shot.save")) { model.saveFile() }.disabled(model.blurPending)
-            Button(L("shot.copy")) { model.copy() }.keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent).disabled(model.blurPending)
+            Button { model.copy() } label: {
+                HStack(spacing: 6) { Text(L("shot.copy")); Text("⌘C").opacity(0.75) }
+            }
+            .keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent).disabled(model.blurPending)
         }
         .padding(.horizontal, 12).frame(height: 46)
     }
@@ -623,6 +626,8 @@ struct StudioView: View {
     private func handleKey(_ key: String, _ flags: NSEvent.ModifierFlags) -> Bool {
         if flags.contains(.command) {
             if key == "z" { flags.contains(.shift) ? model.redo() : model.undo(); return true }
+            // ⌘C copies the edited picture (text fields keep their own ⌘C: KeyCatcher skips them).
+            if key == "c", !model.blurPending { model.copy(); return true }
             return false
         }
         guard model.annotating, let t = StudioModel.Tool.allCases.first(where: { $0.key == key }) else { return false }

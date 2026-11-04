@@ -877,7 +877,7 @@
 "shot.beautifyHistory" = "Beautify & history";
 "shot.defaultBackground" = "Default background";
 "shot.autoBeautify" = "Beautify automatically when copying";
-"shot.autoBlur" = "Blur sensitive data automatically";
+"shot.autoBlur" = "Blur sensitive data automatically (Copy waits for the scan)";
 "shot.keepHistory" = "Keep history";
 "shot.days" = "%d days";
 "shot.forever" = "Forever";

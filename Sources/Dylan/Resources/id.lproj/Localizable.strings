@@ -877,7 +877,7 @@
 "shot.beautifyHistory" = "Percantik & riwayat";
 "shot.defaultBackground" = "Latar default";
 "shot.autoBeautify" = "Percantik otomatis saat Salin";
-"shot.autoBlur" = "Blur data sensitif otomatis";
+"shot.autoBlur" = "Blur data sensitif otomatis (Salin menunggu pemindaian)";
 "shot.keepHistory" = "Simpan riwayat";
 "shot.days" = "%d hari";
 "shot.forever" = "Selamanya";
