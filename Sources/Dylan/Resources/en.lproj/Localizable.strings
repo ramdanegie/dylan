@@ -976,3 +976,4 @@
 "fan.sheetWarning" = "Faster fans make the Mac louder and use more battery. Quiet can make the Mac limit performance when it is hot.";
 "fan.sheetRemoveLater" = "Remove the helper later in Settings";
 "fan.monitorOnly" = "Just monitor temperatures";
+"fan.notchInfo" = "Fan info in the notch (manual mode, back to Automatic)";

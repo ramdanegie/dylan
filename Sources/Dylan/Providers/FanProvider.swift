@@ -73,6 +73,8 @@ final class FanProvider {
     var warnOn: Bool { d.object(forKey: "fan.warnOn") as? Bool ?? true }
     var warnAt: Double { d.object(forKey: "fan.warnAt") as? Double ?? 95 }
     var menuTemp: Bool { d.bool(forKey: "fan.menuTemp") }
+    /// Manual-mode status and "back to Auto" in the notch (D47); the heat warning has its own switch.
+    var notchInfo: Bool { d.object(forKey: "fan.notchInfo") as? Bool ?? true }
     var fahrenheit: Bool { d.bool(forKey: "fan.fahrenheit") }
 
     func format(_ c: Double?) -> String {
@@ -269,7 +271,8 @@ final class FanProvider {
 
     // MARK: Notch (D47)
 
-    private func postManual() {
+    func postManual() {
+        guard notchInfo, preset != .auto else { AppModel.shared.center.remove("fan-manual", now: Date()); return }
         // Stays while manual (upsert, not post: a posted activity expires after its hold).
         let rpm = fans.first.map { Self.rpm($0.rpm) } ?? ""
         AppModel.shared.center.upsert(Activity(
@@ -279,6 +282,7 @@ final class FanProvider {
     }
 
     private func postAutoResult() {
+        guard notchInfo else { return }
         let now = Date()
         AppModel.shared.center.post(Activity(
             id: "fan-auto", kind: .thermal, priority: .p2, state: .success, symbol: "checkmark",
