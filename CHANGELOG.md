@@ -2,6 +2,15 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Added
+- Screen recording: `⌥⇧5` or Screenshot ▸ Record Screen, then drag an area or click for the whole screen. Saved as MP4 next to your screenshots, with system audio and, if you turn it on, the microphone. The notch shows a red dot and the time; stop from the notch, the menu or `⌥⇧5`.
+
+### Changed
+- Settings redesign (design D50): every page opens with a drawn banner of Dylan's island, a serif title, warm neutrals and Cermin's teal; groups are white cards. Optimize Storage, updates and capture history follow the same look.
+- New app icon "Circuit".
+
 ## [0.1.5] - 2026-11-04
 
 ### Added

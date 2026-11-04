@@ -242,7 +242,7 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-91 | Scrolling capture ⌥⇧4 (D42): pilih area lalu scroll; potongan disambung, header lengket dibuang, batas 20.000 px, Esc menyimpan yang sudah terambil | Could |
 | FR-92 | Editor anotasi (D41): panah, kotak, teks, sorot, blur/piksel, nomor urut, crop, ambil warna; undo/redo; Salin ⌘C langsung; blur otomatis data sensitif opsional (detektor rahasia Clipboard, default mati supaya Salin tidak menunggu OCR); ekspor PNG @2x / JPG / WebP | Could |
 | FR-93 | Studio percantik (D44): bingkai (macOS, browser, kaca), sudut, bayangan, rasio + preset sosial (X, Instagram, LinkedIn), latar gradien/mesh + grain, tata letak 3D, jumlah salinan, ukuran; Salin hasil siap tempel | Could |
-| FR-94 | Rekam layar dari menu Screenshot (D38: "Segera") | Won't (v1.x) |
+| FR-94 | Rekam layar atau area ke MP4 (⌥⇧5, mode 6 di bar capture), suara sistem dan mikrofon opsional, indikator ● dan waktu di notch, Stop dari notch/menu/⌥⇧5 | Should |
 | FR-95 | **Suhu & Kipas:** tab Suhu di notch (D45) dengan suhu CPU, GPU, SSD, baterai (IOHID, tanpa root), RPM tiap kipas dan grafik CPU; hanya muncul di Mac yang punya kipas dan bisa disembunyikan | Should |
 | FR-96 | Preset kipas Otomatis (default, dikendalikan macOS), Senyap, Seimbang, Performa, Maksimal, dan Kurva, dari notch, menu bar Fan ▸ (D46), dan shortcut ⌃⌥⇧0–4; titik kecil di ikon menu bar saat bukan Otomatis | Should |
 | FR-97 | Status kipas di notch (D47): Compact P3 saat mode manual; Peek P1 "terlalu panas" saat ≥ 95 °C selama 30 dtk, menyebut proses terberat dan tombol Kipas maks (muncul lagi paling cepat 15 menit); Compact P2 "Kembali ke Otomatis"; status manual dan "Kembali ke Otomatis" bisa disembunyikan dari notch (Settings) | Should |
@@ -851,6 +851,7 @@ Protokol dan perintah ada di §2.6.
 - **Mode** dipilih di bar berbentuk notch (Area 1, Jendela 2, Layar 3, Scroll 4, Teks 5; Spasi ganti mode, Esc batal, ⇧ kunci rasio, ⌥ dari tengah, panah geser 1 px). Timer menunda pembekuan layar.
 - **Hasil**: disalin ke clipboard (bisa diatur), file asli disimpan di riwayat `~/Library/Application Support/Dylan/Captures` (0700), opsional juga ke `~/Pictures/Dylan`. Notch P2 dengan thumbnail yang bisa diseret.
 - **Studio & editor** memakai file yang sama; ekspor tidak pernah menimpa file asli, jadi edit bisa diulang.
+- **Rekam layar (FR-94)**: ⌥⇧5 atau menu → bar capture di mode Rekam: seret area atau klik untuk seluruh layar. `SCStream` + `SCRecordingOutput` (macOS 15) ke MP4 H.264 di folder screenshot; sisi dibulatkan genap dan dikecilkan bila > 4096 px. Jendela Dylan tidak ikut terekam; area diberi bingkai merah yang juga tidak terekam. Suara sistem (default nyala), mikrofon (default mati, izin mikrofon diminta saat pertama), klik mouse, 30/60 fps di Settings → Screenshot. Notch P1: ● merah + waktu, tombol Hentikan. Quit di tengah rekaman menunggu file selesai ditulis.
 - **Privasi**: semua lokal, tanpa jaringan; blur otomatis (opsional, default mati) memakai detektor rahasia yang sama dengan Clipboard; riwayat dihapus otomatis setelah masa simpan.
 
 ### F25 — Optimasi penyimpanan (FR-100 s/d FR-103)

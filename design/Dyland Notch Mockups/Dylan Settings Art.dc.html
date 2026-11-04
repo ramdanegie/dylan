@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#E8E5DF;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:#00838A}a:hover{color:#006A70}
+</style>
+</helmet>
+<section style="padding:72px; display:flex; flex-direction:column; gap:56px; width:2040px; color:#1d1d1f">
+
+<div style="display:flex; flex-direction:column; gap:12px; max-width:1100px">
+  <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.14em; color:#6b6b70">DYLAN · ART DIRECTION · SEKELUARGA DENGAN CERMIN</div>
+  <div style="font-family:'New York',ui-serif,'Iowan Old Style',Georgia,serif; font-size:60px; line-height:1.05; letter-spacing:-.01em">Settings yang <em>lebih tenang</em></div>
+  <div style="font-size:15.5px; line-height:1.55; color:#4a4a4f; text-wrap:pretty">Tiap halaman dibuka dengan sebuah ilustrasi: pulau Dylan di cakrawala, orb berwarna, dan pantulannya. Judulnya serif dengan satu kata italic, netralnya hangat, dan aksennya teal Cermin. Semua item sidebar bisa diklik, begitu juga toggle, segmen, dan pilihan Light/Dark.</div>
+</div>
+
+<div style="display:grid; grid-template-columns:1240px minmax(0,1fr); gap:56px; align-items:start">
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:12px">
+      <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:3px 7px; border-radius:6px; background:#1d1d1f; color:#fff">D50</span>
+      <span style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">Settings · <em>{{ pg.n }}</em></span>
+      <span style="margin-left:auto; display:flex; padding:2px; border-radius:9px; background:#DCD8D1">
+        <sc-for list="{{ themes }}" as="o" hint-placeholder-count="2"><span onClick="{{ o.pick }}" style="height:26px; padding:0 14px; border-radius:7px; display:flex; align-items:center; cursor:pointer; font-size:12.5px; background:{{ o.bg }}; box-shadow:{{ o.sh }}; font-weight:{{ o.fw }}">{{ o.label }}</span></sc-for>
+      </span>
+    </div>
+
+    <div style="position:relative; width:1240px; height:840px; border-radius:16px; overflow:hidden; background:{{ th.content }}; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 30px 80px rgba(40,30,20,.22); display:grid; grid-template-columns:252px minmax(0,1fr); color:{{ th.ink }}; transition:background .25s">
+      <div style="background:{{ th.side }}; padding:16px 12px; display:flex; flex-direction:column; border-right:.5px solid {{ th.line }}; overflow:auto">
+        <div style="display:flex; gap:8px; padding:2px 8px 14px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div>
+        <sc-for list="{{ side }}" as="g" hint-placeholder-count="6">
+          <div style="display:flex; flex-direction:column; gap:1px; padding-top:{{ g.pt }}px">
+            <sc-if value="{{ g.label }}" hint-placeholder-val="{{ false }}"><div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:10px; letter-spacing:.14em; color:{{ th.ink3 }}; padding:4px 10px 5px">{{ g.label }}</div></sc-if>
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+              <div onClick="{{ it.pick }}" style="height:32px; padding:0 10px; border-radius:9px; display:flex; align-items:center; gap:11px; cursor:pointer; background:{{ it.bg }}; box-shadow:{{ it.sh }}; font-size:13.5px; font-weight:{{ it.fw }}; white-space:nowrap; overflow:hidden">
+                <span style="width:15px; height:15px; border-radius:8px; background:{{ it.orb }}; box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08); flex:none"></span>{{ it.name }}
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="overflow:auto; padding:22px 30px 30px; display:flex; flex-direction:column; gap:20px">
+        <div style="position:relative; height:184px; border-radius:22px; overflow:hidden; background:{{ th.bTop }}; flex:none; box-shadow:inset 0 0 0 .5px {{ th.line }}">
+          <div style="position:absolute; left:0; right:0; top:0; height:62%; overflow:hidden">
+            <div style="position:absolute; left:{{ pg.x1 }}%; top:-30px; width:380px; height:260px; transform:translateX(-50%); border-radius:50%; background:radial-gradient(closest-side, {{ pg.c1 }}, transparent); opacity:{{ th.orb }}"></div>
+            <div style="position:absolute; left:{{ pg.x2 }}%; top:-50px; width:340px; height:240px; transform:translateX(-50%); border-radius:50%; background:radial-gradient(closest-side, {{ pg.c2 }}, transparent); opacity:{{ th.orb }}"></div>
+          </div>
+          <div style="position:absolute; left:0; right:0; top:62%; bottom:0; overflow:hidden; background:{{ th.bLow }}">
+            <div style="position:absolute; inset:0; -webkit-mask:linear-gradient(180deg, #000 0%, transparent 55%); mask:linear-gradient(180deg, #000 0%, transparent 55%); opacity:.28">
+              <div style="position:absolute; left:{{ pg.x1 }}%; top:-90px; width:380px; height:260px; transform:translateX(-50%) scaleY(-1); border-radius:50%; background:radial-gradient(closest-side, {{ pg.c1 }}, transparent)"></div>
+              <div style="position:absolute; left:{{ pg.x2 }}%; top:-70px; width:340px; height:240px; transform:translateX(-50%) scaleY(-1); border-radius:50%; background:radial-gradient(closest-side, {{ pg.c2 }}, transparent)"></div>
+              <div style="position:absolute; left:50%; top:6px; width:172px; height:40px; transform:translateX(-50%); border-radius:20px; background:#0B0B0C"></div>
+            </div>
+          </div>
+          <div style="position:absolute; left:0; right:0; top:62%; height:1px; background:{{ th.horizon }}"></div>
+          <div style="position:absolute; left:50%; top:88px; width:150px; height:150px; transform:translate(-50%,-50%); border-radius:50%; border:1px solid {{ th.ring }}"></div>
+          <div style="position:absolute; left:50%; top:88px; width:250px; height:250px; transform:translate(-50%,-50%); border-radius:50%; border:1px solid {{ th.ring }}"></div>
+          <div style="position:absolute; left:50%; top:88px; width:370px; height:370px; transform:translate(-50%,-50%); border-radius:50%; border:1px solid {{ th.ring }}"></div>
+          <div style="position:absolute; left:50%; top:68px; width:172px; height:40px; transform:translateX(-50%); border-radius:20px; background:#0B0B0C; box-shadow:0 12px 28px rgba(0,0,0,.22), inset 0 0 0 .5px rgba(255,255,255,.12); display:flex; align-items:center; justify-content:space-between; padding:0 14px 0 16px; box-sizing:border-box; color:rgba(255,255,255,.88); font-size:12.5px; font-weight:600">
+            <span style="white-space:nowrap">{{ pg.isl }}</span>
+            <span style="width:9px; height:9px; border-radius:5px; background:#6FE6D2; box-shadow:0 0 10px 3px rgba(111,230,210,.55)"></span>
+          </div>
+          <sc-if value="{{ grain }}" hint-placeholder-val="{{ false }}"><div style="position:absolute; inset:0; opacity:.3; mix-blend-mode:overlay; background-image:{{ noise }}; background-size:128px 128px; pointer-events:none"></div></sc-if>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px; padding:0 4px">
+          <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:10.5px; letter-spacing:.14em; color:{{ th.ink3 }}">{{ pg.eyebrow }}</div>
+          <div style="font-family:'New York',ui-serif,'Iowan Old Style',Georgia,serif; font-size:36px; line-height:1.08; letter-spacing:-.005em">{{ pg.a }} <em>{{ pg.i }}</em></div>
+          <div style="font-size:14px; line-height:1.5; color:{{ th.ink2 }}; max-width:640px; text-wrap:pretty">{{ pg.d }}</div>
+        </div>
+
+        <sc-for list="{{ pg.groups }}" as="gr" hint-placeholder-count="3">
+          <div style="border-radius:16px; background:{{ th.card }}; box-shadow:0 0 0 .5px {{ th.line }}, 0 1px 2px {{ th.cardSh }}; display:flex; flex-direction:column; overflow:hidden">
+            <sc-for list="{{ gr }}" as="r" hint-placeholder-count="2">
+              <div style="min-height:52px; padding:9px 18px; display:flex; align-items:center; gap:18px; box-sizing:border-box; border-top:{{ r.line }}">
+                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px">
+                  <span style="font-size:14px">{{ r.l }}</span>
+                  <sc-if value="{{ r.s }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; color:{{ th.ink2 }}; line-height:1.4; text-wrap:pretty">{{ r.s }}</span></sc-if>
+                </div>
+                <sc-if value="{{ r.isTg }}" hint-placeholder-val="{{ false }}">
+                  <span onClick="{{ r.toggle }}" style="width:38px; height:22px; border-radius:11px; background:{{ r.tbg }}; position:relative; cursor:pointer; flex:none; transition:background .15s"><span style="position:absolute; top:2px; left:{{ r.tk }}px; width:18px; height:18px; border-radius:9px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .15s"></span></span>
+                </sc-if>
+                <sc-if value="{{ r.isSg }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex; padding:2px; border-radius:9px; background:{{ th.ctrl }}; flex:none">
+                    <sc-for list="{{ r.opts }}" as="o" hint-placeholder-count="2"><span onClick="{{ o.pick }}" style="height:26px; padding:0 13px; border-radius:7px; display:flex; align-items:center; cursor:pointer; font-size:12.5px; background:{{ o.bg }}; box-shadow:{{ o.sh }}; color:{{ o.fg }}; font-weight:{{ o.fw }}; white-space:nowrap">{{ o.label }}</span></sc-for>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ r.isVal }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex; align-items:center; gap:8px; color:{{ th.ink2 }}; font-size:13.5px; flex:none; white-space:nowrap">{{ r.v }}<span style="display:flex; flex-direction:column; font-size:6.5px; line-height:7px; opacity:.7">▲<br>▼</span></span>
+                </sc-if>
+                <sc-if value="{{ r.isKey }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px; padding:4px 9px; border-radius:7px; background:{{ th.ctrl }}; color:{{ th.ink2 }}; flex:none; white-space:nowrap">{{ r.v }}</span>
+                </sc-if>
+                <sc-if value="{{ r.isLnk }}" hint-placeholder-val="{{ false }}">
+                  <span style="color:{{ r.lc }}; font-size:13.5px; font-weight:600; cursor:pointer; flex:none; white-space:nowrap">{{ r.v }}</span>
+                </sc-if>
+                <sc-if value="{{ r.isSt }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex; align-items:center; gap:8px; font-size:13.5px; color:{{ th.ink2 }}; flex:none; white-space:nowrap"><span style="width:7px; height:7px; border-radius:4px; background:{{ th.accent }}; box-shadow:0 0 0 3px {{ th.accentSoft }}"></span>{{ r.v }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:18px; padding-top:44px">
+    <div style="border-radius:20px; background:#FBFAF7; box-shadow:0 0 0 .5px rgba(0,0,0,.08); padding:24px 26px; display:flex; flex-direction:column; gap:14px">
+      <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:24px">Yang <em>berubah</em></div>
+      <div style="display:flex; flex-direction:column; gap:12px; font-size:13.5px; line-height:1.55; color:#3a3a3c">
+        <div style="display:flex; gap:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#8a8a8e; padding-top:2px">01</span><span><b style="color:#1d1d1f">Banner art per halaman.</b> Pulau Dylan duduk di cakrawala (62% tinggi), dua orb berwarna di belakangnya, lalu pantulan dan grain. Isi pulau menampilkan status kecil halaman itu (68°, 2:41, 1440×900).</span></div>
+        <div style="display:flex; gap:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#8a8a8e; padding-top:2px">02</span><span><b style="color:#1d1d1f">Judul serif + italic.</b> Judul pakai New York 36 dengan satu kata italic, label kecil di atasnya monospace berhuruf kapital renggang. Teks isi tetap SF Pro.</span></div>
+        <div style="display:flex; gap:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#8a8a8e; padding-top:2px">03</span><span><b style="color:#1d1d1f">Ikon tenang.</b> Bukan lagi ikon biru multiwarna. Di app: SF Symbols <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">.hierarchical</span> dengan warna teal. Di mock ini digambar sebagai orb sesuai warna halamannya.</span></div>
+        <div style="display:flex; gap:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#8a8a8e; padding-top:2px">04</span><span><b style="color:#1d1d1f">Aksen teal Cermin</b> (#00838A) untuk toggle, link, dan status. Netral hangat #F7F6F3, bukan abu-abu dingin. Item sidebar yang aktif berupa kartu putih dengan bayangan lembut.</span></div>
+        <div style="display:flex; gap:12px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#8a8a8e; padding-top:2px">05</span><span><b style="color:#1d1d1f">Grup lebih lega.</b> Kartu radius 16, baris setinggi 52, garis pemisah 0,5 pt dengan opasitas 7%.</span></div>
+      </div>
+    </div>
+
+    <div style="border-radius:20px; background:#1A1B1E; color:#E8E6E1; padding:24px 26px; display:flex; flex-direction:column; gap:12px">
+      <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">SwiftUI</div>
+      <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px; line-height:1.7; white-space:pre; overflow:auto; color:#D6D4CF">Text("Temperature &amp; ") + Text("fans").italic()
+  .font(.system(size: 36, design: .serif))
+
+Text("DYLAN · SETTINGS").font(.system(
+  size: 10.5, design: .monospaced)).tracking(1.5)
+
+SettingsBanner(page: .temperature)  <span style="color:#8a8a8e">// Canvas</span>
+  .frame(height: 184)
+  .clipShape(.rect(cornerRadius: 22))
+
+Image(systemName: "fan")
+  .symbolRenderingMode(.hierarchical)
+  .foregroundStyle(Color.dyTeal)
+
+Toggle("", isOn: $x).tint(.dyTeal)</div>
+    </div>
+
+    <div style="border-radius:20px; background:#FBFAF7; box-shadow:0 0 0 .5px rgba(0,0,0,.08); padding:24px 26px; display:flex; flex-direction:column; gap:12px">
+      <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">Banner <em>(art)</em></div>
+      <div style="font-size:13px; line-height:1.55; color:#3a3a3c; text-wrap:pretty">Digambar dengan <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">Canvas</span>, bukan gambar statis, supaya mengikuti mode Light/Dark dan warna tiap halaman. Orb berupa gradien radial dengan opasitas 85% (dark 45%). Pantulan = orb dan pulau yang dibalik, opasitas 28%, mask sampai 55%. Cincin konsentris 1 pt dengan opasitas 4–6%. Grain noise 30% mode overlay. Isi pulau ikut berubah saat datanya berubah, misalnya suhu.</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:20px">
+  <div style="border-radius:20px; background:#FBFAF7; box-shadow:0 0 0 .5px rgba(0,0,0,.08); padding:24px 26px; display:flex; flex-direction:column; gap:14px">
+    <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">Palet</div>
+    <div style="display:flex; gap:10px">
+      <span style="width:44px; height:44px; border-radius:22px; background:#93D9D6"></span><span style="width:44px; height:44px; border-radius:22px; background:#F2C9AA"></span><span style="width:44px; height:44px; border-radius:22px; background:#00838A"></span><span style="width:44px; height:44px; border-radius:22px; background:#C9C2F0"></span><span style="width:44px; height:44px; border-radius:22px; background:#A9CCF2"></span>
+    </div>
+    <div style="font-size:12.5px; line-height:1.55; color:#4a4a4f; text-wrap:pretty">Teal, pasir, dan teal tua sama persis dengan Cermin. Lilac dan langit hanya dipakai untuk orb, dengan lightness dan chroma yang sama sehingga hanya hue-nya yang beda.</div>
+  </div>
+  <div style="border-radius:20px; background:#FBFAF7; box-shadow:0 0 0 .5px rgba(0,0,0,.08); padding:24px 26px; display:flex; flex-direction:column; gap:10px">
+    <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">Tipografi</div>
+    <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:32px; line-height:1.1">New York 36 <em>italic</em></div>
+    <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#8a8a8e">Judul halaman · .serif</div>
+    <div style="font-size:14px">SF Pro 14 — baris &amp; kontrol</div>
+    <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:10.5px; letter-spacing:.14em; color:#6b6b70">MONO 10.5 · EYEBROW</div>
+  </div>
+  <div style="border-radius:20px; background:#FBFAF7; box-shadow:0 0 0 .5px rgba(0,0,0,.08); padding:24px 26px; display:flex; flex-direction:column; gap:12px">
+    <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">Kontrol</div>
+    <div style="display:flex; align-items:center; gap:14px">
+      <span style="width:38px; height:22px; border-radius:11px; background:#00838A; position:relative"><span style="position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:9px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+      <span style="display:flex; padding:2px; border-radius:9px; background:#ECEAE5"><span style="height:26px; padding:0 13px; border-radius:7px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.1); display:flex; align-items:center; font-size:12.5px; font-weight:600">Auto</span><span style="height:26px; padding:0 13px; display:flex; align-items:center; font-size:12.5px; color:#6b6b70">Quiet</span></span>
+      <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px; padding:4px 9px; border-radius:7px; background:#ECEAE5; color:#6b6b70">⌃⌥C</span>
+    </div>
+    <div style="font-size:12.5px; line-height:1.55; color:#4a4a4f; text-wrap:pretty">Semua kontrol memakai bentuk kapsul bawaan macOS, hanya tint-nya yang diganti teal. Tombol utama bisa berupa kapsul teal penuh seperti "Mulai Share Layar" di Cermin.</div>
+  </div>
+  <div style="border-radius:20px; background:#FBFAF7; box-shadow:0 0 0 .5px rgba(0,0,0,.08); padding:24px 26px; display:flex; flex-direction:column; gap:12px">
+    <div style="font-family:'New York',ui-serif,Georgia,serif; font-size:22px">Dark <em>mode</em></div>
+    <div style="display:flex; gap:10px"><span style="width:44px; height:44px; border-radius:12px; background:#191B1E"></span><span style="width:44px; height:44px; border-radius:12px; background:#222529"></span><span style="width:44px; height:44px; border-radius:12px; background:#23A7A8"></span></div>
+    <div style="font-size:12.5px; line-height:1.55; color:#4a4a4f; text-wrap:pretty">Tinta gelap yang sedikit hangat, bukan abu-abu kebiruan. Orb diredupkan ke 45% dan teal dinaikkan ke #23A7A8 supaya kontrasnya tetap cukup.</div>
+  </div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startDark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;grain&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { page: 'general', dark: null, ov: {}, noise: null };
+  componentDidMount() {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const d = x.createImageData(128, 128);
+    for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    x.putImageData(d, 0, 0); c.toBlob(b => { this.noiseUrl = URL.createObjectURL(b); this.setState({ noise: 'url(' + this.noiseUrl + ')' }); });
+  }
+  componentWillUnmount() { if (this.noiseUrl) URL.revokeObjectURL(this.noiseUrl); }
+  renderVals() {
+    const s = this.state;
+    const dark = s.dark ?? !!this.props.startDark;
+    const T = '#93D9D6', S = '#F2C9AA', L = '#C9C2F0', K = '#A9CCF2', G = '#BFE0C4', R = '#F2B8C2', B = '#EBDDB8';
+    const PG = {
+      general: ['General', '', 'Dylan,', 'your way', 'Language, profile, and the shortcuts you use every day.', [T, S], 'Dylan', [
+        [['Language', 'Applies to the notch, Settings, menu bar and onboarding.', 'val', 'System (English)']],
+        [['Profile', 'Developer adds the Agents tab, Claude Code hooks and shell integration.', 'sg', ['General', 'Developer'], 1]],
+        [['Open at login', '', 'tg', true], ['Open notch', '', 'key', '⌃⌥ Space'], ['Presentation Mode', 'Hides private content while sharing your screen.', 'key', '⌃⌥⌘H']]]],
+      appearance: ['Appearance', '', 'Look &', 'feel', 'How the island and its panels look on your Mac.', [L, T], 'Aa', [
+        [['Theme', '', 'sg', ['Auto', 'Light', 'Dark'], 0], ['Tint from artwork', 'Panel accents follow the album or app colour.', 'tg', true], ['Glass pill', 'macOS 26 and later.', 'tg', true]],
+        [['Notch size', '', 'sg', ['Compact', 'Standard', 'Large'], 1], ['Tab order', '', 'val', 'Home · Media · Stats · Agents'], ['Show on external displays', 'As a pill at the top centre.', 'tg', true]]]],
+      live: ['Live Activity', 'NOTCH', 'Live', 'Activity', 'What appears in the ears, and when the island opens by itself.', [T, K], '2:41', [
+        [['Peek on hover', '', 'tg', true], ['Hover delay', '', 'val', '150 ms'], ['Close results after', '', 'val', '5 s']],
+        [['Two activities at once', 'Split the island when two things are running.', 'tg', true], ['Priority', '', 'val', 'Agents · Commands · Media']],
+        [['Hide in fullscreen', 'Only important alerts break through.', 'tg', true]]]],
+      media: ['Media & time', 'NOTCH', 'Media &', 'time', 'Now Playing, lyrics, calendar and timers.', [S, R], '♪ 1:23', [
+        [['Now Playing', 'Spotify, Apple Music, browsers.', 'tg', true], ['Synced lyrics', '', 'tg', true], ['Audio output switcher', '', 'tg', true], ['Volume per app', 'macOS 14.2 and later.', 'tg', false]],
+        [['Next meeting', 'Countdown and a Join button.', 'tg', true], ['Timer presets', '', 'val', '5 · 25 · 50 min']]]],
+      discord: ['Discord', 'NOTCH', 'Discord', 'voice', 'Who is speaking, plus mute and deafen from the notch.', [L, K], '3 in voice', [
+        [['Voice activity', '', 'tg', true], ['DMs & mentions', '', 'tg', true], ['Hide names in Presentation Mode', '', 'tg', true]],
+        [['Connection', '', 'st', 'Connected · Discord app']]]],
+      devices: ['Devices & System', 'SYSTEM', 'Devices &', 'system', 'Battery, AirPods, camera and the small things macOS tells you.', [G, T], '87%', [
+        [['Battery & charging', '', 'tg', true], ['Low battery warning', '', 'val', '20%'], ['AirPods & Bluetooth', 'Left, right and case battery.', 'tg', true]],
+        [['Camera & mic indicator', '', 'tg', true], ['Keep awake', '', 'val', 'Off'], ['Focus changes', '', 'tg', true]]]],
+      temp: ['Temperature & fans', 'SYSTEM', 'Temperature &', 'fans', 'Sensors, presets and your own fan curve. Fans always return to Automatic when Dylan quits.', [K, T], '68°', [
+        [['Fan mode', '', 'sg', ['Auto', 'Quiet', 'Balanced', 'Max'], 0], ['Custom curve', 'Follows a sensor you choose.', 'lnk', 'Edit curve…']],
+        [['Heat warning', '', 'val', '≥ 95 °C'], ['Temperature in menu bar', '', 'tg', false], ['Units', '', 'sg', ['°C', '°F'], 0]],
+        [['Fan helper', 'Needs admin once.', 'st', 'Active']]]],
+      storage: ['Storage', 'SYSTEM', 'What Dylan', 'keeps', 'Shelf, clipboard and capture history all stay on this Mac.', [B, S], '1,2 GB', [
+        [['Shelf limit', '', 'val', '2 GB'], ['Keep shelf items', '', 'val', '7 days']],
+        [['Clipboard history', '', 'val', '30 days'], ['Capture history', '', 'val', '30 days']],
+        [['Used', '', 'st', '1,2 GB of 4 GB'], ['Clear cache', '', 'lnk', 'Clear…']]]],
+      face: ['Face Unlock', 'SYSTEM', 'Face', 'Unlock', 'Experimental. 2D face matching is weaker than Touch ID; use it only where you trust the room.', [R, L], 'Locked', [
+        [['Unlock with face', 'Off by default.', 'tg', false], ['Only if locked for less than', '', 'val', '60 min'], ['Trusted Wi‑Fi only', 'Rumah-5G · Kantor', 'tg', true]],
+        [['Enrol face again', '', 'lnk', 'Enrol…'], ['Delete face data', '', 'red', 'Delete…']]]],
+      util: ['Utilities', 'TOOLS', 'Small', 'tools', 'Colour picker, scratchpad and mirror.', [S, B], '#00838A', [
+        [['Colour picker', '', 'key', '⌃⌥C'], ['Copy as', '', 'sg', ['HEX', 'RGB', 'HSL'], 0]],
+        [['Scratchpad', '', 'tg', true], ['Mirror camera', '', 'tg', false]]]],
+      clip: ['Clipboard', 'TOOLS', 'Clipboard', 'history', 'Text, images and files you copied, searchable and pinnable.', [T, G], '⌘C', [
+        [['Keep history', '', 'tg', true], ['Keep for', '', 'val', '30 days'], ['Ignore secrets', 'Passwords and tokens are never saved.', 'tg', true]],
+        [['Open clipboard', '', 'key', '⌃⌥V'], ['Paste as plain text', '', 'tg', false]],
+        [['Ignored apps', '', 'val', '1Password, Keychain']]]],
+      shot: ['Screenshot', 'TOOLS', 'Screen', 'capture', 'Area, window, scrolling and text capture, then a studio to make it beautiful.', [S, L], '1440×900', [
+        [['Capture area', '', 'key', '⌥⇧1'], ['Capture window', '', 'key', '⌥⇧2'], ['Scrolling capture', '', 'key', '⌥⇧4'], ['Replace ⇧⌘3 / 4 / 5', '', 'tg', false]],
+        [['After capture', '', 'sg', ['Notch', 'Studio', 'Save'], 0], ['Default background', '', 'val', 'Sunset'], ['Blur sensitive data', '', 'tg', true]]]],
+      agents: ['Agents', 'DEVELOPER', 'Coding', 'agents', 'Claude Code sessions, edits and permission requests.', [T, K], 'Edit', [
+        [['Claude Code hooks', '', 'st', 'Installed'], ['Answer permissions from the notch', '', 'tg', true], ['Sound on permission request', '', 'tg', false]],
+        [['Codex CLI', 'Coming next.', 'tg', false]]]],
+      term: ['Terminal', 'DEVELOPER', 'Terminal &', 'ports', 'Long commands, dev servers and sudo with Touch ID.', [G, K], 'npm test', [
+        [['Command tracker', '', 'tg', true], ['Show after', '', 'val', '10 s'], ['Shell', '', 'st', 'zsh · integrated']],
+        [['Dev servers & ports', '', 'tg', true], ['Touch ID for sudo', '', 'st', 'Enabled']]]],
+      integ: ['Integrations', 'DEVELOPER', 'Connected', 'services', 'GitHub, Docker, script widgets and the dylan CLI.', [L, S], 'CI ✓', [
+        [['GitHub', '', 'st', 'Connected · @egie'], ['Docker', '', 'tg', false], ['Script widgets', '', 'val', '2 scripts']],
+        [['dylan CLI', '', 'st', 'Installed']]]],
+      features: ['Features', '', 'What Dylan', 'can do', 'Everything that works on this Mac today, and what is coming.', [T, S], '54', [
+        [['Available', '', 'st', '54 features'], ['Coming next', '', 'val', '31'], ['Experimental', '', 'val', '2']],
+        [['See all features', '', 'lnk', 'Open…']]]],
+      about: ['About', '', 'About', 'Dylan', 'Made for MacBooks with a notch, and the ones without.', [T, S], '1.1.0', [
+        [['Version', '', 'val', '1.1.0 (412)'], ['Check for updates', '', 'lnk', 'Check now']],
+        [['Privacy', 'Nothing leaves your Mac unless you connect a service.', 'lnk', 'Read…']]]]
+    };
+    const SIDE = [['', ['general', 'appearance']], ['NOTCH', ['live', 'media', 'discord']], ['SYSTEM', ['devices', 'temp', 'storage', 'face']], ['TOOLS', ['util', 'clip', 'shot']], ['DEVELOPER', ['agents', 'term', 'integ']], ['', ['features', 'about']]];
+    const th = dark ? {
+      content: '#191B1E', side: '#1E2024', line: 'rgba(255,255,255,.07)', ink: '#F2F1EE', ink2: '#9C9EA3', ink3: '#76787D', card: '#222529', cardSh: 'rgba(0,0,0,.2)', ctrl: '#2E3135',
+      bTop: '#1F2226', bLow: '#16181B', horizon: 'rgba(255,255,255,.07)', ring: 'rgba(255,255,255,.05)', orb: .45, accent: '#23A7A8', accentSoft: 'rgba(35,167,168,.2)',
+      sel: 'rgba(255,255,255,.08)', selSh: 'none', segSel: '#3A3E44', segSh: '0 1px 2px rgba(0,0,0,.3)', off: '#3A3D42'
+    } : {
+      content: '#F7F6F3', side: '#EFECE6', line: 'rgba(0,0,0,.07)', ink: '#1d1d1f', ink2: '#6b6b70', ink3: '#8e8e93', card: '#FFFFFF', cardSh: 'rgba(60,40,20,.04)', ctrl: '#ECEAE5',
+      bTop: '#F2F0EB', bLow: '#E4E4E3', horizon: 'rgba(255,255,255,.7)', ring: 'rgba(0,0,0,.045)', orb: .85, accent: '#00838A', accentSoft: 'rgba(0,131,138,.14)',
+      sel: '#FFFFFF', selSh: '0 1px 3px rgba(60,40,20,.08), 0 0 0 .5px rgba(0,0,0,.05)', segSel: '#FFFFFF', segSh: '0 1px 2px rgba(0,0,0,.1)', off: '#D6D3CC'
+    };
+    const p = PG[s.page];
+    const orbOf = k => `radial-gradient(circle at 35% 30%, ${PG[k][5][0]}, ${PG[k][5][1]})`;
+    const side = SIDE.map(([label, keys], gi) => ({
+      label, pt: gi === 0 ? 0 : 12,
+      items: keys.map(k => ({ name: PG[k][0], orb: orbOf(k), bg: s.page === k ? th.sel : 'transparent', sh: s.page === k ? th.selSh : 'none', fw: s.page === k ? 600 : 400, pick: () => this.setState({ page: k }) }))
+    }));
+    const ov = s.ov;
+    const groups = p[7].map((g, gi) => g.map((r, ri) => {
+      const [l, sub, t, v, sel] = r, key = s.page + gi + '.' + ri;
+      const row = { l, s: sub, line: ri ? '.5px solid ' + th.line : 'none', isTg: t === 'tg', isSg: t === 'sg', isVal: t === 'val', isKey: t === 'key', isLnk: t === 'lnk' || t === 'red', isSt: t === 'st', v: typeof v === 'string' ? v : '', lc: t === 'red' ? (dark ? '#FF6961' : '#C9302C') : th.accent };
+      if (t === 'tg') { const on = key in ov ? ov[key] : v; Object.assign(row, { tbg: on ? th.accent : th.off, tk: on ? 18 : 2, toggle: () => this.setState(st => ({ ov: { ...st.ov, [key]: !on } })) }); }
+      if (t === 'sg') { const cur = key in ov ? ov[key] : sel; row.opts = v.map((label, i) => ({ label, bg: i === cur ? th.segSel : 'transparent', sh: i === cur ? th.segSh : 'none', fg: i === cur ? th.ink : th.ink2, fw: i === cur ? 600 : 400, pick: () => this.setState(st => ({ ov: { ...st.ov, [key]: i } })) })); }
+      return row;
+    }));
+    const X = { general: [28, 74], appearance: [70, 26], live: [24, 78], media: [76, 30], discord: [30, 72], devices: [26, 76], temp: [72, 24], storage: [30, 70], face: [74, 28], util: [26, 72], clip: [70, 30], shot: [28, 74], agents: [72, 26], term: [26, 76], integ: [74, 30], features: [28, 72], about: [30, 70] }[s.page];
+    return {
+      th, side, grain: this.props.grain ?? true, noise: s.noise || 'none',
+      pg: { n: p[0], eyebrow: 'DYLAN · SETTINGS' + (p[1] ? ' · ' + p[1] : ''), a: p[2], i: p[3], d: p[4], c1: p[5][0], c2: p[5][1], x1: X[0], x2: X[1], isl: p[6], groups },
+      themes: [['Light', false], ['Dark', true]].map(([label, v]) => ({ label, bg: dark === v ? '#fff' : 'transparent', sh: dark === v ? '0 1px 2px rgba(0,0,0,.1)' : 'none', fw: dark === v ? 600 : 400, pick: () => this.setState({ dark: v }) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

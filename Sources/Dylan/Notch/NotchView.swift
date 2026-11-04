@@ -229,6 +229,8 @@ struct RightEar: View {
         case .meeting:
             Countdown(meetingStart: activity.startedAt.addingTimeInterval(MeetingSchedule.soonWindow),
                       color: activity.priority == .p0 ? DY.action : DY.fg)
+        case .capture where activity.id == "recording":
+            HStack(spacing: 5) { Circle().fill(DY.fail).frame(width: 7, height: 7); Elapsed(since: activity.startedAt) }
         case .notify where activity.id == "faceunlock":
             // D21: the time in Compact, the match score in Peek (carried in `progress`), "Dimatikan" in red.
             if activity.state == .failure {
@@ -272,7 +274,7 @@ struct EarSummary: View {
     @ViewBuilder private var value: some View {
         switch activity.kind {
         case .agent where activity.state == .running, .command where activity.state == .running,
-             .script where activity.state == .running && activity.progress == nil:
+             .script where activity.state == .running && activity.progress == nil, .capture where activity.id == "recording":
             Elapsed(since: activity.startedAt)
         case .media:
             EmptyView()
@@ -298,7 +300,8 @@ struct Glyph: View {
         } else {
             Image(systemName: activity.kind == .media ? "music.note" : activity.symbol)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(DY.color(for: activity.state == .running || activity.state == .ambient ? .running : activity.state))
+                .foregroundStyle(activity.id == "recording" ? DY.fail
+                                 : DY.color(for: activity.state == .running || activity.state == .ambient ? .running : activity.state))
                 .frame(width: 14)
         }
     }

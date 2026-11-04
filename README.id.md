@@ -31,7 +31,7 @@ Developer mendapat **Mode Developer**: pantau agent AI, perintah yang lama, CI, 
 ## Sorotan
 
 - 🎵 **Musik yang terasa native.** Spotify, Apple Music, tab browser (YouTube, SoundCloud…) dan VLC. Lirik tersinkron, pilihan output audio, volume per app, dan equalizer yang mengikuti audio sungguhan.
-- 📸 **Screenshot tanpa ribet.** Area, jendela, layar penuh, scrolling capture, dan teks (OCR) dengan `⌥⇧1`–`⌥⇧4` dan `⌥⇧T`. Layar dibekukan dulu, loupe piksel menampilkan koordinat dan warna, lalu editor langsung terbuka: panah, kotak, teks, sorot, blur, nomor urut, crop. `⌘C` menyalin lalu menutup editor. Mode Studio menambahkan bingkai, gradien, bayangan, rasio media sosial, dan tata letak 3D.
+- 📸 **Screenshot tanpa ribet.** Area, jendela, layar penuh, scrolling capture, dan teks (OCR) dengan `⌥⇧1`–`⌥⇧4` dan `⌥⇧T`, plus rekam layar ke MP4 dengan `⌥⇧5`. Layar dibekukan dulu, loupe piksel menampilkan koordinat dan warna, lalu editor langsung terbuka: panah, kotak, teks, sorot, blur, nomor urut, crop. `⌘C` menyalin lalu menutup editor. Mode Studio menambahkan bingkai, gradien, bayangan, rasio media sosial, dan tata letak 3D.
 - 🌡️ **Suhu & kipas.** Suhu CPU, GPU, SSD, dan baterai tanpa root. Preset kipas dari Senyap sampai Maksimal, kurva sendiri, `⌃⌥⇧0`–`4`, dan peringatan panas yang menyebut proses terberat. Kipas selalu kembali ke otomatis saat Dylan ditutup, sleep, atau crash.
 - 🔔 **Notifikasi & panggilan.** Notifikasi app di notch, balas dari banner, terima atau tolak panggilan, dan kontrol mic/kamera/share untuk Zoom, Teams, dan Meet.
 - 🎧 **Discord.** Siapa yang sedang bicara di voice, mute, deafen, dan keluar dari notch.

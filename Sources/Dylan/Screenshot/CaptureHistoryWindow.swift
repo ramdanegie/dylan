@@ -11,7 +11,8 @@ enum CaptureHistoryWindow {
         let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 760, height: 520), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         w.title = L("shot.history")
         w.isReleasedWhenClosed = false
-        w.contentView = NSHostingView(rootView: CaptureHistoryView())
+        w.contentView = NSHostingView(rootView: CaptureHistoryView().artWindow())
+        Art.style(w)
         w.center()
         NSApp.activate()
         w.makeKeyAndOrderFront(nil)

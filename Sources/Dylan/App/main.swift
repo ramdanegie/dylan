@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import DylanCore
 import SwiftUI
 
@@ -47,6 +48,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let section = SettingsSection(rawValue: CommandLine.arguments[i + 1]) {
             SettingsWindow.show(section: section)
         }
+    }
+
+    /// Quitting mid-recording would leave an unreadable MP4: finish the file first.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard ScreenRecorder.shared.isBusy else { return .terminateNow }
+        ScreenRecorder.shared.stop { NSApp.reply(toApplicationShouldTerminate: true) }
+        return .terminateLater
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -192,9 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         timer.submenu = tm
         m.addItem(timer)
-        let rec = NSMenuItem(title: L("shot.record"), action: nil, keyEquivalent: "")
-        rec.isEnabled = false
-        m.addItem(rec)
+        m.addItem(item(ScreenRecorder.shared.isRecording ? "rec.stop" : "shot.record", #selector(toggleRecording), "5"))
         m.addItem(.separator())
         m.addItem(item("shot.pickColor", #selector(pickColorFromMenu), "c", [.control, .option]))
         m.addItem(item("shot.openLast", #selector(openLastCapture), "e"))
@@ -250,6 +256,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { MainActor.assumeIsolated { CaptureOverlay.shared.start(mode) } }
     }
 
+    @objc private func toggleRecording() {
+        if ScreenRecorder.shared.isRecording { ScreenRecorder.shared.stop(); return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { MainActor.assumeIsolated { ScreenRecorder.shared.toggle() } }
+    }
+
     @objc private func captureTimer(_ sender: NSMenuItem) { CaptureOverlay.shared.start(.area, delay: sender.tag) }
     @objc private func pickColorFromMenu() { AppModel.shared.pickColor() }
     @objc private func openLastCapture() { ScreenshotService.shared.openLast() }
@@ -287,6 +298,61 @@ if let i = arguments.firstIndex(of: "--snapshot"), i + 1 < arguments.count {
     if let l = arguments.firstIndex(of: "--lang"), l + 1 < arguments.count { L10n.forcedLanguage = arguments[l + 1] }
     Snapshot.render(to: URL(fileURLWithPath: arguments[i + 1]))
     exit(0)
+}
+if let i = arguments.firstIndex(of: "--settings-snapshot"), i + 1 < arguments.count {
+    if let l = arguments.firstIndex(of: "--lang"), l + 1 < arguments.count { L10n.forcedLanguage = arguments[l + 1] }
+    let h = arguments.firstIndex(of: "--height").flatMap { $0 + 1 < arguments.count ? Double(arguments[$0 + 1]) : nil } ?? 660
+    Snapshot.renderSettings(to: URL(fileURLWithPath: arguments[i + 1]), dark: arguments.contains("--dark"), height: h)
+    exit(0)
+}
+// Records the real screen twice (whole screen, then an area) into /private/tmp, checks the MP4s, deletes them.
+// No microphone; throwaway defaults, so the user's capture folder and settings are untouched.
+if arguments.contains("--record-selftest") {
+    let dir = "/private/tmp/dylan-rec-selftest-\(getpid())"
+    let suite = "io.github.ramdanegie.dylan.selftest"
+    AppModel.store = UserDefaults(suiteName: suite)!
+    AppModel.store.set(dir, forKey: "shot.folder")
+    _ = NSApplication.shared
+    NSApp.setActivationPolicy(.prohibited)
+    func spin(_ seconds: Double, until done: () -> Bool = { false }) {
+        let end = Date().addingTimeInterval(seconds)
+        while Date() < end && !done() { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+    }
+    guard CGPreflightScreenCaptureAccess(), let screen = NSScreen.main else {
+        UserDefaults.standard.removePersistentDomain(forName: suite)
+        print("SKIP no Screen Recording permission"); exit(2)
+    }
+    var checks: [(String, Bool)] = []
+    let area = CGRect(x: screen.frame.minX + 100, y: screen.frame.minY + 100, width: 401, height: 301)
+    for (name, region, seconds) in [("screen", nil, 3.0), ("area", Optional(area), 2.0)] as [(String, CGRect?, Double)] {
+        AppModel.shared.removeIfPresent("capture-saved", now: Date())
+        let r = ScreenRecorder.shared
+        r.start(region: region, screen: screen)
+        spin(10) { r.isRecording }
+        checks.append(("\(name): started", r.isRecording))
+        spin(seconds)
+        var finished = false
+        r.stop { finished = true }
+        spin(20) { finished }
+        let path = AppModel.shared.center.activities["capture-saved"]?.url.map { String($0.dropFirst(6)) }
+        checks.append(("\(name): file announced", path != nil))
+        guard let path else { continue }
+        var duration = 0.0, size = CGSize.zero
+        Task {
+            let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+            duration = (try? await asset.load(.duration).seconds) ?? 0
+            size = (try? await asset.loadTracks(withMediaType: .video).first?.load(.naturalSize)) ?? .zero
+        }
+        spin(10) { duration > 0 }
+        let px = ScreenRecording.pixelSize(points: region?.size ?? screen.frame.size, scale: screen.backingScaleFactor)
+        print(String(format: "  %@: %.1f s, %.0f×%.0f", name, duration, size.width, size.height))
+        checks.append(("\(name): about \(Int(seconds)) s long", abs(duration - seconds) < 1.5))
+        checks.append(("\(name): \(px.width)×\(px.height)", Int(size.width) == px.width && Int(size.height) == px.height))
+    }
+    for (name, ok) in checks { print(ok ? "PASS" : "FAIL", name) }
+    try? FileManager.default.removeItem(atPath: dir)
+    UserDefaults.standard.removePersistentDomain(forName: suite)
+    exit(checks.allSatisfy(\.1) ? 0 : 1)
 }
 // Self-test of the Clean path on a throwaway home folder in /private/tmp (never the user's files or Trash).
 if arguments.contains("--storage-selftest") {

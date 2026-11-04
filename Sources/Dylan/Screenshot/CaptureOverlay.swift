@@ -10,7 +10,7 @@ final class CaptureOverlay {
     static let shared = CaptureOverlay()
 
     enum Mode: Int, CaseIterable {
-        case area = 1, window, screen, scroll, text
+        case area = 1, window, screen, scroll, text, record
         var key: String { "\(rawValue)" }
         var title: String { L("shot.mode.\(self)") }
     }
@@ -218,7 +218,7 @@ final class CaptureView: NSView {
             borderLayer.path = hole.map { CGPath(rect: $0.insetBy(dx: -0.5, dy: -0.5), transform: nil) }
             lastHole = .some(hole)
         }
-        let cross = hole == nil && (mode == .area || mode == .text || mode == .scroll)
+        let cross = hole == nil && [.area, .text, .scroll, .record].contains(mode)
         crossH.isHidden = !cross
         crossV.isHidden = !cross
         crossV.frame = CGRect(x: mouse.x - 0.5, y: 0, width: 1, height: bounds0.height)
@@ -385,8 +385,12 @@ final class CaptureView: NSView {
             finish { await ScreenshotService.shared.capture(window: w, scale: self.frozen.scale) }
         case .screen:
             finishImage(frozen.image)
-        case .area, .text, .scroll:
-            guard let sel = selection, !CaptureSelection.isClick(sel) else { selection = nil; refresh(); return }
+        case .area, .text, .scroll, .record:
+            guard let sel = selection, !CaptureSelection.isClick(sel) else {
+                // Record: a click (no drag) takes the whole screen.
+                if mode == .record { CaptureOverlay.shared.close(); ScreenRecorder.shared.start(region: nil, screen: frozen.screen); return }
+                selection = nil; refresh(); return
+            }
             confirm(sel)
         }
     }
@@ -399,6 +403,7 @@ final class CaptureView: NSView {
         switch mode {
         case .text: CaptureOverlay.shared.close(); ScreenshotService.shared.finishedText(crop)
         case .scroll: CaptureOverlay.shared.close(); ScrollCapture.shared.start(region: global, screen: screen)
+        case .record: CaptureOverlay.shared.close(); ScreenRecorder.shared.start(region: global, screen: screen)
         default:
             // Spinner on the frozen picture first, then the editor opens and only then the frozen screen goes:
             // the click is answered at once instead of a frozen pause (user feedback).

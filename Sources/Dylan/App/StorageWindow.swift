@@ -13,7 +13,8 @@ enum StorageWindow {
             w.title = L("storage.title")
             w.isReleasedWhenClosed = false
             w.minSize = CGSize(width: 620, height: 420)
-            w.contentView = NSHostingView(rootView: StorageView())
+            w.contentView = NSHostingView(rootView: StorageView().artWindow())
+            Art.style(w)
             w.center()
             window = w
         }
@@ -24,7 +25,7 @@ enum StorageWindow {
     }
 }
 
-private struct StorageView: View {
+struct StorageView: View {
     @StateBox private var confirm = false
     private var p: StorageProvider { StorageProvider.shared }
     private var shown: [StorageCategory] { StorageCategory.allCases.filter { c in p.items.contains { $0.category == c } } }
@@ -35,7 +36,7 @@ private struct StorageView: View {
             Divider()
             if p.items.isEmpty && !p.scanning && p.blocked.isEmpty {
                 VStack(spacing: 8) {
-                    Image(systemName: "checkmark.seal").font(.largeTitle).foregroundStyle(.green)
+                    Image(systemName: "checkmark.seal").font(.largeTitle).foregroundStyle(Art.accent)
                     SwiftUI.Text(p.result ?? L("storage.nothing")).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -58,6 +59,7 @@ private struct StorageView: View {
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
             }
             Divider()
             footer
@@ -81,14 +83,14 @@ private struct StorageView: View {
         return lines.joined(separator: "\n\n")
     }
 
+    /// D50 family: the Storage page's banner and a serif title.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: "internaldrive").font(.title2).foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    SwiftUI.Text(L("storage.title")).font(.headline)
-                    SwiftUI.Text(L("storage.disk", StorageProvider.bytes(p.free), StorageProvider.bytes(p.total))).font(.caption).foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            ArtBanner(orbs: SettingsSection.storage.orbs, x: SettingsSection.storage.orbX,
+                      island: L("storage.island", StorageProvider.bytes(p.free)), height: 120)
+            HStack(alignment: .bottom, spacing: 10) {
+                ArtTitle(eyebrow: SettingsSection.storage.eyebrow, title: L("storage.windowTitle"), italic: L("storage.windowItalic"),
+                         detail: L("storage.disk", StorageProvider.bytes(p.free), StorageProvider.bytes(p.total)), size: 28)
                 Spacer()
                 if p.scanning {
                     ProgressView().controlSize(.small)
@@ -98,11 +100,11 @@ private struct StorageView: View {
             }
             if p.total > 0 {
                 ProgressView(value: Double(p.total - p.free), total: Double(p.total))
-                    .tint(StorageRules.isLowSpace(free: p.free, total: p.total) ? .red : .accentColor)
+                    .tint(StorageRules.isLowSpace(free: p.free, total: p.total) ? .red : Art.accent)
                     .accessibilityLabel(L("storage.disk", StorageProvider.bytes(p.free), StorageProvider.bytes(p.total)))
             }
         }
-        .padding(14)
+        .padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 14)
     }
 
     private func categoryHeader(_ c: StorageCategory) -> some View {

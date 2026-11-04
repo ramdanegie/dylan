@@ -42,6 +42,9 @@ enum Hotkeys {
                 }
             }
         }
+        // ⌥⇧5: record the screen, or stop the recording (FR-94).
+        unregister(id: 16)
+        if on { register(id: 16, keyCode: kVK_ANSI_5, modifiers: optionKey | shiftKey) { ScreenRecorder.shared.toggle() } }
         setTakeOver(on && AppModel.store.bool(forKey: "shot.takeOver"))
     }
 

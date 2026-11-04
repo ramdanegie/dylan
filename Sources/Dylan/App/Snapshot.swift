@@ -153,6 +153,16 @@ enum Snapshot {
                 m.notchState = .peek
             }),
             ("D32-privacy-dots", { m.cameraOn = true; m.micOn = true; m.notchState = .compact }),
+            ("rec-compact", {
+                m.center.upsert(Activity(id: "recording", kind: .capture, priority: .p1, state: .running, symbol: "record.circle",
+                                         label: L("rec.recording"), detail: L("rec.stopHint"), startedAt: now.addingTimeInterval(-83)))
+                m.notchState = .compact
+            }),
+            ("rec-peek", {
+                m.center.upsert(Activity(id: "recording", kind: .capture, priority: .p1, state: .running, symbol: "record.circle",
+                                         label: L("rec.recording"), detail: L("rec.stopHint"), startedAt: now.addingTimeInterval(-83)))
+                m.notchState = .peek
+            }),
         ]
 
         for (name, setup) in cases {
@@ -211,6 +221,49 @@ enum Snapshot {
                   let png = rep.representation(using: .png, properties: [:]) else { continue }
             try? png.write(to: dir.appendingPathComponent("\(name)-\(lang).png"))
             print("✓ \(name)-\(lang).png")
+        }
+    }
+
+    /// `Dylan --settings-snapshot <dir> [--dark] [--lang id|en]`: every Settings page (D50) to PNG, from throwaway
+    /// defaults. Face Unlock is skipped so its sealed vault is never opened for a picture.
+    static func renderSettings(to dir: URL, dark: Bool, height: CGFloat = 660) {
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let suite = "io.github.ramdanegie.dylan.snapshot"
+        AppModel.store = UserDefaults(suiteName: suite)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        AppModel.shared.features.profile = .developer
+        _ = FanProvider.shared   // created before any view, as at launch: its init runs a subprocess that spins the run loop
+        _ = NSApplication.shared
+        NSApp.setActivationPolicy(.prohibited)
+        let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        NSApp.appearance = appearance
+        // Storage window (D50 family) next to the pages.
+        let sw = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 780, height: 620), styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: false)
+        sw.appearance = appearance
+        Art.style(sw)
+        let sh = NSHostingView(rootView: StorageView().artWindow())
+        sw.contentView = sh
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        if let rep = sh.bitmapImageRepForCachingDisplay(in: sh.bounds) {
+            sh.cacheDisplay(in: sh.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent("storage-window-\(dark ? "dark" : "light")-\(L10n.language).png"))
+        }
+        for s in SettingsSection.allCases where s != .faceUnlock {
+            let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 920, height: height), styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+                             backing: .buffered, defer: false)
+            w.titlebarAppearsTransparent = true
+            w.titleVisibility = .hidden
+            w.appearance = appearance
+            let host = NSHostingView(rootView: SettingsView(selection: s))
+            w.contentView = host
+            RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+            host.layoutSubtreeIfNeeded()
+            guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { continue }
+            host.cacheDisplay(in: host.bounds, to: rep)
+            let name = "settings-\(s.rawValue)-\(dark ? "dark" : "light")-\(L10n.language).png"
+            try? rep.representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent(name))
+            print("✓ \(name)")
+            w.close()
         }
     }
 
