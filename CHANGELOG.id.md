@@ -2,6 +2,11 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Diperbaiki
+- Ikon app kembali ke "Pulau + telinga" (desain 4c); 0.1.6 keliru memakai ikon lain.
+
 ## [0.1.6] - 2026-11-04
 
 ### Ditambahkan
