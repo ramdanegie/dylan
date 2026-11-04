@@ -1,4 +1,5 @@
 import Carbon.HIToolbox
+import DylanCore
 import Foundation
 
 /// Global hotkeys through Carbon `RegisterEventHotKey` (no Accessibility permission needed).
@@ -42,6 +43,16 @@ enum Hotkeys {
             }
         }
         setTakeOver(on && AppModel.store.bool(forKey: "shot.takeOver"))
+    }
+
+    /// Fan presets ⌃⌥⇧0–4 (D46), only on Macs with fans while Suhu & Kipas is on.
+    static func setFanKeys(_ on: Bool) {
+        let keys = [kVK_ANSI_0, kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4]
+        for (n, key) in keys.enumerated() {
+            let id = UInt32(30 + n)
+            unregister(id: id)
+            if on { register(id: id, keyCode: key, modifiers: controlKey | optionKey | shiftKey) { FanProvider.shared.setPreset(FanPreset.shortcuts[n]) } }
+        }
     }
 
     static func unregister(id: UInt32) {

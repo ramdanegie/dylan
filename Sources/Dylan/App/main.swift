@@ -82,6 +82,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.notifications) ? NotificationProvider.shared.start() : NotificationProvider.shared.stop()
         if !f.isEnabled(.terminal) { TerminalProvider.shared.stop() }
         Hotkeys.setScreenshotKeys(f.isEnabled(.screenshot))
+        f.isEnabled(.thermal) ? FanProvider.shared.start() : FanProvider.shared.stop()
+        Hotkeys.setFanKeys(f.isEnabled(.thermal) && FanProvider.shared.hasFans)
+        refreshStatusItem()
         f.isEnabled(.lockScreen) ? LockScreenProvider.shared.start() : LockScreenProvider.shared.stop()
         FaceUnlockProvider.shared.start()
         f.isEnabled(.timeToLeave) && f.isEnabled(.meeting) ? TravelProvider.shared.start() : TravelProvider.shared.stop()
@@ -133,6 +136,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let shot = NSMenuItem(title: L("shot.menu"), action: nil, keyEquivalent: "")
             shot.submenu = makeScreenshotMenu()
             menu.addItem(shot)
+        }
+        if AppModel.shared.features.isEnabled(.thermal) && FanProvider.shared.hasFans {
+            let fan = NSMenuItem(title: L("fan.menu"), action: nil, keyEquivalent: "")
+            fan.submenu = makeFanMenu()
+            menu.addItem(fan)
         }
         let awake = NSMenuItem(title: L("keepAwake.button"), action: #selector(toggleKeepAwake), keyEquivalent: "")
         awake.state = AppModel.shared.keepAwake != nil ? .on : .off
@@ -187,6 +195,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return m
     }
 
+    /// Fan ▸ (design D46): temperatures, the presets with ⌃⌥⇧0–4, and Settings.
+    private func makeFanMenu() -> NSMenu {
+        let p = FanProvider.shared, m = NSMenu()
+        func info(_ s: String) { let i = NSMenuItem(title: s, action: nil, keyEquivalent: ""); i.isEnabled = false; m.addItem(i) }
+        info("CPU \(p.format(p.cpu)) · GPU \(p.format(p.temps[.gpu]))")
+        info(p.fans.map { "\(FanProvider.fanName($0.index, of: p.fans.count)) \(FanProvider.rpm($0.rpm))" }.joined(separator: " · "))
+        m.addItem(.separator())
+        for (n, preset) in FanPreset.allCases.enumerated() {
+            let shortcut = FanPreset.shortcuts.firstIndex(of: preset).map(String.init) ?? ""
+            let i = NSMenuItem(title: L("fan.menu.\(preset.rawValue)"), action: #selector(pickFanPreset(_:)), keyEquivalent: shortcut)
+            i.keyEquivalentModifierMask = [.control, .option, .shift]
+            i.tag = n
+            i.target = self
+            i.state = p.preset == preset ? .on : .off
+            m.addItem(i)
+        }
+        m.addItem(.separator())
+        let s = NSMenuItem(title: L("fan.settings"), action: #selector(openFanSettings), keyEquivalent: "")
+        s.target = self
+        m.addItem(s)
+        return m
+    }
+
+    @objc private func pickFanPreset(_ sender: NSMenuItem) { FanProvider.shared.setPreset(FanPreset.allCases[sender.tag]) }
+    @objc private func openFanSettings() { SettingsWindow.show(section: .thermal) }
+
+    /// Dot when Dylan drives the fans, so manual mode is not forgotten; optional CPU temperature (D46).
+    func refreshStatusItem() {
+        guard let button = statusItem?.button else { return }
+        let p = FanProvider.shared, on = AppModel.shared.features.isEnabled(.thermal)
+        button.image = Self.menuBarIcon(dot: on && p.preset != .auto)
+        let title = on && p.menuTemp ? p.format(p.cpu) : ""
+        if button.title != title {
+            button.title = title
+            button.imagePosition = title.isEmpty ? .imageOnly : .imageLeading
+            statusItem?.length = title.isEmpty ? NSStatusItem.squareLength : NSStatusItem.variableLength
+        }
+    }
+
     @objc private func captureMode(_ sender: NSMenuItem) {
         guard let mode = CaptureOverlay.Mode(rawValue: sender.tag) else { return }
         // Let the menu close before the screen is frozen.
@@ -201,12 +248,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openSettings() { SettingsWindow.show() }
 
     /// Template icon: black capsule = island, knocked-out dot = status (design §3).
-    static func menuBarIcon() -> NSImage {
+    static func menuBarIcon(dot: Bool = false) -> NSImage {
         let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { r in
             let capsule = NSBezierPath(roundedRect: NSRect(x: 2, y: 6, width: 14, height: 6.5), xRadius: 3.25, yRadius: 3.25)
             capsule.append(NSBezierPath(ovalIn: NSRect(x: 11, y: 7.75, width: 3, height: 3)).reversed)
             NSColor.black.setFill()
             capsule.fill()
+            if dot { NSBezierPath(ovalIn: NSRect(x: 14, y: 13.5, width: 4, height: 4)).fill() }
             return true
         }
         img.isTemplate = true

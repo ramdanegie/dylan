@@ -21,6 +21,7 @@ struct ExpandedView: View {
                 case .shelf: ShelfTab()
                 case .discord: DiscordTab()
                 case .stats: StatsTab()
+                case .thermal: ThermalTab()
                 case .dev: DevTab()
                 case .terminal: TerminalTab()
                 case .agents: AgentsTab()

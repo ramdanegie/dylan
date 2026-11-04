@@ -6,7 +6,7 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, discord, shelf, clipboard, stats, agents, dev, terminal
+    case home, media, discord, shelf, clipboard, stats, thermal, agents, dev, terminal
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -16,6 +16,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .shelf: return "tray.and.arrow.down"
         case .discord: return "headphones"
         case .stats: return "chart.bar"
+        case .thermal: return "thermometer.medium"
         case .agents: return "sparkle"
         case .dev: return "hammer"
         case .terminal: return "apple.terminal"
@@ -97,6 +98,8 @@ enum NotchAction: Equatable {
     case banner(String, String)
     /// beautify / save / pin / text / openLink / showText on a screenshot result (D40).
     case capture(String, String)
+    /// max / processes on the over-temperature peek (D47).
+    case fan(String)
 }
 
 @Observable
@@ -251,6 +254,7 @@ final class AppModel {
         if features.isEnabled(.shelf) { t.append(.shelf) }
         if features.isEnabled(.clipboard) { t.append(.clipboard) }
         if features.isEnabled(.stats) { t.append(.stats) }
+        if features.isEnabled(.thermal) { t.append(.thermal) }
         if isDeveloper && features.isEnabled(.agents) { t.append(.agents) }
         if isDeveloper && features.isEnabled(.ports) { t.append(.dev) }
         if isDeveloper && features.isEnabled(.terminal) { t.append(.terminal) }
@@ -722,6 +726,7 @@ final class AppModel {
         case .meetingControl(let c): MeetingCallProvider.shared.press(c)
         case .banner(let action, let id): NotificationProvider.shared.perform(action, bannerID: id)
         case .capture(let action, let arg): ScreenshotService.shared.perform(action, arg)
+        case .fan(let action): FanProvider.shared.perform(action)
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -758,6 +763,10 @@ final class AppModel {
             return [(L("button.open"), .normal, .capture("openLink", String(a.url!.dropFirst(3))))]
         case .capture where a.url?.hasPrefix("text:") == true:
             return [(L("shot.showText"), .normal, .capture("showText", String(a.url!.dropFirst(5))))]
+        case .thermal where a.id == "fan-hot":
+            // "Fan max" disappears once the fans are already at max (D47).
+            return (a.url == "fan:max" ? [(L("fan.maxButton"), NotchButton.Kind.primaryAction, NotchAction.fan("max"))] : [])
+                + [(L("fan.processes"), .normal, .fan("processes"))]
         case .notify where a.url?.hasPrefix("call:") == true:
             let id = String(a.url!.dropFirst(5))
             return [(L("calls.decline"), .destructive, .banner("decline", id)), (L("calls.accept"), .confirm, .banner("accept", id))]
@@ -783,6 +792,9 @@ final class AppModel {
             return []
         }
     }
+
+    /// Menu-bar dot and temperature (D46) follow the fans.
+    func fanChanged() { (NSApp.delegate as? AppDelegate)?.refreshStatusItem() }
 
     // MARK: Presentation Mode (PRD §F12)
 

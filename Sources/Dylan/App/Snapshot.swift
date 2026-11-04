@@ -1,5 +1,6 @@
 import AppKit
 import DylanCore
+import SMCKit
 import SwiftUI
 
 /// `Dylan --snapshot <dir> [--lang id|en]`: renders notch states to PNG without Screen Recording
@@ -90,6 +91,20 @@ enum Snapshot {
             ("D23-expanded-media", { music(); m.selectedTab = .media; m.notchState = .expanded }),
             ("D9-expanded-agents", { agentWorking(); m.selectedTab = .agents; m.notchState = .expanded }),
             ("D44-studio", { Snapshot.studioSample = true }),
+            ("D45-thermal", {
+                let f = FanProvider.shared
+                f.fans = [SMC.Fan(index: 0, rpm: 3240, min: 1200, max: 5779, manual: false, target: 3240),
+                          SMC.Fan(index: 1, rpm: 3480, min: 1200, max: 6241, manual: false, target: 3480)]
+                f.temps = [.cpu: 72, .gpu: 63, .ssd: 44, .battery: 33]
+                f.cpuHistory = (0..<40).map { (i: Int) -> Double in let t = Double(i); return 68 + 9 * sin(t / 6) + 4 * sin(t / 2.3) }
+                m.selectedTab = .thermal; m.notchState = .expanded
+            }),
+            ("D47-fan-hot", {
+                m.center.post(Activity(id: "fan-hot", kind: .thermal, priority: .p1, state: .needsAction, symbol: "thermometer.high",
+                                       label: "97°", value: "5.800 rpm", detail: L("fan.hotBy", "Xcode", 380), genericDetail: L("fan.hot"),
+                                       url: "fan:max", startedAt: now), now: now)
+                m.notchState = .peek
+            }),
             ("FR41-terminal", {
                 m.features.toggles[.terminal] = true
                 TerminalProvider.shared.lines = ["~/web-admin % git status -sb", "## feat/login...origin/feat/login [ahead 2]",

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.github.ramdanegie.dylan.fan</string>
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/dylan-fan-helper</string>
+	<key>MachServices</key>
+	<dict>
+		<key>io.github.ramdanegie.dylan.fan</key>
+		<true/>
+	</dict>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>io.github.ramdanegie.dylan</string>
+	</array>
+	<!-- Relaunch after a crash so it hands back the fans it had taken. -->
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+</dict>
+</plist>

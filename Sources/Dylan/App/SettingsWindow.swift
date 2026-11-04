@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, discord, devices, utilities, clipboard, screenshot, agents, terminal, features, about
+    case general, appearance, liveActivity, media, discord, devices, thermal, utilities, clipboard, screenshot, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -34,6 +34,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .media: return "music.note"
         case .discord: return "headphones"
         case .devices: return "battery.100percent.bolt"
+        case .thermal: return "fan"
         case .utilities: return "wrench.and.screwdriver"
         case .clipboard: return "doc.on.clipboard"
         case .screenshot: return "camera.viewfinder"
@@ -95,6 +96,7 @@ struct SettingsView: View {
         case .discord: DiscordSettings()
         case .clipboard: ClipboardSettings()
         case .screenshot: ScreenshotSettings()
+        case .thermal: ThermalSettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
         case .features: FeatureSupportSettings()

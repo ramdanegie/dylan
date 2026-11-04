@@ -34,6 +34,7 @@ struct NotchRootView: View {
         case .shelf: return 236
         case .discord: return 300
         case .stats: return 366
+        case .thermal: return FanProvider.shared.hasFans ? 300 : 236
         case .dev: return 316
         case .terminal: return 330
         case .agents: return 312
