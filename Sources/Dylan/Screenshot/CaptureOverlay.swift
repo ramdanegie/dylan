@@ -396,13 +396,35 @@ final class CaptureView: NSView {
         let px = CaptureSelection.pixelRect(global, screen: frozen.screen.frame, scale: frozen.scale)
         guard let crop = frozen.image.cropping(to: px) else { return }
         let screen = frozen.screen
-        let mode = self.mode
-        CaptureOverlay.shared.close()
         switch mode {
-        case .text: ScreenshotService.shared.finishedText(crop)
-        case .scroll: ScrollCapture.shared.start(region: global, screen: screen)
-        default: ScreenshotService.shared.finished(crop)
+        case .text: CaptureOverlay.shared.close(); ScreenshotService.shared.finishedText(crop)
+        case .scroll: CaptureOverlay.shared.close(); ScrollCapture.shared.start(region: global, screen: screen)
+        default:
+            // Spinner on the frozen picture first, then the editor opens and only then the frozen screen goes:
+            // the click is answered at once instead of a frozen pause (user feedback).
+            showBusy(at: sel)
+            CATransaction.flush()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                MainActor.assumeIsolated {
+                    ScreenshotService.shared.finished(crop)
+                    CaptureOverlay.shared.close()
+                }
+            }
         }
+    }
+
+    private func showBusy(at sel: CGRect) {
+        let box = NSView(frame: CGRect(x: sel.midX - 32, y: sel.midY - 32, width: 64, height: 64))
+        box.wantsLayer = true
+        box.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.6).cgColor
+        box.layer?.cornerRadius = 14
+        let spinner = NSProgressIndicator(frame: CGRect(x: 16, y: 16, width: 32, height: 32))
+        spinner.style = .spinning
+        spinner.appearance = NSAppearance(named: .darkAqua)
+        spinner.usesThreadedAnimation = true   // keeps turning while the main thread builds the editor
+        box.addSubview(spinner)
+        addSubview(box)
+        spinner.startAnimation(nil)
     }
 
     private func finishImage(_ image: CGImage) {
