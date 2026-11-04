@@ -28,6 +28,22 @@ enum Hotkeys {
         }
     }
 
+    /// Screenshot shortcuts (FR-88, D38): ⌥⇧ so they never clash with macOS's ⇧⌘3/4/5. Registered only while the
+    /// feature is on, so the keys reach other apps otherwise.
+    static func setScreenshotKeys(_ on: Bool) {
+        let shots: [(UInt32, Int, CaptureOverlay.Mode?)] = [(10, kVK_ANSI_1, .area), (11, kVK_ANSI_2, .window), (12, kVK_ANSI_3, .screen),
+                                                             (13, kVK_ANSI_4, .scroll), (14, kVK_ANSI_T, .text), (15, kVK_ANSI_E, nil)]
+        for (id, key, mode) in shots {
+            unregister(id: id)
+            if on {
+                register(id: id, keyCode: key, modifiers: optionKey | shiftKey) {
+                    if let mode { CaptureOverlay.shared.start(mode) } else { ScreenshotService.shared.openLast() }
+                }
+            }
+        }
+        setTakeOver(on && AppModel.store.bool(forKey: "shot.takeOver"))
+    }
+
     static func unregister(id: UInt32) {
         if let ref = refs.removeValue(forKey: id) { UnregisterEventHotKey(ref) }
         handlers[id] = nil
@@ -57,16 +73,6 @@ enum Hotkeys {
         register(id: 4, keyCode: kVK_ANSI_V, modifiers: controlKey | optionKey) {
             AppModel.shared.openClipboard()
         }
-        // Screenshots (FR-88, design D38): ⌥⇧ so they never clash with macOS's ⇧⌘3/4/5.
-        let shots: [(UInt32, Int, CaptureOverlay.Mode?)] = [(10, kVK_ANSI_1, .area), (11, kVK_ANSI_2, .window), (12, kVK_ANSI_3, .screen),
-                                                             (13, kVK_ANSI_4, .scroll), (14, kVK_ANSI_T, .text), (15, kVK_ANSI_E, nil)]
-        for (id, key, mode) in shots {
-            register(id: id, keyCode: key, modifiers: optionKey | shiftKey) {
-                guard AppModel.shared.features.isEnabled(.screenshot) else { return }
-                if let mode { CaptureOverlay.shared.start(mode) } else { ScreenshotService.shared.openLast() }
-            }
-        }
-        if AppModel.store.bool(forKey: "shot.takeOver") { setTakeOver(true) }
         // Quick terminal (FR-41): drops down from the notch, again to put it away.
         register(id: 5, keyCode: kVK_ANSI_T, modifiers: controlKey | optionKey) {
             let m = AppModel.shared

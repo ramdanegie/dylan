@@ -14,6 +14,8 @@ final class ScrollCapture {
     private var border: NSPanel?
     private var keyMonitor: Any?
     private var pieces: [CGImage] = []
+    /// A sticky footer seen between the first two frames: cut from the first piece, added once at the end.
+    private var footer: CGImage?
     private var lastRows: [UInt64] = []
     private var height = 0
     private var busy = false
@@ -25,7 +27,7 @@ final class ScrollCapture {
         guard !isActive else { return }
         self.region = region
         self.screen = screen
-        pieces = []; lastRows = []; height = 0; lastMove = Date(); autoScroll = false
+        pieces = []; lastRows = []; height = 0; lastMove = Date(); autoScroll = false; footer = nil
         showChrome()
         let t = Timer(timeInterval: 0.15, repeats: true) { _ in MainActor.assumeIsolated { ScrollCapture.shared.tick() } }
         RunLoop.main.add(t, forMode: .common)
@@ -54,9 +56,16 @@ final class ScrollCapture {
             pieces = [img]; lastRows = rows; height = img.height; lastMove = Date(); updateHUD(); return
         }
         let sticky = ScrollStitch.stickyRows(lastRows, rows)
-        guard let shift = ScrollStitch.shift(lastRows, rows, sticky: sticky) else { lastRows = rows; return }
-        let keep = ScrollStitch.newRows(height: img.height, shift: shift)
-        if let slice = img.cropping(to: CGRect(x: 0, y: keep.lowerBound, width: img.width, height: keep.count)) {
+        let foot = ScrollStitch.stickyFooterRows(lastRows, rows)
+        guard let shift = ScrollStitch.shift(lastRows, rows, sticky: sticky, footer: foot) else { lastRows = rows; return }
+        if foot > 0, footer == nil, pieces.count == 1, let first = pieces.first {
+            // First time a footer shows up: keep it aside and cut it from the first frame.
+            footer = Self.copy(first, rows: (first.height - foot)..<first.height)
+            pieces[0] = Self.copy(first, rows: 0..<(first.height - foot)) ?? first
+            height -= foot
+        }
+        let keep = ScrollStitch.newRows(height: img.height - foot, shift: shift)
+        if let slice = Self.copy(img, rows: keep) {
             pieces.append(slice)
             height += keep.count
             lastMove = Date()
@@ -65,13 +74,26 @@ final class ScrollCapture {
         updateHUD()
     }
 
+    /// Rows of a frame in a buffer of their own: a plain crop keeps the whole parent frame alive (~11 MB each).
+    nonisolated static func copy(_ img: CGImage, rows: Range<Int>) -> CGImage? {
+        guard !rows.isEmpty, let ctx = CGContext(data: nil, width: img.width, height: rows.count, bitsPerComponent: 8, bytesPerRow: 0,
+                                                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        // Rows are counted from the top; CoreGraphics draws from the bottom.
+        ctx.draw(img, in: CGRect(x: 0, y: -(img.height - rows.upperBound), width: img.width, height: img.height))
+        return ctx.makeImage()
+    }
+
     /// FNV-1a of every 4th pixel per row: enough to tell rows apart, cheap enough for ~7 frames a second.
     nonisolated static func rowHashes(_ img: CGImage) -> [UInt64] {
         let w = img.width, h = img.height, bpr = w * 4
         var data = [UInt8](repeating: 0, count: bpr * h)
-        guard let ctx = CGContext(data: &data, width: w, height: h, bitsPerComponent: 8, bytesPerRow: bpr,
-                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return [] }
-        ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
+        let drawn = data.withUnsafeMutableBytes { buf -> Bool in
+            guard let ctx = CGContext(data: buf.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: bpr,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
+            return true
+        }
+        guard drawn else { return [] }
         var out = [UInt64](repeating: 0, count: h)
         for y in 0..<h {
             var hash: UInt64 = 0xcbf29ce484222325
@@ -86,8 +108,8 @@ final class ScrollCapture {
         guard isActive else { return }
         timer?.invalidate(); timer = nil
         hideChrome()
-        guard let image = Self.join(pieces) else { return }
-        pieces = []
+        guard let image = Self.join(pieces + (footer.map { [$0] } ?? [])) else { return }
+        pieces = []; footer = nil
         ScreenshotService.shared.finished(image)
     }
 

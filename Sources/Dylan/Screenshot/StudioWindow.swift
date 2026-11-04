@@ -59,6 +59,10 @@ final class StudioModel {
     var tool: Tool = .arrow
     var ink: Color = Color(red: 1, green: 0.23, blue: 0.19)
     var marks: [Mark] = [] { didSet { rebuildWorking() } }
+    /// Blurs found by OCR: never undone or reset, so a secret cannot come back by accident.
+    var autoBlurs: [Mark] = [] { didSet { rebuildWorking() } }
+    /// Copy, Save and drag wait for OCR, so an unblurred picture never leaves the editor.
+    var blurPending = false
     var crop: CGRect? { didSet { rebuildWorking() } }       // normalized
     private(set) var working: NSImage
     var redoStack: [[Mark]] = []
@@ -82,7 +86,7 @@ final class StudioModel {
     init(original: CGImage, url: URL) {
         self.original = original
         self.url = url
-        working = NSImage(cgImage: original, size: CGSize(width: original.width / 2, height: original.height / 2))
+        working = NSImage(cgImage: original, size: CGSize(width: CGFloat(original.width) / 2, height: CGFloat(original.height) / 2))
         let d = AppModel.store
         frame = Beautify.Frame(rawValue: d.string(forKey: "studio.frame") ?? "") ?? .mac
         background = d.object(forKey: "studio.bg") as? Int ?? ShotPrefs.studioBackground
@@ -130,11 +134,22 @@ final class StudioModel {
 
     var nextNumber: Int { (marks.filter { $0.kind == .number }.map(\.number).max() ?? 0) + 1 }
 
+    /// Marks and crops are stored in original-picture coordinates; the editor shows the cropped picture.
+    func toOriginal(_ p: CGPoint) -> CGPoint {
+        let c = crop ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+        return CGPoint(x: c.minX + p.x * c.width, y: c.minY + p.y * c.height)
+    }
+
+    func toWorking(_ p: CGPoint) -> CGPoint {
+        let c = crop ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+        return CGPoint(x: (p.x - c.minX) / c.width, y: (p.y - c.minY) / c.height)
+    }
+
     /// The capture with blur marks applied and the crop taken; annotations other than blur are drawn on top by the view.
     private func rebuildWorking() {
         var img = CIImage(cgImage: original)
         let w = CGFloat(original.width), h = CGFloat(original.height)
-        for m in marks where m.kind == .blur {
+        for m in autoBlurs + marks where m.kind == .blur {
             let r = Self.rect(m.a, m.b, w: w, h: h)
             // CIImage is bottom-left based.
             let ciRect = CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height)
@@ -143,13 +158,15 @@ final class StudioModel {
                 .cropped(to: ciRect)
             img = pix.composited(over: img)
         }
+        // A blur box padded past an edge must not grow the picture.
+        img = img.cropped(to: CGRect(x: 0, y: 0, width: w, height: h))
         if let c = crop {
             let r = Self.rect(c.origin, CGPoint(x: c.maxX, y: c.maxY), w: w, h: h)
             img = img.cropped(to: CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height))
         }
         let ctx = CIContext()
         if let out = ctx.createCGImage(img, from: img.extent) {
-            working = NSImage(cgImage: out, size: CGSize(width: out.width / 2, height: out.height / 2))
+            working = NSImage(cgImage: out, size: CGSize(width: CGFloat(out.width) / 2, height: CGFloat(out.height) / 2))
         }
     }
 
@@ -158,9 +175,11 @@ final class StudioModel {
     }
 
     /// Blur emails, tokens and card numbers found by OCR (same secret patterns as the Clipboard).
-    func autoBlurSensitive() {
+    @discardableResult func autoBlurSensitive() -> Task<Void, Never> {
         let image = original
-        Task {
+        blurPending = true
+        return Task {
+            defer { blurPending = false }
             let boxes: [CGRect] = await Task.detached {
                 let req = VNRecognizeTextRequest()
                 req.recognitionLevel = .accurate
@@ -173,7 +192,7 @@ final class StudioModel {
             }.value
             guard !boxes.isEmpty else { return }
             let blurs = boxes.map { Mark(kind: .blur, a: $0.origin, b: CGPoint(x: $0.maxX, y: $0.maxY), color: .clear) }
-            marks += blurs
+            autoBlurs = blurs
             status = L("shot.autoBlurred", blurs.count)
         }
     }
@@ -188,7 +207,8 @@ final class StudioModel {
 
     func render() -> CGImage? {
         let r = ImageRenderer(content: StudioCanvas(model: self, exporting: true).frame(width: canvasSize.width, height: canvasSize.height))
-        r.scale = 2
+        // ImageRenderer returns an empty picture past ~16 384 px a side (long scroll captures).
+        r.scale = min(2, 16_384 / max(canvasSize.width, canvasSize.height, 1))
         return r.cgImage
     }
 
@@ -271,7 +291,7 @@ struct FillView: View {
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: 2, height: 2))
         guard let p = ctx.data?.assumingMemoryBound(to: UInt8.self) else { return (.gray, .black) }
         func c(_ i: Int) -> Color { Color(red: Double(p[i]) / 255 * 0.8, green: Double(p[i + 1]) / 255 * 0.8, blue: Double(p[i + 2]) / 255 * 0.8) }
-        return (c(8), c(4))
+        return (c(0), c(12))   // top-left, bottom-right (row 0 is the top in memory)
     }
 }
 
@@ -309,6 +329,7 @@ struct GrainView: View {
 struct StudioCanvas: View {
     var model: StudioModel
     var exporting = false
+    private var flat: Bool { model.annotating && !exporting }
 
     var body: some View {
         let canvas = model.canvasSize
@@ -323,11 +344,12 @@ struct StudioCanvas: View {
                 }
                 framed
             }
-            .scaleEffect(model.zoom / 100)
-            .rotation3DEffect(.degrees(lay.rotateX), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
-            .rotation3DEffect(.degrees(lay.rotateY), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-            .rotationEffect(.degrees(lay.rotateZ))
-            .position(x: canvas.width * lay.anchorX, y: canvas.height * lay.anchorY)
+            // Annotating needs the picture flat and centered so the marks land where the pointer is.
+            .scaleEffect(flat ? 1 : model.zoom / 100)
+            .rotation3DEffect(.degrees(flat ? 0 : lay.rotateX), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
+            .rotation3DEffect(.degrees(flat ? 0 : lay.rotateY), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+            .rotationEffect(.degrees(flat ? 0 : lay.rotateZ))
+            .position(x: canvas.width * (flat ? 0.5 : lay.anchorX), y: canvas.height * (flat ? 0.5 : lay.anchorY))
         }
         .frame(width: canvas.width, height: canvas.height)
         .clipped()
@@ -395,7 +417,8 @@ struct AnnotationLayer: View {
         Canvas { ctx, size in
             let lw = max(2, min(size.width, size.height) / 160)   // line width follows the picture size (D41)
             for m in model.marks where m.kind != .blur {
-                let a = CGPoint(x: m.a.x * size.width, y: m.a.y * size.height), b = CGPoint(x: m.b.x * size.width, y: m.b.y * size.height)
+                let wa = model.toWorking(m.a), wb = model.toWorking(m.b)
+                let a = CGPoint(x: wa.x * size.width, y: wa.y * size.height), b = CGPoint(x: wb.x * size.width, y: wb.y * size.height)
                 switch m.kind {
                 case .arrow:
                     var p = Path(); p.move(to: a); p.addLine(to: b)
@@ -480,14 +503,15 @@ struct StudioView: View {
             }
             Spacer()
             if let s = model.status { Text(s).font(.caption).foregroundStyle(.secondary) }
-            DragOut(model: model)
+            if model.blurPending { ProgressView().controlSize(.small); Text(L("shot.checkingSensitive")).font(.caption).foregroundStyle(.secondary) }
+            DragOut(model: model).disabled(model.blurPending).opacity(model.blurPending ? 0.4 : 1)
             Picker("", selection: $model.format) {
                 Text("PNG").tag("png"); Text("JPG").tag("jpg")
                 if ScreenshotService.canWriteWebP { Text("WebP").tag("webp") }
             }
             .frame(width: 80)
-            Button(L("shot.save")) { model.saveFile() }
-            Button(L("shot.copy")) { model.copy() }.keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent)
+            Button(L("shot.save")) { model.saveFile() }.disabled(model.blurPending)
+            Button(L("shot.copy")) { model.copy() }.keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent).disabled(model.blurPending)
         }
         .padding(.horizontal, 12).frame(height: 46)
     }
@@ -511,7 +535,7 @@ struct StudioView: View {
     /// Gestures over the picture itself (annotation mode shows the picture without 3D layout so it can be edited).
     private func editingOverlay(canvas: CGSize, fit: CGFloat) -> some View {
         let content = model.contentSize, f = model.frame
-        let picture = CGRect(x: (canvas.width - content.width) / 2 * fit, y: ((canvas.height - content.height - f.barHeight) / 2 + f.barHeight + f.glassBorder) * fit,
+        let picture = CGRect(x: (canvas.width - content.width) / 2 * fit, y: ((canvas.height - content.height - f.barHeight) / 2 + f.barHeight) * fit,
                              width: content.width * fit, height: content.height * fit)
         return ZStack(alignment: .topLeading) {
             Color.clear
@@ -530,8 +554,9 @@ struct StudioView: View {
             dragNow = clamped
         }.onEnded { _ in
             defer { dragStart = nil; dragNow = nil }
-            guard let a = dragStart, let b = dragNow else { return }
-            let moved = hypot(a.x - b.x, a.y - b.y) > 0.005
+            guard let wa = dragStart, let wb = dragNow else { return }
+            let moved = hypot(wa.x - wb.x, wa.y - wb.y) > 0.005
+            let a = model.toOriginal(wa), b = model.toOriginal(wb)
             switch model.tool {
             case .arrow: if moved { model.add(Mark(kind: .arrow, a: a, b: b, color: model.ink)) }
             case .rect: if moved { model.add(Mark(kind: .rect, a: a, b: b, color: model.ink)) }
@@ -539,7 +564,7 @@ struct StudioView: View {
             case .blur: if moved { model.add(Mark(kind: .blur, a: a, b: b, color: .clear)) }
             case .number: model.add(Mark(kind: .number, a: b, b: b, number: model.nextNumber, color: model.ink))
             case .text: pendingText = b
-            case .crop: if moved { model.crop = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y)) }
+            case .crop: if moved { model.crop = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y)) }   // a, b already original
             case .pick:
                 let rep = NSBitmapImageRep(cgImage: model.original)
                 if let c = rep.colorAt(x: Int(b.x * CGFloat(rep.pixelsWide)), y: Int(b.y * CGFloat(rep.pixelsHigh))) { model.ink = Color(nsColor: c) }

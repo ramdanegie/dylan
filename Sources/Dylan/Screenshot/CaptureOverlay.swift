@@ -15,12 +15,16 @@ final class CaptureOverlay {
 
     private var panel: NSPanel?
     private var countdown: Timer?
-    var isActive: Bool { panel != nil || countdown != nil }
+    /// Set while ScreenCaptureKit freezes the screen, so a second shortcut press cannot open a second overlay.
+    private var freezing = false
+    var isActive: Bool { panel != nil || countdown != nil || freezing }
     static let timers = [0, 3, 5, 10]
 
     /// Starts a capture. `delay` (seconds) waits before freezing the screen, so menus can be opened first.
     func start(_ mode: Mode, delay: Int = 0) {
-        guard !isActive, ScreenshotService.shared.ensurePermission() else { return }
+        // Pressing a capture shortcut again during the countdown cancels it.
+        if countdown != nil { cancelCountdown(); return }
+        guard !isActive, !ScrollCapture.shared.isActive, ScreenshotService.shared.ensurePermission() else { return }
         if delay > 0 { runCountdown(mode, delay); return }
         freeze(mode)
     }
@@ -57,9 +61,12 @@ final class CaptureOverlay {
 
     private func freeze(_ mode: Mode) {
         let mouse = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main else { return }
+        guard !freezing, panel == nil, let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main else { return }
+        freezing = true
         Task {
-            guard let frozen = await ScreenshotService.shared.freeze(screen) else { return }
+            let frozen = await ScreenshotService.shared.freeze(screen)
+            CaptureOverlay.shared.freezing = false
+            guard let frozen else { return }
             // ⌥⇧3: the whole screen at once, like ⇧⌘3.
             if mode == .screen { ScreenshotService.shared.finished(frozen.image); return }
             CaptureOverlay.shared.show(frozen, mode: mode)
@@ -67,6 +74,7 @@ final class CaptureOverlay {
     }
 
     private func show(_ frozen: ScreenshotService.Frozen, mode: Mode) {
+        guard panel == nil else { return }
         let p = KeyPanel(contentRect: frozen.screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         p.level = .screenSaver
         p.isOpaque = true
@@ -329,7 +337,7 @@ final class CaptureView: NSView {
 
     override func keyDown(with e: NSEvent) {
         switch e.keyCode {
-        case 53: CaptureOverlay.shared.close(); return                                    // Esc
+        case 53: timerWork?.cancel(); CaptureOverlay.shared.close(); return               // Esc
         case 36, 76: if let s = selection { confirm(s) }; return                          // Return
         case 49:                                                                          // Space
             let next = CaptureOverlay.Mode(rawValue: mode.rawValue % CaptureOverlay.Mode.allCases.count + 1)!

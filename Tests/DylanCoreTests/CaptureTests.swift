@@ -68,4 +68,17 @@ import Testing
         #expect(ScrollStitch.shift(a, b, sticky: sticky) == 100)
         #expect(ScrollStitch.stickyRows(a, a) == 0)
     }
+
+    @Test func blankFramesAndStickyFooter() {
+        let blank = [UInt64](repeating: 9, count: 400)
+        #expect(ScrollStitch.shift(blank, blank) == nil)
+        var blank2 = blank; blank2[0] = 1
+        #expect(ScrollStitch.shift(blank, blank2, sticky: 1) == nil)          // only blank rows left to compare
+        let page = (0..<2000).map { UInt64($0) * 2654435761 + 3 }
+        let footer: [UInt64] = (0..<30).map { UInt64($0) + 900_000_000 }
+        let a = Array(page[0..<370]) + footer, b = Array(page[80..<450]) + footer
+        let f = ScrollStitch.stickyFooterRows(a, b)
+        #expect(f == 30)
+        #expect(ScrollStitch.shift(a, b, footer: f) == 80)
+    }
 }

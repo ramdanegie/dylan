@@ -610,7 +610,7 @@ struct CaptureThumb: View {
     var path: String
     var body: some View {
         Group {
-            if let img = NSImage(contentsOfFile: path) {
+            if let img = Self.thumbnail(path) {
                 Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
             } else {
                 Color.white.opacity(0.1)
@@ -621,5 +621,18 @@ struct CaptureThumb: View {
         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.25), lineWidth: 1))
         .onDrag { NSItemProvider(contentsOf: URL(fileURLWithPath: path)) ?? NSItemProvider() }
         .accessibilityLabel(L("shot.dragToApp"))
+    }
+
+    /// A small decoded copy, made once: a scroll capture's full PNG is ~160 MB decoded.
+    nonisolated(unsafe) private static var cache: [String: NSImage] = [:]
+    static func thumbnail(_ path: String) -> NSImage? {
+        if let c = cache[path] { return c }
+        guard let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+              let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                                                   kCGImageSourceThumbnailMaxPixelSize: 160] as CFDictionary) else { return nil }
+        let img = NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height))
+        if cache.count > 20 { cache.removeAll() }
+        cache[path] = img
+        return img
     }
 }

@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotchController.shared.show()
         SocketServer.shared.start()
         Hotkeys.registerDefaults()
+        ScreenshotService.shared.pruneHistory()   // retention also applies when nothing new is captured
         installMenuBar()
         refreshProviders()
         observeProviders()
@@ -80,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !f.isEnabled(.appVolume) { AppVolumeProvider.shared.stopAll() }
         f.isEnabled(.notifications) ? NotificationProvider.shared.start() : NotificationProvider.shared.stop()
         if !f.isEnabled(.terminal) { TerminalProvider.shared.stop() }
+        Hotkeys.setScreenshotKeys(f.isEnabled(.screenshot))
         f.isEnabled(.lockScreen) ? LockScreenProvider.shared.start() : LockScreenProvider.shared.stop()
         FaceUnlockProvider.shared.start()
         f.isEnabled(.timeToLeave) && f.isEnabled(.meeting) ? TravelProvider.shared.start() : TravelProvider.shared.stop()

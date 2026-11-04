@@ -881,3 +881,5 @@
 "shot.keepHistory" = "Simpan riwayat";
 "shot.days" = "%d hari";
 "shot.forever" = "Selamanya";
+"shot.checkingSensitive" = "Mencari data sensitif…";
+"shot.after.editor" = "Buka editor langsung";

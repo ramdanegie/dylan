@@ -881,3 +881,5 @@
 "shot.keepHistory" = "Keep history";
 "shot.days" = "%d days";
 "shot.forever" = "Forever";
+"shot.checkingSensitive" = "Checking for sensitive data…";
+"shot.after.editor" = "Open the editor right away";

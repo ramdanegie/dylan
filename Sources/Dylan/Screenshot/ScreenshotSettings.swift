@@ -37,7 +37,7 @@ struct ScreenshotSettings: View {
                 LabeledContent(L(k)) { SwiftUI.Text(v).font(.system(.body, design: .monospaced)).foregroundStyle(.secondary) }
             }
             Toggle(L("shot.takeOver"), isOn: Binding(get: { _ = refresh; return d.bool(forKey: "shot.takeOver") },
-                                                    set: { d.set($0, forKey: "shot.takeOver"); Hotkeys.setTakeOver($0); refresh += 1 }))
+                                                    set: { d.set($0, forKey: "shot.takeOver"); Hotkeys.setTakeOver($0 && AppModel.shared.features.isEnabled(.screenshot)); refresh += 1 }))
             SwiftUI.Text(L("shot.takeOverHint")).font(.caption).foregroundStyle(.secondary)
             if d.bool(forKey: "shot.takeOver") {
                 Button(L("shot.openKeyboardShortcuts")) {
@@ -46,7 +46,8 @@ struct ScreenshotSettings: View {
             }
         }
         Section(L("shot.afterCapture")) {
-            Picker(L("shot.afterCapture"), selection: string("shot.after", "notch")) {
+            Picker(L("shot.afterCapture"), selection: string("shot.after", "editor")) {
+                SwiftUI.Text(L("shot.after.editor")).tag("editor")
                 SwiftUI.Text(L("shot.after.notch")).tag("notch")
                 SwiftUI.Text(L("shot.after.studio")).tag("studio")
                 SwiftUI.Text(L("shot.after.saveOnly")).tag("saveOnly")

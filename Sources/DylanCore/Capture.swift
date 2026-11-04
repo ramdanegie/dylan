@@ -80,11 +80,20 @@ public enum ScrollStitch {
         return n == min(prev.count, next.count) ? 0 : n
     }
 
-    /// How far `next` scrolled relative to `prev` (rows), comparing below the sticky header. nil = no match
-    /// (scrolled too far between frames) or no movement.
-    public static func shift(_ prev: [UInt64], _ next: [UInt64], sticky: Int = 0, minOverlap: Int = 24) -> Int? {
-        let h = min(prev.count, next.count)
-        guard h - sticky > minOverlap else { return nil }
+    /// Rows identical at the bottom of both frames (sticky footer / cookie bar).
+    public static func stickyFooterRows(_ prev: [UInt64], _ next: [UInt64]) -> Int {
+        var n = 0
+        while n < min(prev.count, next.count), prev[prev.count - 1 - n] == next[next.count - 1 - n] { n += 1 }
+        return n == min(prev.count, next.count) ? 0 : n
+    }
+
+    /// How far `next` scrolled relative to `prev` (rows), comparing between the sticky header and footer.
+    /// nil = no match (scrolled too far between frames), no movement, or a blank area that matches anywhere.
+    public static func shift(_ prev: [UInt64], _ next: [UInt64], sticky: Int = 0, footer: Int = 0, minOverlap: Int = 24) -> Int? {
+        let h = min(prev.count, next.count) - footer
+        guard h - sticky > minOverlap, prev != next else { return nil }
+        // A uniform region (blank page) would "match" at shift 1 forever.
+        guard Set(next[sticky..<h]).count > 1 else { return nil }
         // Look for the largest overlap first: small scroll steps are the common case.
         for s in 1...(h - sticky - minOverlap) {
             var ok = true

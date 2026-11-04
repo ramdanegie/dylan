@@ -6,9 +6,10 @@ import UniformTypeIdentifiers
 
 /// Screenshot preferences (design D43), in the app's defaults.
 enum ShotPrefs {
-    enum After: String, CaseIterable { case notch, studio, saveOnly }
+    /// editor (default, user feedback): copy and open the annotation editor right away.
+    enum After: String, CaseIterable { case editor, notch, studio, saveOnly }
     static var d: UserDefaults { AppModel.store }
-    static var after: After { After(rawValue: d.string(forKey: "shot.after") ?? "") ?? .notch }
+    static var after: After { After(rawValue: d.string(forKey: "shot.after") ?? "") ?? .editor }
     static var saveFile: Bool { d.object(forKey: "shot.saveFile") as? Bool ?? false }
     static var folder: URL {
         d.string(forKey: "shot.folder").map { URL(fileURLWithPath: $0) }
@@ -76,7 +77,12 @@ final class ScreenshotService {
         guard let image = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) else { return nil }
         // Pickable windows: normal layer, visible, not Dylan's, front to back (content.windows is front to back).
         let primaryTop = NSScreen.screens.first?.frame.maxY ?? screen.frame.maxY
-        let windows = content.windows.compactMap { w -> (CGRect, SCWindow)? in
+        // Front-to-back order from WindowServer (SCShareableContent does not promise an order).
+        let order = (CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? [])
+            .compactMap { $0[kCGWindowNumber as String] as? CGWindowID }
+        let rank = Dictionary(order.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: { a, _ in a })
+        let sorted = content.windows.sorted { (rank[$0.windowID] ?? .max) < (rank[$1.windowID] ?? .max) }
+        let windows = sorted.compactMap { w -> (CGRect, SCWindow)? in
             guard w.windowLayer == 0, w.isOnScreen, w.frame.width > 40, w.frame.height > 40, w.owningApplication?.processID != me else { return nil }
             // SCWindow.frame is top-left based on the primary screen; convert to AppKit.
             let f = CGRect(x: w.frame.minX, y: primaryTop - w.frame.maxY, width: w.frame.width, height: w.frame.height)
@@ -89,8 +95,10 @@ final class ScreenshotService {
     func capture(window: SCWindow, scale: CGFloat) async -> CGImage? {
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let config = SCStreamConfiguration()
-        config.width = Int(window.frame.width * scale)
-        config.height = Int(window.frame.height * scale)
+        // The filter's rect includes the shadow when it is kept; sizing from window.frame would squeeze it.
+        let rect = filter.contentRect, s = CGFloat(filter.pointPixelScale) * scale / max(1, CGFloat(filter.pointPixelScale))
+        config.width = Int(rect.width * s)
+        config.height = Int(rect.height * s)
         config.showsCursor = false
         config.ignoreShadowsSingleWindow = !ShotPrefs.windowShadow
         config.captureResolution = .best
@@ -122,10 +130,18 @@ final class ScreenshotService {
         lastCapture = url
         pruneHistory()
         if ShotPrefs.after != .saveOnly {
-            if ShotPrefs.d.bool(forKey: "shot.autoBeautify"), let url, let pretty = StudioModel(original: image, url: url).render() { copy(pretty) } else { copy(image) }
+            if ShotPrefs.d.bool(forKey: "shot.autoBeautify"), let url {
+                // Wait for the sensitive-data blur so the beautified copy never leaks what the editor would hide.
+                let model = StudioModel(original: image, url: url)
+                Task {
+                    if ShotPrefs.autoBlur { await model.autoBlurSensitive().value }
+                    self.copy(model.render() ?? image)
+                }
+            } else { copy(image) }
         }
         if ShotPrefs.saveFile || ShotPrefs.after == .saveOnly { _ = Self.store(image, in: ShotPrefs.folder, ext: ShotPrefs.format) }
         if ShotPrefs.after == .studio, let url { StudioWindow.open(url); return }
+        if ShotPrefs.after == .editor, let url { StudioWindow.open(url, annotate: true); return }
         guard let url else { return }
         let now = Date()
         AppModel.shared.center.post(Activity(
