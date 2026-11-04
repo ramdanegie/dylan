@@ -350,7 +350,14 @@ struct PeekRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if activity.kind == .media, let m = model.media {
+            if activity.kind == .capture, let path = activity.url?.hasPrefix("capture:") == true ? String(activity.url!.dropFirst(8)) : nil {
+                CaptureThumb(path: path)
+                SwiftUI.Text(model.displayDetail(activity)).font(DY.font(12, .regular)).foregroundStyle(DY.fg).lineLimit(1)
+                Spacer(minLength: 4)
+                ForEach(Array(model.actions(for: activity).enumerated()), id: \.offset) { _, a in
+                    NotchButton(title: a.0, kind: a.1) { model.perform(a.2) }
+                }
+            } else if activity.kind == .media, let m = model.media {
                 SwiftUI.Text(model.presentationMode ? m.title : "\(m.title) · \(m.artist)")
                     .font(DY.font(12.5, .regular)).foregroundStyle(DY.fg).lineLimit(1)
                 Spacer(minLength: 4)
@@ -595,5 +602,24 @@ struct PulseRing: View {
             phase = 0
             withAnimation(.easeOut(duration: 1.2)) { phase = 1 }
         }
+    }
+}
+
+/// The capture's thumbnail in Peek (D40): drag it straight into Slack, Figma, email, or onto the Shelf.
+struct CaptureThumb: View {
+    var path: String
+    var body: some View {
+        Group {
+            if let img = NSImage(contentsOfFile: path) {
+                Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
+            } else {
+                Color.white.opacity(0.1)
+            }
+        }
+        .frame(width: 46, height: 30)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.25), lineWidth: 1))
+        .onDrag { NSItemProvider(contentsOf: URL(fileURLWithPath: path)) ?? NSItemProvider() }
+        .accessibilityLabel(L("shot.dragToApp"))
     }
 }

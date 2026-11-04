@@ -127,6 +127,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pres.keyEquivalentModifierMask = [.control, .option, .command]
         pres.state = AppModel.shared.presentationMode ? .on : .off
         menu.addItem(pres)
+        if AppModel.shared.features.isEnabled(.screenshot) {
+            let shot = NSMenuItem(title: L("shot.menu"), action: nil, keyEquivalent: "")
+            shot.submenu = makeScreenshotMenu()
+            menu.addItem(shot)
+        }
         let awake = NSMenuItem(title: L("keepAwake.button"), action: #selector(toggleKeepAwake), keyEquivalent: "")
         awake.state = AppModel.shared.keepAwake != nil ? .on : .off
         menu.addItem(awake)
@@ -144,6 +149,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openNotch() { AppModel.shared.notchState = .expanded }
     @objc private func togglePresentation() { AppModel.shared.togglePresentation() }
     @objc private func toggleKeepAwake() { AppModel.shared.toggleKeepAwake() }
+
+    // MARK: Screenshot menu (design D38)
+
+    private func makeScreenshotMenu() -> NSMenu {
+        let m = NSMenu()
+        func item(_ key: String, _ action: Selector, _ eq: String = "", _ mods: NSEvent.ModifierFlags = [.option, .shift], tag: Int = 0) -> NSMenuItem {
+            let i = NSMenuItem(title: L(key), action: action, keyEquivalent: eq)
+            i.keyEquivalentModifierMask = mods
+            i.target = self
+            i.tag = tag
+            return i
+        }
+        m.addItem(item("shot.captureArea", #selector(captureMode(_:)), "1", tag: 1))
+        m.addItem(item("shot.captureWindow", #selector(captureMode(_:)), "2", tag: 2))
+        m.addItem(item("shot.captureScreen", #selector(captureMode(_:)), "3", tag: 3))
+        m.addItem(item("shot.captureScroll", #selector(captureMode(_:)), "4", tag: 4))
+        m.addItem(item("shot.captureText", #selector(captureMode(_:)), "t", tag: 5))
+        let timer = NSMenuItem(title: L("shot.captureTimer"), action: nil, keyEquivalent: "")
+        let tm = NSMenu()
+        for s in [3, 5, 10] {
+            let i = item("shot.seconds", #selector(captureTimer(_:)), tag: s)
+            i.title = L("shot.seconds", s)
+            tm.addItem(i)
+        }
+        timer.submenu = tm
+        m.addItem(timer)
+        let rec = NSMenuItem(title: L("shot.record"), action: nil, keyEquivalent: "")
+        rec.isEnabled = false
+        m.addItem(rec)
+        m.addItem(.separator())
+        m.addItem(item("shot.pickColor", #selector(pickColorFromMenu), "c", [.control, .option]))
+        m.addItem(item("shot.openLast", #selector(openLastCapture), "e"))
+        m.addItem(item("shot.history", #selector(openCaptureHistory)))
+        return m
+    }
+
+    @objc private func captureMode(_ sender: NSMenuItem) {
+        guard let mode = CaptureOverlay.Mode(rawValue: sender.tag) else { return }
+        // Let the menu close before the screen is frozen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { MainActor.assumeIsolated { CaptureOverlay.shared.start(mode) } }
+    }
+
+    @objc private func captureTimer(_ sender: NSMenuItem) { CaptureOverlay.shared.start(.area, delay: sender.tag) }
+    @objc private func pickColorFromMenu() { AppModel.shared.pickColor() }
+    @objc private func openLastCapture() { ScreenshotService.shared.openLast() }
+    @objc private func openCaptureHistory() { CaptureHistoryWindow.show() }
     @objc private func disableFaceUnlock() { FaceUnlockProvider.shared.disable(); statusItem?.menu = makeMenu() }
     @objc private func openSettings() { SettingsWindow.show() }
 

@@ -7,6 +7,7 @@ import SwiftUI
 enum Snapshot {
     /// Views that use AppKit layers draw a static SwiftUI stand-in while this is set.
     static var rendering = false
+    nonisolated(unsafe) static var studioSample = false
 
     static func render(to dir: URL) {
         rendering = true
@@ -88,6 +89,7 @@ enum Snapshot {
             ("D8-expanded-home", { music(); m.startTimer(.pomodoro(now: now.addingTimeInterval(-378))); agentWorking(); m.notchState = .expanded }),
             ("D23-expanded-media", { music(); m.selectedTab = .media; m.notchState = .expanded }),
             ("D9-expanded-agents", { agentWorking(); m.selectedTab = .agents; m.notchState = .expanded }),
+            ("D44-studio", { Snapshot.studioSample = true }),
             ("FR41-terminal", {
                 m.features.toggles[.terminal] = true
                 TerminalProvider.shared.lines = ["~/web-admin % git status -sb", "## feat/login...origin/feat/login [ahead 2]",
@@ -118,6 +120,25 @@ enum Snapshot {
                 .frame(width: g.panelFrame.width, height: g.panelFrame.height)
                 .background(LinearGradient(colors: [Color(white: 0.85), Color(white: 0.7)], startPoint: .top, endPoint: .bottom))
                 .transaction { $0.animation = nil }
+            if Snapshot.studioSample {
+                // Studio on a sample "screenshot": the sample notch image itself, framed and beautified.
+                Snapshot.studioSample = false
+                let sample = ImageRenderer(content: NotchRootView(layout: layout).environment(\.colorScheme, .dark)
+                    .frame(width: 760, height: 400).background(Color(white: 0.96)))
+                sample.scale = 2
+                if let cg = sample.cgImage {
+                    let model = StudioModel(original: cg, url: URL(fileURLWithPath: "/tmp/sample.png"))
+                    model.frame = .browser; model.background = 0; model.shadow = 2; model.layout = 0; model.padding = 64; model.zoom = 100
+                    model.count = 1; model.ratio = 0
+                    model.add(Mark(kind: .arrow, a: CGPoint(x: 0.15, y: 0.75), b: CGPoint(x: 0.4, y: 0.4), color: .red))
+                    model.add(Mark(kind: .number, a: CGPoint(x: 0.12, y: 0.8), b: CGPoint(x: 0.12, y: 0.8), number: 1, color: .red))
+                    if let out = model.render(), let png = NSBitmapImageRep(cgImage: out).representation(using: .png, properties: [:]) {
+                        try? png.write(to: dir.appendingPathComponent("\(name)-\(lang).png"))
+                        print("✓ \(name)-\(lang).png")
+                    }
+                }
+                continue
+            }
             let r = ImageRenderer(content: view)
             r.scale = 2
             guard let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),

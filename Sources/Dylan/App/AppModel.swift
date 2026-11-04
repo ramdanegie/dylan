@@ -95,6 +95,8 @@ enum NotchAction: Equatable {
     case meetingControl(MeetingControls.Control)
     /// open / close / reply / accept / decline on a Notification Center banner.
     case banner(String, String)
+    /// beautify / save / pin / text / openLink / showText on a screenshot result (D40).
+    case capture(String, String)
 }
 
 @Observable
@@ -719,6 +721,7 @@ final class AppModel {
         case .discordKeybindMute: DiscordProvider.shared.sendKeybind(discordMuteKey)
         case .meetingControl(let c): MeetingCallProvider.shared.press(c)
         case .banner(let action, let id): NotificationProvider.shared.perform(action, bannerID: id)
+        case .capture(let action, let arg): ScreenshotService.shared.perform(action, arg)
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -747,6 +750,14 @@ final class AppModel {
                     (L("discord.leave"), .destructive, .discordLeave)]
         case .discord:
             return [(L("discord.toggleMute"), .normal, .discordKeybindMute)]
+        case .capture where a.url?.hasPrefix("capture:") == true:
+            let path = String(a.url!.dropFirst(8))
+            return [(L("shot.beautify"), .normal, .capture("beautify", path)), (L("shot.save"), .quiet, .capture("save", path)),
+                    (L("shot.pin"), .quiet, .capture("pin", path)), (L("shot.text"), .quiet, .capture("text", path))]
+        case .capture where a.url?.hasPrefix("qr:") == true:
+            return [(L("button.open"), .normal, .capture("openLink", String(a.url!.dropFirst(3))))]
+        case .capture where a.url?.hasPrefix("text:") == true:
+            return [(L("shot.showText"), .normal, .capture("showText", String(a.url!.dropFirst(5))))]
         case .notify where a.url?.hasPrefix("call:") == true:
             let id = String(a.url!.dropFirst(5))
             return [(L("calls.decline"), .destructive, .banner("decline", id)), (L("calls.accept"), .confirm, .banner("accept", id))]
