@@ -2,6 +2,11 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Ditambahkan
+- Editor screenshot: setelah Simpan, notch menampilkan "Klik untuk membuka di Finder" dengan path file dan tombol Finder.
+
 ## [0.1.2] - 2026-11-04
 
 ### Ditambahkan

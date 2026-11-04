@@ -107,6 +107,15 @@ enum Snapshot {
                                        value: L("faceUnlock.off"), detail: L("faceUnlock.offTooMany"), url: "faceunlock:history", startedAt: now), now: now)
                 m.notchState = .peek
             }),
+            ("D40-saved", {
+                let tmp = NSTemporaryDirectory() + "dylan-snapshot-saved.png"
+                if let tiff = sampleArtwork().tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: tmp))
+                }
+                m.center.post(Activity(id: "capture-saved", kind: .capture, priority: .p2, state: .success, symbol: "folder", label: L("shot.saved"),
+                                       detail: L("shot.openInFinder"), url: "saved:" + tmp, startedAt: now), now: now)
+                m.notchState = .peek
+            }),
             ("whats-new", {}),
             ("D19-enroll-1", { Snapshot.enrollStep = 0 }),
             ("D19-enroll-3", { Snapshot.enrollStep = 2 }),

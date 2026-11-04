@@ -1055,3 +1055,5 @@
 "update.whatsNewTitle" = "Yang baru di Dylan %@";
 "update.allChanges" = "Semua perubahan";
 "update.notNotarized" = "Build ini belum dinotarisasi: setelah memasang, buka System Settings → Privacy & Security → Open Anyway.";
+"shot.openInFinder" = "Klik untuk membuka di Finder";
+"shot.finder" = "Finder";

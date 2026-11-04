@@ -1055,3 +1055,5 @@
 "update.whatsNewTitle" = "What's new in Dylan %@";
 "update.allChanges" = "All changes";
 "update.notNotarized" = "This build is not notarized: after installing, open System Settings → Privacy & Security → Open Anyway.";
+"shot.openInFinder" = "Click to open in Finder";
+"shot.finder" = "Finder";

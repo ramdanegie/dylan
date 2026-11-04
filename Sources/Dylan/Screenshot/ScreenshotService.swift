@@ -159,6 +159,17 @@ final class ScreenshotService {
         if after == .editor, let url { StudioWindow.open(image: image, url: url, annotate: true) }
     }
 
+    /// After Save (user feedback, like Shottr): the notch peeks with "Click to open in Finder", the path and a
+    /// Finder button; clicking anywhere on it reveals the file.
+    func announceSaved(_ url: URL) {
+        let now = Date(), m = AppModel.shared
+        m.center.post(Activity(id: "capture-saved", kind: .capture, priority: .p2, state: .success, symbol: "folder",
+                               label: L("shot.saved"), detail: L("shot.openInFinder"), url: "saved:" + url.path, startedAt: now), now: now)
+        m.autoPeekUntil = now.addingTimeInterval(5)
+        if m.notchState == .closed || m.notchState == .compact { m.notchState = .peek }
+        m.scheduleTick()
+    }
+
     private func postResult(_ url: URL, width: Int, height: Int) {
         let now = Date(), s = max(1, Int(screenScale))
         AppModel.shared.center.post(Activity(
