@@ -765,6 +765,8 @@ final class AppModel {
             let path = String(a.url!.dropFirst(8))
             return [(L("shot.beautify"), .normal, .capture("beautify", path)), (L("shot.save"), .quiet, .capture("save", path)),
                     (L("shot.pin"), .quiet, .capture("pin", path)), (L("shot.text"), .quiet, .capture("text", path))]
+        case .capture where a.url?.hasPrefix("saved:") == true:
+            return [(L("shot.finder"), .normal, .revealFile(String(a.url!.dropFirst(6))))]
         case .capture where a.url?.hasPrefix("qr:") == true:
             return [(L("button.open"), .normal, .capture("openLink", String(a.url!.dropFirst(3))))]
         case .capture where a.url?.hasPrefix("text:") == true:

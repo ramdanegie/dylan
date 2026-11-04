@@ -367,6 +367,20 @@ struct PeekRow: View {
                 ForEach(Array(model.actions(for: activity).enumerated()), id: \.offset) { _, a in
                     NotchButton(title: a.0, kind: a.1) { model.perform(a.2) }
                 }
+            } else if activity.kind == .capture, let path = activity.url?.hasPrefix("saved:") == true ? String(activity.url!.dropFirst(6)) : nil {
+                // Saved from the editor (like Shottr): the whole row reveals the file in Finder.
+                CaptureThumb(path: path)
+                VStack(alignment: .leading, spacing: 1) {
+                    SwiftUI.Text(model.displayDetail(activity)).font(DY.font(12, .semibold)).foregroundStyle(DY.fg).lineLimit(1)
+                    SwiftUI.Text(model.presentationMode ? URL(fileURLWithPath: path).lastPathComponent : (path as NSString).abbreviatingWithTildeInPath)
+                        .font(DY.font(11, .regular)).foregroundStyle(DY.fg2).lineLimit(1).truncationMode(.middle)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { model.perform(.revealFile(path)) }
+                Spacer(minLength: 4)
+                ForEach(Array(model.actions(for: activity).enumerated()), id: \.offset) { _, a in
+                    NotchButton(title: a.0, kind: a.1) { model.perform(a.2) }
+                }
             } else if activity.kind == .media, let m = model.media {
                 SwiftUI.Text(model.presentationMode ? m.title : "\(m.title) · \(m.artist)")
                     .font(DY.font(12.5, .regular)).foregroundStyle(DY.fg).lineLimit(1)

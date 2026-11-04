@@ -249,6 +249,7 @@ final class StudioModel {
     func saveFile() -> URL? {
         guard let img = render(), let u = ScreenshotService.store(img, in: ShotPrefs.folder, ext: format) else { return nil }
         status = L("shot.savedTo", u.lastPathComponent)
+        ScreenshotService.shared.announceSaved(u)
         return u
     }
 
