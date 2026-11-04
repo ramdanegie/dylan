@@ -41,6 +41,22 @@ import Testing
         #expect(waitFor(sink, "GOT_INT"))
     }
 
+    /// The real case: an interactive zsh (macOS's default shell) must own the terminal, or Ctrl-C does nothing.
+    @Test func interactiveZshOwnsTheTerminalAndCtrlCStopsAJob() throws {
+        let pty = try #require(PTY(path: "/bin/zsh", args: ["-f", "-i"], environment: ["PATH": "/usr/bin:/bin", "TERM": "dumb"], cwd: "/tmp"))
+        let sink = Sink()
+        Thread { pty.readLoop { sink.add($0) } }.start()
+        pty.write(Data("ps -o tty= -p $$\n".utf8))
+        #expect(waitFor(sink, "ttys"))
+        pty.write(Data("sleep 30\n".utf8))
+        usleep(500_000)
+        pty.write(Data([0x03]))
+        // Ctrl-C ends the whole command line in zsh, so ask for the status on the next one.
+        pty.write(Data("echo AFTER-$?\n".utf8))
+        #expect(waitFor(sink, "AFTER-130"))   // sleep was interrupted (128 + SIGINT)
+        pty.terminate()
+    }
+
     @Test func inputAndDirectory() throws {
         let (pty, sink, _) = try start("read x; echo \"got:$x\"; cd /usr; sleep 2", cwd: "/")
         pty.write(Data("hello\n".utf8))

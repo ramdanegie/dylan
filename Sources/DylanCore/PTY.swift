@@ -1,9 +1,8 @@
 import Darwin
 import Foundation
 
-/// A shell on a pseudo-terminal for the quick terminal (FR-41). posix_spawn with POSIX_SPAWN_SETSID (no fork in a
-/// threaded app); the child opens the slave as its first tty, which makes it the controlling terminal, so
-/// Ctrl-C (0x03) interrupts the foreground job like in Terminal.
+/// A shell on a pseudo-terminal for the quick terminal (FR-41), started with forkpty so the slave is the shell's
+/// controlling terminal and Ctrl-C (0x03) interrupts the foreground job like in Terminal.
 public final class PTY: @unchecked Sendable {
     public let pid: pid_t
     public let master: Int32
@@ -13,37 +12,29 @@ public final class PTY: @unchecked Sendable {
     private var reading = false
 
     public init?(path: String, args: [String], environment: [String: String], cwd: String, cols: UInt16 = 90, rows: UInt16 = 14) {
-        let m = posix_openpt(O_RDWR | O_NOCTTY)
-        guard m >= 0, grantpt(m) == 0, unlockpt(m) == 0, let name = ptsname(m) else { if m >= 0 { close(m) }; return nil }
-        let slave = String(cString: name)
-        // The size sticks only once the slave is open; keep this fd open until the child has it too.
-        let s = open(slave, O_RDWR | O_NOCTTY)
-        defer { if s >= 0 { close(s) } }
-        var size = winsize(ws_row: rows, ws_col: cols, ws_xpixel: 0, ws_ypixel: 0)
-        _ = ioctl(s >= 0 ? s : m, TIOCSWINSZ, &size)
-
-        var attr: posix_spawnattr_t?
-        posix_spawnattr_init(&attr)
-        defer { posix_spawnattr_destroy(&attr) }
-        // A shell must not inherit the app's blocked or ignored signals (Ctrl-C, SIGPIPE in pipelines).
-        var none = sigset_t(), all = sigset_t()
-        sigemptyset(&none); sigfillset(&all)
-        posix_spawnattr_setsigmask(&attr, &none)
-        posix_spawnattr_setsigdefault(&attr, &all)
-        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF))
-        var actions: posix_spawn_file_actions_t?
-        posix_spawn_file_actions_init(&actions)
-        defer { posix_spawn_file_actions_destroy(&actions) }
-        posix_spawn_file_actions_addopen(&actions, 0, slave, O_RDWR, 0)
-        posix_spawn_file_actions_adddup2(&actions, 0, 1)
-        posix_spawn_file_actions_adddup2(&actions, 0, 2)
-        posix_spawn_file_actions_addchdir_np(&actions, cwd)
-
+        // Everything the child needs is built before fork: after fork it may only make async-signal-safe calls.
         let argv = ([path] + args).map { strdup($0) } + [nil]
         let envp = environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
-        defer { argv.forEach { free($0) }; envp.forEach { free($0) } }
-        var child: pid_t = 0
-        guard posix_spawn(&child, path, &actions, &attr, argv, envp) == 0 else { close(m); return nil }
+        let cpath = strdup(path), ccwd = strdup(cwd)
+        defer { argv.forEach { free($0) }; envp.forEach { free($0) }; free(cpath); free(ccwd) }
+        var size = winsize(ws_row: rows, ws_col: cols, ws_xpixel: 0, ws_ypixel: 0)
+        var m: Int32 = -1
+        // forkpty: setsid + TIOCSCTTY in the child, so the shell owns the terminal and Ctrl-C reaches its job.
+        // (posix_spawn cannot do TIOCSCTTY; zsh then had no controlling tty and ignored Ctrl-C.)
+        let child = forkpty(&m, nil, nil, &size)
+        if child == 0 {
+            var none = sigset_t()
+            sigemptyset(&none)
+            sigprocmask(SIG_SETMASK, &none, nil)
+            for sig: Int32 in 1..<32 { signal(sig, SIG_DFL) }
+            let maxFD = getdtablesize()
+            var fd: Int32 = 3
+            while fd < maxFD { close(fd); fd += 1 }
+            _ = chdir(ccwd)
+            execve(cpath, argv, envp)
+            _exit(127)
+        }
+        guard child > 0, m >= 0 else { return nil }
         pid = child
         master = m
     }
