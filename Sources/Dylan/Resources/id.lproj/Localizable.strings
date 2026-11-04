@@ -759,3 +759,5 @@
 "feature.otherPlayers" = "Pemutar lain (YouTube, SoundCloud, VLC…)";
 "feature.otherPlayers.hint" = "Tab browser yang sedang bersuara dan VLC; tiap browser minta izin Automation sekali";
 "otherPlayers.allow" = "Izinkan browser & VLC sekarang";
+"focus.blocked" = "macOS tidak mengizinkan Dylan membaca status Focus. Beri Dylan Full Disk Access, lalu buka ulang Dylan.";
+"focus.openFullDiskAccess" = "Buka Full Disk Access";

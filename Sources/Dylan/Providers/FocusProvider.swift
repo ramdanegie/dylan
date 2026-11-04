@@ -8,11 +8,14 @@ final class FocusProvider {
     private var source: DispatchSourceFileSystemObject?
     private var current: String?
     private var pending: DispatchWorkItem?
+    /// macOS refused the DoNotDisturb folder (it needs Full Disk Access on macOS 27); Settings says so.
+    private(set) var blocked = false
     private static let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/DoNotDisturb/DB")
 
     func start() {
         guard source == nil else { return }
         let fd = open(Self.dir.path, O_EVTONLY)
+        blocked = fd < 0
         guard fd >= 0 else { return }
         let s = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write, .rename], queue: .main)
         s.setEventHandler { MainActor.assumeIsolated { FocusProvider.shared.changed() } }

@@ -81,6 +81,14 @@ struct SettingsView: View {
             QuickPlaySettings()
         case .devices:
             FeatureToggles(features: [.battery, .bluetooth, .privacy, .focus, .keepAwake, .hud])
+            if model.features.isEnabled(.focus), FocusProvider.shared.blocked {
+                Section {
+                    SwiftUI.Text(L("focus.blocked")).font(.caption).foregroundStyle(.orange)
+                    Button(L("focus.openFullDiskAccess")) {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AllFiles")!)
+                    }
+                }
+            }
             KeepAwakeSettings()
         case .utilities: UtilitySettings()
         case .discord: DiscordSettings()
