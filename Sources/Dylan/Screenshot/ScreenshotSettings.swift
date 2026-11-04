@@ -33,7 +33,7 @@ struct ScreenshotSettings: View {
         }
         Section(L("shot.shortcuts")) {
             ForEach([("shot.captureArea", "⌥⇧1"), ("shot.captureWindow", "⌥⇧2"), ("shot.captureScreen", "⌥⇧3"), ("shot.captureScroll", "⌥⇧4"),
-                     ("shot.captureText", "⌥⇧T"), ("shot.openLast", "⌥⇧E")], id: \.0) { k, v in
+                     ("shot.captureText", "⌥⇧T"), ("shot.record", "⌥⇧5"), ("shot.openLast", "⌥⇧E")], id: \.0) { k, v in
                 LabeledContent(L(k)) { SwiftUI.Text(v).font(.system(.body, design: .monospaced)).foregroundStyle(.secondary) }
             }
             Toggle(L("shot.takeOver"), isOn: Binding(get: { _ = refresh; return d.bool(forKey: "shot.takeOver") },
@@ -70,6 +70,20 @@ struct ScreenshotSettings: View {
             }
             .pickerStyle(.segmented)
             LabeledContent(L("shot.fileName")) { SwiftUI.Text(CaptureStore.fileName(Date(), ext: ShotPrefs.format)).foregroundStyle(.secondary) }
+        }
+        // FR-94: saved as MP4 next to the screenshots.
+        Section(L("rec.title")) {
+            Toggle(L("rec.systemAudio"), isOn: bool("rec.systemAudio", true))
+            Toggle(isOn: bool("rec.mic", false)) {
+                SwiftUI.Text(L("rec.mic"))
+                SwiftUI.Text(L("rec.micHint")).font(.caption).foregroundStyle(.secondary)
+            }
+            Toggle(L("rec.clicks"), isOn: bool("rec.clicks", true))
+            Picker(L("rec.fps"), selection: Binding(get: { _ = refresh; return RecordPrefs.fps }, set: { d.set($0, forKey: "rec.fps"); refresh += 1 })) {
+                SwiftUI.Text("30 fps").tag(30); SwiftUI.Text("60 fps").tag(60)
+            }
+            .pickerStyle(.segmented)
+            SwiftUI.Text(L("rec.hint")).font(.caption).foregroundStyle(.secondary)
         }
         Section(L("shot.whileCapturing")) {
             Toggle(L("shot.hideIcons"), isOn: bool("shot.hideIcons", true))

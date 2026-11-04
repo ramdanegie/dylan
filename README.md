@@ -31,7 +31,7 @@ Developers get a **Developer Mode** on top: watch AI coding agents, long-running
 ## Highlights
 
 - 🎵 **Music that feels native.** Spotify, Apple Music, browser tabs (YouTube, SoundCloud…) and VLC. Synced lyrics, audio output picker, per-app volume, and an equalizer that follows the actual audio.
-- 📸 **Screenshots without the clutter.** Area, window, full screen, scrolling capture, and text (OCR) with `⌥⇧1`–`⌥⇧4` and `⌥⇧T`. The screen freezes first, a pixel loupe shows coordinates and colors, and the editor opens right away: arrows, boxes, text, highlight, blur, numbered steps, crop. `⌘C` copies and closes. A Studio mode adds frames, gradients, shadows, social ratios, and 3D layouts.
+- 📸 **Screenshots without the clutter.** Area, window, full screen, scrolling capture, and text (OCR) with `⌥⇧1`–`⌥⇧4` and `⌥⇧T`, plus screen recording to MP4 with `⌥⇧5`. The screen freezes first, a pixel loupe shows coordinates and colors, and the editor opens right away: arrows, boxes, text, highlight, blur, numbered steps, crop. `⌘C` copies and closes. A Studio mode adds frames, gradients, shadows, social ratios, and 3D layouts.
 - 🌡️ **Temperatures & fans.** CPU, GPU, SSD, and battery temperatures without root. Fan presets from Quiet to Max, a custom curve, `⌃⌥⇧0`–`4`, and a heat warning that names the busiest process. Fans always go back to automatic when Dylan quits, sleeps, or crashes.
 - 🔔 **Notifications & calls.** App notifications in the notch, reply from the banner, accept or decline calls, and mic/camera/share controls for Zoom, Teams, and Meet.
 - 🎧 **Discord.** Who is talking in voice, mute, deafen, and leave from the notch.

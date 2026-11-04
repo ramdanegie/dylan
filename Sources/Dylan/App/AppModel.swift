@@ -106,6 +106,8 @@ enum NotchAction: Equatable {
     case showUpdate
     /// "Clean up" on the low-storage notice (FR-103).
     case openStorage
+    /// Stop on the screen recording (FR-94).
+    case stopRecording
 }
 
 @Observable
@@ -736,6 +738,7 @@ final class AppModel {
         case .faceUnlockHistory: SettingsWindow.show(section: .faceUnlock)
         case .showUpdate: UpdateWindow.show()
         case .openStorage: StorageWindow.show()
+        case .stopRecording: ScreenRecorder.shared.stop()
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -768,6 +771,8 @@ final class AppModel {
             let path = String(a.url!.dropFirst(8))
             return [(L("shot.beautify"), .normal, .capture("beautify", path)), (L("shot.save"), .quiet, .capture("save", path)),
                     (L("shot.pin"), .quiet, .capture("pin", path)), (L("shot.text"), .quiet, .capture("text", path))]
+        case .capture where a.id == "recording":
+            return [(L("rec.stop"), .destructive, .stopRecording)]
         case .capture where a.url?.hasPrefix("saved:") == true:
             return [(L("shot.finder"), .normal, .revealFile(String(a.url!.dropFirst(6))))]
         case .capture where a.url?.hasPrefix("qr:") == true:

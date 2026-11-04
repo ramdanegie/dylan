@@ -103,13 +103,13 @@ final class UpdateService {
 
 enum UpdateWindow {
     private static var window: NSWindow?
-    static func show() { window = present(window, title: L("update.title"), size: CGSize(width: 480, height: 460), UpdateView { window?.close() }) }
+    static func show() { window = present(window, title: L("update.title"), size: CGSize(width: 500, height: 580), UpdateView { window?.close() }) }
 }
 
 enum WhatsNewWindow {
     private static var window: NSWindow?
     static func show() {
-        window = present(window, title: L("update.whatsNewTitle", UpdateService.shared.current), size: CGSize(width: 480, height: 460),
+        window = present(window, title: L("update.whatsNewTitle", UpdateService.shared.current), size: CGSize(width: 500, height: 580),
                          WhatsNewView { window?.close() })
     }
 }
@@ -118,7 +118,8 @@ private func present<V: View>(_ existing: NSWindow?, title: String, size: CGSize
     let w = existing ?? NSWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: [.titled, .closable], backing: .buffered, defer: false)
     w.title = title
     w.isReleasedWhenClosed = false
-    w.contentView = NSHostingView(rootView: view)
+    w.contentView = NSHostingView(rootView: view.artWindow())
+    Art.style(w)
     if existing == nil { w.center() }
     NSApp.activate()
     w.makeKeyAndOrderFront(nil)
@@ -131,12 +132,13 @@ private struct UpdateView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            UpdateBanner(island: s.current)
             switch s.state {
             case .checking, .idle:
                 HStack { ProgressView().controlSize(.small); SwiftUI.Text(L("update.checking")) }
                 Spacer()
             case .upToDate:
-                Label(L("update.upToDate", s.current), systemImage: "checkmark.circle.fill").foregroundStyle(.green).font(.headline)
+                SwiftUI.Text(L("update.upToDate", s.current)).font(.system(size: 24, design: .serif))
                 Spacer()
                 HStack { Spacer(); Button(L("update.ok")) { done() }.keyboardShortcut(.defaultAction) }
             case .failed:
@@ -144,7 +146,7 @@ private struct UpdateView: View {
                 Spacer()
                 HStack { Spacer(); Button(L("update.later")) { done() }; Button(L("update.retry")) { s.check(manual: true) }.keyboardShortcut(.defaultAction) }
             case .available(let r):
-                SwiftUI.Text(L("update.available", r.version?.description ?? r.tag)).font(.title2.bold())
+                SwiftUI.Text(L("update.available", r.version?.description ?? r.tag)).font(.system(size: 26, design: .serif))
                 SwiftUI.Text(L("update.youHave", s.current)).foregroundStyle(.secondary)
                 ScrollView { ChangelogText(markdown: r.body ?? "").frame(maxWidth: .infinity, alignment: .leading) }
                     .padding(10).background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.08)))
@@ -158,7 +160,18 @@ private struct UpdateView: View {
             }
         }
         .padding(20)
-        .frame(width: 480, height: 460, alignment: .topLeading)
+        .frame(width: 500, height: 580, alignment: .topLeading)
+    }
+}
+
+/// D50 family: the About page's banner with the version in the island.
+private struct UpdateBanner: View {
+    var island: String
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ArtBanner(orbs: SettingsSection.about.orbs, x: SettingsSection.about.orbX, island: island, height: 110)
+            SwiftUI.Text(L("update.eyebrow")).font(.system(size: 10.5, design: .monospaced)).tracking(1.5).foregroundStyle(Art.ink3)
+        }
     }
 }
 
@@ -166,7 +179,8 @@ private struct WhatsNewView: View {
     var done: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SwiftUI.Text(L("update.whatsNewTitle", UpdateService.shared.current)).font(.title2.bold())
+            UpdateBanner(island: UpdateService.shared.current)
+            SwiftUI.Text(L("update.whatsNewTitle", UpdateService.shared.current)).font(.system(size: 26, design: .serif))
             ScrollView { ChangelogText(markdown: UpdateService.shared.whatsNew() ?? "").frame(maxWidth: .infinity, alignment: .leading) }
             HStack {
                 Link(L("update.allChanges"), destination: UpdateService.releasesPage)
@@ -175,7 +189,7 @@ private struct WhatsNewView: View {
             }
         }
         .padding(20)
-        .frame(width: 480, height: 460, alignment: .topLeading)
+        .frame(width: 500, height: 580, alignment: .topLeading)
     }
 }
 

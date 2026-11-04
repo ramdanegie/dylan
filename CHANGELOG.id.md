@@ -2,6 +2,15 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Ditambahkan
+- Rekam layar: `⌥⇧5` atau Screenshot ▸ Rekam Layar, lalu seret area atau klik untuk seluruh layar. Disimpan sebagai MP4 di samping screenshot, dengan suara sistem dan, bila dinyalakan, mikrofon. Notch menampilkan titik merah dan waktunya; hentikan dari notch, menu, atau `⌥⇧5`.
+
+### Diubah
+- Tampilan baru Settings (desain D50): tiap halaman dibuka dengan banner pulau Dylan, judul serif, warna netral hangat, dan teal Cermin; grup berupa kartu putih. Optimasi Penyimpanan, update, dan riwayat capture ikut tampilan yang sama.
+- Ikon app baru "Sirkuit".
+
 ## [0.1.5] - 2026-11-04
 
 ### Ditambahkan

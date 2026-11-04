@@ -176,7 +176,8 @@ enum HelperSheetWindow {
         let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 440, height: 420), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = L("fan.sheetTitle")
         w.isReleasedWhenClosed = false
-        w.contentView = NSHostingView(rootView: HelperSheet { close() })
+        w.contentView = NSHostingView(rootView: HelperSheet { close() }.artWindow())
+        Art.style(w)
         w.center()
         window = w
         w.makeKeyAndOrderFront(nil)

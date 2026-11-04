@@ -9,9 +9,13 @@ enum SettingsWindow {
 
     static func show(section: SettingsSection = .general) {
         if window == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 500),
-                             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 660),
+                             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             w.title = L("settings.title")
+            // D50: the sidebar runs up under the traffic lights; the page banner carries the title.
+            w.titlebarAppearsTransparent = true
+            w.titleVisibility = .hidden
+            w.minSize = NSSize(width: 780, height: 520)
             w.isReleasedWhenClosed = false
             w.center()
             window = w
@@ -34,7 +38,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
             case .system: return L("settings.group.system")
             case .tools: return L("settings.group.tools")
             case .developer: return L("settings.developer")
-            case .info: return L("settings.group.info")
+            case .info: return nil   // D50: Features and About sit under an unlabeled gap
             }
         }
     }
@@ -72,6 +76,123 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         }
     }
     var title: String { L("settings.section.\(rawValue)") }
+
+    // MARK: D50 page art
+
+    var orbs: (UInt32, UInt32) {
+        typealias O = Art.Orb
+        switch self {
+        case .general, .features, .about: return (O.teal, O.sand)
+        case .appearance: return (O.lilac, O.teal)
+        case .liveActivity, .agents: return (O.teal, O.sky)
+        case .media: return (O.sand, O.rose)
+        case .discord: return (O.lilac, O.sky)
+        case .devices: return (O.green, O.teal)
+        case .thermal: return (O.sky, O.teal)
+        case .storage: return (O.butter, O.sand)
+        case .faceUnlock: return (O.rose, O.lilac)
+        case .utilities: return (O.sand, O.butter)
+        case .clipboard: return (O.teal, O.green)
+        case .screenshot: return (O.sand, O.lilac)
+        case .terminal: return (O.green, O.sky)
+        }
+    }
+
+    /// Orb positions alternate sides from page to page (D50).
+    var orbX: (CGFloat, CGFloat) {
+        switch self {
+        case .general: return (0.28, 0.74)
+        case .appearance: return (0.70, 0.26)
+        case .liveActivity: return (0.24, 0.78)
+        case .media: return (0.76, 0.30)
+        case .discord: return (0.30, 0.72)
+        case .devices: return (0.26, 0.76)
+        case .thermal: return (0.72, 0.24)
+        case .storage: return (0.30, 0.70)
+        case .faceUnlock: return (0.74, 0.28)
+        case .utilities: return (0.26, 0.72)
+        case .clipboard: return (0.70, 0.30)
+        case .screenshot: return (0.28, 0.74)
+        case .agents: return (0.72, 0.26)
+        case .terminal: return (0.26, 0.76)
+        case .features: return (0.28, 0.72)
+        case .about: return (0.30, 0.70)
+        }
+    }
+
+    var eyebrow: String { L("settings.eyebrow") + (group.title.map { " · " + $0.uppercased() } ?? "") }
+
+    /// The small live status inside the banner's island.
+    var island: String {
+        let m = AppModel.shared
+        switch self {
+        case .general: return "Dylan"
+        case .appearance: return "Aa"
+        case .liveActivity: return Date().formatted(date: .omitted, time: .shortened)
+        case .media: return m.presentationMode ? "♪" : m.media.map { "♪ " + $0.title } ?? "♪"
+        case .discord: return DiscordProvider.shared.connected ? L("discord.connected") : "Discord"
+        case .devices: return m.battery.map { "\($0.percent)%" } ?? "Mac"
+        case .thermal: return FanProvider.shared.format(FanProvider.shared.cpu)
+        case .storage: return L("storage.island", StorageProvider.bytes(StorageProvider.shared.free))
+        case .faceUnlock: return L(FaceUnlockProvider.shared.enabled ? "faceUnlock.island.on" : "faceUnlock.island.off")
+        case .utilities: return m.colorHistory.first ?? "#00838A"
+        case .clipboard: return "⌃⌥V"
+        case .screenshot:
+            if ScreenRecorder.shared.isRecording { return "● REC" }
+            return NSScreen.main.map { "\(Int($0.frame.width))×\(Int($0.frame.height))" } ?? "⌥⇧1"
+        case .agents: return "Claude Code"
+        case .terminal: return "zsh"
+        case .features:
+            let major = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+            return "\(FeatureSupport.all.filter { $0.status(macOSMajor: major) == .available }.count)"
+        case .about: return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        }
+    }
+}
+
+/// Banner + serif title at the top of every Settings page (D50).
+struct SettingsPageHeader: View {
+    var section: SettingsSection
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ArtBanner(orbs: section.orbs, x: section.orbX, island: section.island)
+            ArtTitle(eyebrow: section.eyebrow, title: L("settings.page.\(section.rawValue).title"),
+                     italic: L("settings.page.\(section.rawValue).italic"), detail: L("settings.page.\(section.rawValue).detail"))
+        }
+        .padding(.horizontal, -4).padding(.bottom, 6)   // full width like the cards
+        .textCase(nil)
+        .foregroundStyle(.primary)
+    }
+}
+
+struct SidebarRow: View {
+    var section: SettingsSection
+    var selected: Bool
+    var pick: () -> Void
+    @StateBox private var hover = false
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Button(action: pick) {
+            HStack(spacing: 11) {
+                Image(systemName: section.symbol).symbolRenderingMode(.hierarchical).foregroundStyle(Art.accent)
+                    .font(.system(size: 14)).frame(width: 18)
+                SwiftUI.Text(section.title).font(.system(size: 13, weight: selected ? .semibold : .regular)).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(selected ? Art.selected : hover ? Art.selected.opacity(0.5) : .clear)
+                    .shadow(color: selected && scheme == .light ? Color(nsColor: Art.hex(0x3C2814, 0.1)) : .clear, radius: 1.5, y: 1)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
 }
 
 struct SettingsView: View {
@@ -79,22 +200,43 @@ struct SettingsView: View {
     private var model: AppModel { AppModel.shared }
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $selection) {
-                ForEach(SettingsSection.Group.allCases.filter { $0 != .developer || model.isDeveloper }, id: \.self) { g in
-                    let sections = SettingsSection.allCases.filter { $0.group == g }
+        HStack(spacing: 0) {
+            sidebar
+            Rectangle().fill(Art.line).frame(width: 0.5).ignoresSafeArea()
+            Form {
+                Section {} header: { SettingsPageHeader(section: selection) }
+                detail
+            }
+            .formStyle(ArtFormStyle())
+            .background(Art.content.ignoresSafeArea())
+            .id(selection)   // a new page starts at its banner
+        }
+        .tint(Art.accent)
+        .frame(minWidth: 780, minHeight: 520)
+    }
+
+    /// D50 sidebar: warm neutral, mono group labels, teal hierarchical symbols, the active page as a white card.
+    private var sidebar: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(Array(SettingsSection.Group.allCases.filter { $0 != .developer || model.isDeveloper }.enumerated()), id: \.element) { n, g in
                     if let title = g.title {
-                        Section(title) { ForEach(sections) { s in Label(s.title, systemImage: s.symbol).tag(s) } }
-                    } else {
-                        ForEach(sections) { s in Label(s.title, systemImage: s.symbol).tag(s) }
+                        SwiftUI.Text(title.uppercased()).font(.system(size: 10, design: .monospaced)).tracking(1.4).foregroundStyle(Art.ink3)
+                            .padding(.horizontal, 10).padding(.top, 14).padding(.bottom, 5)
+                            .accessibilityAddTraits(.isHeader)
+                    } else if n > 0 {
+                        Spacer().frame(height: 14)
+                    }
+                    ForEach(SettingsSection.allCases.filter { $0.group == g }) { s in
+                        SidebarRow(section: s, selected: s == selection) { selection = s }
                     }
                 }
             }
-            .navigationSplitViewColumnWidth(190)
-        } detail: {
-            Form { detail }.formStyle(.grouped).navigationTitle(selection.title)
+            .padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 16)
         }
-        .frame(minWidth: 700, minHeight: 480)
+        .scrollIndicators(.never)
+        .frame(width: 232)
+        .background(Art.side.ignoresSafeArea())
     }
 
     @ViewBuilder private var detail: some View {
@@ -224,8 +366,12 @@ struct LiveActivitySettings: View {
                         _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
                     }
                 }
-                TextField(L("notifications.apps"), text: Binding(get: { model.notificationApps.joined(separator: ", ") },
-                                                                set: { model.notificationApps = $0.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }))
+                // Fields keep a visible label: under the D50 form style a TextField title is only a placeholder.
+                LabeledContent(L("notifications.apps")) {
+                    TextField("", text: Binding(get: { model.notificationApps.joined(separator: ", ") },
+                                                set: { model.notificationApps = $0.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }))
+                        .frame(minWidth: 240)
+                }
                 SwiftUI.Text(L("notifications.appsHint")).font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -263,7 +409,7 @@ struct DiscordSettings: View {
         Section(L("discord.status")) {
             LabeledContent("Client ID") {
                 TextField("", text: Binding(get: { model.discordClientID }, set: { model.discordClientID = $0.filter(\.isNumber) }))
-                    .multilineTextAlignment(.trailing)
+                    .multilineTextAlignment(.trailing).frame(minWidth: 200)
             }
             SecureField(L("discord.secret"), text: $secret)
                 .onSubmit { Keychain.set(secret, "discord.secret"); secret = "" }
@@ -283,10 +429,10 @@ struct DiscordSettings: View {
         }
         Section(L("discord.simpleTitle")) {
             LabeledContent(L("discord.toggleMute")) {
-                TextField("", text: Binding(get: { model.discordMuteKey }, set: { model.discordMuteKey = $0 })).multilineTextAlignment(.trailing)
+                TextField("", text: Binding(get: { model.discordMuteKey }, set: { model.discordMuteKey = $0 })).multilineTextAlignment(.trailing).frame(minWidth: 160)
             }
             LabeledContent(L("discord.toggleDeafen")) {
-                TextField("", text: Binding(get: { model.discordDeafKey }, set: { model.discordDeafKey = $0 })).multilineTextAlignment(.trailing)
+                TextField("", text: Binding(get: { model.discordDeafKey }, set: { model.discordDeafKey = $0 })).multilineTextAlignment(.trailing).frame(minWidth: 160)
             }
             SwiftUI.Text(L("discord.simpleHint")).font(.caption).foregroundStyle(.secondary)
         }
@@ -331,7 +477,9 @@ struct SpotifyAccountSettings: View {
     var body: some View {
         Section(L("spotify.account")) {
             SwiftUI.Text(L("spotify.accountHint")).font(.caption).foregroundStyle(.secondary)
-            TextField("Client ID", text: Binding(get: { model.spotifyClientID }, set: { model.spotifyClientID = $0 })).disabled(account.connected)
+            LabeledContent("Client ID") {
+                TextField("", text: Binding(get: { model.spotifyClientID }, set: { model.spotifyClientID = $0 })).disabled(account.connected).frame(minWidth: 240)
+            }
             HStack {
                 SwiftUI.Text(SpotifyAPI.redirectURI).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
                 Spacer()
@@ -407,8 +555,10 @@ struct UtilitySettings: View {
     var body: some View {
         FeatureToggles(features: [.shelf, .colorPicker, .weather, .downloads, .scratchpad, .mirror])
         Section(L("weather.title")) {
-            TextField(L("weather.city"), text: Binding(get: { model.weatherCity }, set: { model.weatherCity = $0 }))
-                .onSubmit { WeatherProvider.shared.cityChanged() }
+            LabeledContent(L("weather.city")) {
+                TextField("", text: Binding(get: { model.weatherCity }, set: { model.weatherCity = $0 }))
+                    .onSubmit { WeatherProvider.shared.cityChanged() }.frame(minWidth: 200)
+            }
             SwiftUI.Text(L("weather.privacy")).font(.caption).foregroundStyle(.secondary)
         }
         Section("Shelf") {
@@ -722,13 +872,11 @@ struct FeatureSupportSettings: View {
     var body: some View {
         let visible = FeatureSupport.all.filter { model.isDeveloper || !$0.isDeveloper }
         Section {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    SwiftUI.Text(L("settings.section.features")).font(.title3.weight(.semibold))
-                    SwiftUI.Text(L("support.version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev",
-                                   "\(os.majorVersion).\(os.minorVersion)"))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+            HStack {
+                // The page banner already carries the title (D50).
+                SwiftUI.Text(L("support.version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev",
+                               "\(os.majorVersion).\(os.minorVersion)"))
+                    .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 SwiftUI.Text(L("support.devToggle")).font(.callout)
                 Toggle(L("support.devToggle"), isOn: Binding(get: { model.isDeveloper },
@@ -893,7 +1041,8 @@ enum App {
         guard path.hasSuffix(".app") else { NSApp.terminate(nil); return }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/sh")
-        p.arguments = ["-c", "sleep 0.6; /usr/bin/open \"$0\"", path]
+        // Wait until this process is gone (quitting can wait for a recording to finish), then open again.
+        p.arguments = ["-c", "while kill -0 \"$1\" 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"", path, "\(getpid())"]
         try? p.run()
         NSApp.terminate(nil)
     }
