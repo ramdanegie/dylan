@@ -8,7 +8,7 @@ import Darwin
 // Rule: when Dylan is not running, commands exit 0 with a note on stderr so user scripts never fail
 // because of Dylan. `dylan run` passes through the command's exit code. Hooks are always silent.
 
-let version = "0.1.4"
+let version = "0.1.5"
 var args = Array(CommandLine.arguments.dropFirst())
 
 func stderr(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }

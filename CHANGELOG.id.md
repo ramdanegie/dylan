@@ -2,7 +2,7 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
-## [Unreleased]
+## [0.1.5] - 2026-11-04
 
 ### Ditambahkan
 - Optimasi Penyimpanan (menu bar, Settings → Penyimpanan): pindai cache, log, Downloads lama, file besar, cadangan iPhone, dan di Mode Developer data Xcode, cache paket, serta node_modules lama. Centang yang mau dihapus; tiap item menampilkan ukuran, lokasi, dan dampaknya. Yang dibuat ulang otomatis dihapus, file milikmu dipindah ke Trash.
