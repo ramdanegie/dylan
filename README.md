@@ -1,70 +1,127 @@
-# Dylan
+<p align="center">
+  <img src="docs/images/dylan-icon.png" width="128" height="128" alt="Dylan app icon">
+</p>
 
-**Dynamic Island untuk Mac. Untuk semua orang, dengan banyak fitur khusus engineer.**
+<h1 align="center">Dylan</h1>
 
-Dylan mengubah notch MacBook menjadi pusat status yang hidup: musik, Discord, notifikasi, baterai, dan meeting muncul kecil di samping notch, lalu menyingkir sendiri setelah selesai. Fitur terbaik dari Droppy, Atoll, DynamicLake, dan Alcove digabung dalam satu app gratis.
+<p align="center">
+  <strong>A Dynamic Island for your MacBook notch. For everyone, with superpowers for developers.</strong>
+</p>
 
-Buat software engineer, Dylan punya **Mode Developer**: pantau agent AI, perintah panjang, CI, dan dev server langsung dari notch. Pengguna biasa tidak akan melihat fitur ini sama sekali; engineer cukup menyalakannya sekali.
+<p align="center">
+  <a href="https://github.com/ramdanegie/dylan/releases"><img src="https://img.shields.io/github/v/release/ramdanegie/dylan?include_prereleases&label=download" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/macOS-15%2B-black?logo=apple" alt="macOS 15+">
+  <img src="https://img.shields.io/badge/Apple%20Silicon-arm64-black" alt="Apple Silicon">
+  <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+</p>
 
-> **Status:** v0.1, dalam pengembangan. Phase 0 (spike) dan sebagian besar v1.0 sudah ada; lihat [docs/test-report.md](docs/test-report.md). Spesifikasi lengkap ada di [PRD.md](PRD.md).
+<p align="center">
+  English · <a href="README.id.md">Bahasa Indonesia</a>
+</p>
 
-## Fitur untuk semua orang
+---
 
-- **Musik:** kontrol penuh Spotify & Apple Music (shuffle, repeat, volume, love), putar playlist favorit sekali klik, lirik tersinkron, pilih output audio, volume per app, equalizer yang mengikuti musik, akun Spotify opsional (simpan lagu, playlist, lagu berikutnya). Media dari browser (YouTube dll.) menyusul.
-- **Discord:** siapa yang sedang bicara di voice, mute/deafen/keluar, DM & mention, langsung dari notch.
-- **Notifikasi & pesan:** notifikasi app di notch, balas lewat banner, panggilan masuk Terima/Tolak, kontrol mic/kamera/share untuk Zoom, Teams, dan Meet.
-- **Perangkat:** HUD volume/brightness, animasi charging, baterai AirPods, indikator kamera/mikrofon, Focus.
-- **Produktivitas:** countdown meeting + tombol Join, "waktunya berangkat" ke meeting di lokasi fisik, reminder, timer/Pomodoro, shelf file + AirDrop, clipboard, color picker, keep awake, cuaca, progres download, widget lock screen (eksperimental).
-- **Mode Presentasi:** sembunyikan isi sensitif saat screen share, bisa menyala otomatis saat kamu share layar (eksperimental).
-- **Bahasa Indonesia & English:** pilih di Settings, atau ikuti bahasa sistem.
+Dylan turns the MacBook notch into a living status center. Music, calls, notifications, battery, meetings, screenshots, and temperatures show up small beside the notch, expand when you hover, and get out of the way when they are done.
 
-## Fitur untuk engineer (Mode Developer)
+It brings the best ideas from notch apps like Droppy, Atoll, DynamicLake, and Alcove into **one free, open-source app**. Everything runs locally, with no telemetry and no account.
 
-- **Agent AI:** status Claude Code (tool & file yang sedang dikerjakan), notifikasi saat agent butuh izin atau selesai, lengkap dengan durasi dan `+x −y` baris. Izin bisa dijawab langsung dari notch. Codex CLI, Cursor, dan OpenCode juga tampil.
-- **Command tracker:** `npm test`, build, migrasi, deploy. Notch memberi tahu saat selesai/gagal, lengkap dengan durasi dan exit code.
-- **Live Activity API:** script apa pun bisa menampilkan progres di notch lewat CLI `dylan` (contoh di bawah).
-- **Dev server & port:** port mana dipakai project apa, buka di browser, atau matikan.
-- **GitHub:** status GitHub Actions di branch yang sedang dikerjakan dan jumlah PR yang menunggu review-mu.
-- **Clipboard developer:** decode JWT, pretty-print JSON, Unix timestamp ↔ tanggal, Base64, UUID, hash. Token dan password otomatis disamarkan dan tidak pernah disimpan ke disk.
-- **Stats + alert:** CPU, memori, jaringan; peringatan saat proses seperti `node` atau `docker` nyangkut memakan CPU.
-- **Script widget, Docker, terminal cepat di notch (⌃⌥T), MCP server** untuk Claude Code.
-- **Touch ID untuk `sudo`.**
-- **Face Unlock (eksperimental):** buka kunci dengan wajah, dengan tantangan acak dan batas ala Apple. Bukan Face ID; lihat `docs/face-unlock.md`.
+Developers get a **Developer Mode** on top: watch AI coding agents, long-running commands, CI, and dev servers from the notch, and answer Claude Code permission prompts without switching windows. Everyone else never sees it.
+
+## Highlights
+
+- 🎵 **Music that feels native.** Spotify, Apple Music, browser tabs (YouTube, SoundCloud…) and VLC. Synced lyrics, audio output picker, per-app volume, and an equalizer that follows the actual audio.
+- 📸 **Screenshots without the clutter.** Area, window, full screen, scrolling capture, and text (OCR) with `⌥⇧1`–`⌥⇧4` and `⌥⇧T`. The screen freezes first, a pixel loupe shows coordinates and colors, and the editor opens right away: arrows, boxes, text, highlight, blur, numbered steps, crop. `⌘C` copies and closes. A Studio mode adds frames, gradients, shadows, social ratios, and 3D layouts.
+- 🌡️ **Temperatures & fans.** CPU, GPU, SSD, and battery temperatures without root. Fan presets from Quiet to Max, a custom curve, `⌃⌥⇧0`–`4`, and a heat warning that names the busiest process. Fans always go back to automatic when Dylan quits, sleeps, or crashes.
+- 🔔 **Notifications & calls.** App notifications in the notch, reply from the banner, accept or decline calls, and mic/camera/share controls for Zoom, Teams, and Meet.
+- 🎧 **Discord.** Who is talking in voice, mute, deafen, and leave from the notch.
+- 🔋 **Devices.** Volume and brightness HUD, charging animation, AirPods battery, camera and microphone indicators, Focus status.
+- 🗓️ **Everyday helpers.** Meeting countdown with a Join button, "time to leave" for in-person meetings, reminders, timer, a file shelf with AirDrop, clipboard history, color picker, keep awake, weather, download progress.
+- 🙈 **Presentation Mode.** Hides sensitive content while you share your screen, and can turn on by itself when sharing starts.
+- 🌏 **English and Bahasa Indonesia**, following your system language or your choice.
+
+### For developers (Developer Mode)
+
+- 🤖 **AI agents.** Live status for Claude Code (the tool and file it is working on, `+x −y` lines, duration), plus Codex CLI, Cursor, and OpenCode. Answer Claude Code permission requests straight from the notch.
+- ⏱️ **Command tracker.** `npm test`, builds, migrations, deploys: the notch tells you when they finish or fail, with duration and exit code.
+- 🧩 **Live Activity API.** Any script can show progress in the notch through the `dylan` CLI (see below).
+- 🌐 **Ports & dev servers.** Which project owns which port, open it in the browser, or stop it.
+- ✅ **GitHub.** Actions status for the branch you are on, and PRs waiting for your review.
+- 📋 **Developer clipboard.** Decode JWTs, pretty-print JSON, Unix time ↔ date, Base64, UUIDs, hashes. Tokens and passwords are masked and never written to disk.
+- 📈 **Stats & alerts** for CPU, memory, and network, with a warning when a stuck `node` or `docker` process eats the CPU.
+- 🛠️ Script widgets, Docker, a quick terminal in the notch (`⌃⌥T`), an MCP server for Claude Code, and Touch ID for `sudo`.
+
+### Experimental (off by default)
+
+- **Face Unlock.** Unlock with your face using a random liveness challenge and Apple-style limits. It is not Face ID: a Mac camera is 2D. Read [docs/face-unlock.md](docs/face-unlock.md) before turning it on.
+- **Lock screen widget** with the time, battery, and what is playing.
+
+## Install
+
+**Requirements:** a Mac with Apple Silicon (M1 or later) and macOS 15 or later.
+
+1. Download the latest `Dylan-x.y.z.dmg` from [Releases](https://github.com/ramdanegie/dylan/releases).
+2. Open it and drag **Dylan** to **Applications**.
+3. Open Dylan. Test builds are not notarized yet, so macOS cannot verify it: click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine /Applications/Dylan.app`.)
+
+Dylan lives in the menu bar and the notch. Permissions (Screen Recording, Accessibility, Calendar…) are only asked for when you turn on a feature that needs them.
 
 ## Live Activity API
 
 ```bash
 dylan activity start deploy --title "Deploy staging" --progress 0
-dylan activity update deploy --progress 0.6 --subtitle "migrasi DB"
+dylan activity update deploy --progress 0.6 --subtitle "migrating DB"
 dylan activity end deploy --success --detail "v2.4.1 · 3m 10s"
+
+dylan run -- npm test            # run a command as a tracked activity, exit code passed through
+dylan notify "Backup done" "12 GB"
 ```
 
-## Build & jalankan
+Install the CLI from **Settings → Terminal → Install CLI** (symlink in `~/.local/bin/dylan`). Add `eval "$(dylan shell-init zsh)"` to `~/.zshrc` to track long commands automatically. `dylan doctor` checks the app, socket, hooks, and shell integration.
 
-Cukup Command Line Tools (tanpa Xcode), macOS 15+, Apple Silicon.
+## Build from source
+
+Only the Command Line Tools are needed (no Xcode).
 
 ```bash
-./scripts/build.sh --test --run   # unit test, bundel build/Dylan.app, lalu jalankan
+git clone https://github.com/ramdanegie/dylan.git
+cd dylan
+./scripts/build.sh --test --run    # unit tests, build/Dylan.app, then launch
 ```
 
-- CLI ada di `Dylan.app/Contents/Helpers/dylan`. Settings → Terminal → "Pasang CLI" membuat symlink `~/.local/bin/dylan`.
-- Mode Developer: Settings → Umum → Profil → Developer, lalu Settings → Agents → Pasang hook (diff ditampilkan, file lama di-backup).
-- Lacak perintah panjang: tambahkan `eval "$(dylan shell-init zsh)"` ke `~/.zshrc`.
-- `dylan doctor` mengecek app, socket, hook, dan shell integration. `dylan debug state` mencetak aktivitas yang sedang tampil.
-- Build memakai signature ad-hoc, jadi macOS bisa meminta izin (Kalender, Automation) lagi setelah build baru. Dengan `DYLAN_SIGN_IDENTITY="Apple Development: …"` build ditandatangani tim: izin bertahan antar-build dan kontrol kipas (helper) bisa dipakai.
-- Bagikan ke penguji: `DYLAN_SIGN_IDENTITY="Apple Development: …" ./scripts/dmg.sh` membuat `build/Dylan-<versi>.dmg` (seret ke Applications + petunjuk "Open Anyway"). Belum dinotarisasi, jadi Gatekeeper menahan pembukaan pertama; distribusi publik butuh Developer ID + notarization.
-- `build/Dylan.app/Contents/MacOS/Dylan --snapshot <folder> --lang id|en` merender state notch ke PNG tanpa izin Screen Recording.
+- Builds are signed ad-hoc by default, so macOS may ask for permissions again after each build. Sign with your own certificate to keep them: `DYLAN_SIGN_IDENTITY="Apple Development: …" ./scripts/build.sh --run`. Fan control needs a team-signed build.
+- `./scripts/dmg.sh` packs a drag-to-Applications DMG for testers.
+- `build/Dylan.app/Contents/MacOS/Dylan --snapshot <folder> --lang en|id` renders notch states to PNG.
 
-## Prinsip
+## Privacy
 
-Lokal, tanpa telemetry, gratis, ringan (idle < 1% CPU). Semua akses jaringan opt-in (GitHub, cuaca, lirik, Spotify). Fitur developer mati secara default dan tidak meminta izin apa pun sampai Mode Developer dinyalakan.
+- Local first: no telemetry, no analytics, no account, no server.
+- Network access is opt-in per feature: GitHub (through `gh`), weather, lyrics, Spotify, Discord token exchange, Apple Maps travel time.
+- Developer features are off by default and ask for nothing until you turn on Developer Mode.
+- Idle CPU stays under 1%.
 
-## Rencana stack
+## Project layout
 
-- Swift 6, SwiftUI + AppKit, SwiftPM
-- macOS 15+ (efek glass di macOS 26+)
-- Tanpa dependensi pihak ketiga di v1.0 (satu pengecualian opsional untuk media browser, lihat PRD §2.2)
+| Path | What is there |
+|---|---|
+| `Sources/Dylan` | The app: notch, providers, Settings, screenshots (SwiftUI + AppKit) |
+| `Sources/DylanCore` | Pure logic with unit tests |
+| `Sources/DylanCLI` | The `dylan` command-line tool |
+| `Sources/DylanFanHelper`, `Sources/SMCKit` | Privileged fan helper and SMC access |
+| `Tests/DylanCoreTests` | Unit tests (`swift test`) |
+| `PRD.md`, `design/` | Product spec (in Indonesian) and design mockups |
 
-## Lisensi
+## Contributing
+
+Issues and pull requests are welcome, from bug reports to new notch activities.
+
+- Run `./scripts/build.sh --test` before opening a PR.
+- Swift 6 with strict concurrency, SwiftPM, no third-party dependencies.
+- Every user-facing string lives in both `en.lproj` and `id.lproj`; a test checks that the keys match.
+- New experimental or permission-hungry features stay off by default.
+
+If Dylan is useful to you, a ⭐ helps other people find it.
+
+## License
 
 [MIT](LICENSE)
