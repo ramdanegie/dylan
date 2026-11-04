@@ -12,6 +12,8 @@ final class OtherPlayersProvider {
     private var timer: Timer?
     /// Tab titles are read off the main thread, at most every 10 s per browser.
     private var lastTabQuery: [String: Date] = [:]
+    /// The tab shown now (window/tab numbers), for the controls.
+    private var lastItem: BrowserMedia.Item?
     private var querying = false
 
     func start() {
@@ -70,6 +72,7 @@ final class OtherPlayersProvider {
                 if AppModel.shared.media?.source == .browser, AppModel.shared.media?.appBundleID == id { OtherPlayersProvider.shared.clearIfOurs() }
                 return
             }
+            OtherPlayersProvider.shared.lastItem = item
             OtherPlayersProvider.shared.publish(MediaState(
                 source: .browser, title: item.title, artist: item.artist.isEmpty ? "\(item.site) · \(BrowserMedia.browsers[id] ?? "")" : item.artist,
                 album: item.artist.isEmpty ? "" : item.site, isPlaying: true, position: 0, duration: 0, positionAt: Date(),
@@ -113,14 +116,6 @@ final class OtherPlayersProvider {
         if let s = AppModel.shared.media?.source, s == .browser || s == .vlc { AppModel.shared.mediaChanged(nil) }
     }
 
-    /// Background polls never prompt: the first Automation prompt comes from the user's own action (a control).
-    private func run(_ source: String, app: String) -> String? {
-        let target = NSAppleEventDescriptor(bundleIdentifier: app)
-        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr else { return nil }
-        var err: NSDictionary?
-        let r = NSAppleScript(source: "with timeout of 2 seconds\n\(source)\nend timeout")?.executeAndReturnError(&err)
-        return err == nil ? r?.stringValue : nil
-    }
 
     /// Settings → Media: ask each running browser (and VLC) for Automation now, while the user is looking.
     func requestAccess() {
@@ -137,28 +132,34 @@ final class OtherPlayersProvider {
 
     // MARK: Controls
 
+    /// Browser tabs cannot be paused from outside on macOS 27.2: synthesized media keys and keys sent to a
+    /// background Chrome are both ignored (tested). So play/pause runs a fixed script in the tab when the
+    /// user has turned on "Allow JavaScript from Apple Events" in that browser, and otherwise (and for
+    /// next/previous) the buttons bring the media tab forward so the user can control it there.
     func control(_ action: String) {
         guard let m = AppModel.shared.media else { return }
         if m.source == .vlc {
             let cmd = ["playpause": "play", "next": "next", "previous": "previous"][action] ?? ""
             guard !cmd.isEmpty else { return }
             _ = run("tell application id \"\(Self.vlcID)\" to \(cmd)", app: Self.vlcID)
-        } else {
-            // NX_KEYTYPE_PLAY 16, NEXT 17, PREVIOUS 18: macOS sends them to the Now Playing app (the browser tab).
-            guard let key = ["playpause": 16, "next": 17, "previous": 18][action] else { return }
-            // Posting events needs permission; the user's click is the moment to ask, instead of failing silently.
-            guard CGPreflightPostEventAccess() else { _ = CGRequestPostEventAccess(); return }
-            Self.mediaKey(key)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MainActor.assumeIsolated { OtherPlayersProvider.shared.poll() } }
+            return
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MainActor.assumeIsolated { OtherPlayersProvider.shared.poll() } }
+        guard let item = lastItem, let id = m.appBundleID else { return }
+        if action == "playpause", let js = BrowserMedia.tabScript(bundleID: id, action: "toggle", window: item.window, tab: item.tab),
+           run(js, app: id) == "ok" {
+            lastTabQuery[id] = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { MainActor.assumeIsolated { OtherPlayersProvider.shared.poll() } }
+            return
+        }
+        if let show = BrowserMedia.tabScript(bundleID: id, action: "show", window: item.window, tab: item.tab) { _ = run(show, app: id) }
     }
 
-    static func mediaKey(_ key: Int) {
-        for down in [true, false] {
-            let flags = NSEvent.ModifierFlags(rawValue: down ? 0xA00 : 0xB00)
-            let data1 = (key << 16) | ((down ? 0xA : 0xB) << 8)
-            NSEvent.otherEvent(with: .systemDefined, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: 0,
-                               context: nil, subtype: 8, data1: data1, data2: -1)?.cgEvent?.post(tap: .cghidEventTap)
-        }
+    /// Run on the main thread for user actions only (a click): short scripts against an allowed app.
+    private func run(_ source: String, app: String) -> String? {
+        guard canAutomate(app) else { return nil }
+        var err: NSDictionary?
+        let r = NSAppleScript(source: "with timeout of 2 seconds\n\(source)\nend timeout")?.executeAndReturnError(&err)
+        return err == nil ? r?.stringValue : nil
     }
 }

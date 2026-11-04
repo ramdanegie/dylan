@@ -7,6 +7,14 @@ public enum BrowserMedia {
         public var title: String
         public var artist: String
         public var site: String
+        /// Where the tab is (AppleScript window and tab numbers), to bring it forward or script it.
+        public var window = 0
+        public var tab = 0
+    }
+
+    public struct Tab: Equatable, Sendable {
+        public var title: String, url: String, window: Int, tab: Int
+        public init(title: String, url: String, window: Int = 1, tab: Int = 1) { self.title = title; self.url = url; self.window = window; self.tab = tab }
     }
 
     public static let browsers: [String: String] = [
@@ -15,8 +23,8 @@ public enum BrowserMedia {
     ]
 
     /// The first tab that is a media page, cleaned up ("(3) Lagu - YouTube" → "Lagu", site "YouTube").
-    public static func pick(_ tabs: [(title: String, url: String)]) -> Item? {
-        for t in tabs { if let i = item(title: t.title, url: t.url) { return i } }
+    public static func pick(_ tabs: [Tab]) -> Item? {
+        for t in tabs { if var i = item(title: t.title, url: t.url) { i.window = t.window; i.tab = t.tab; return i } }
         return nil
     }
 
@@ -80,9 +88,11 @@ public enum BrowserMedia {
         set nl to character id 10
         set out to ""
         tell application id "\(bundleID)"
-            repeat with w in windows
-                repeat with t in tabs of w
-                    set out to out & (\(titleProp) of t) & sep & (URL of t) & nl
+            repeat with wi from 1 to count of windows
+                set w to window wi
+                repeat with ti from 1 to count of tabs of w
+                    set t to tab ti of w
+                    set out to out & (\(titleProp) of t) & sep & (URL of t) & sep & wi & sep & ti & nl
                 end repeat
             end repeat
         end tell
@@ -90,10 +100,33 @@ public enum BrowserMedia {
         """
     }
 
-    public static func parseTabs(_ out: String) -> [(title: String, url: String)] {
+    public static func parseTabs(_ out: String) -> [Tab] {
         out.split(separator: "\n").compactMap { line in
-            let p = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
-            return p.count == 2 ? (String(p[0]), String(p[1])) : nil
+            let p = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            guard p.count >= 2 else { return nil }
+            return Tab(title: p[0], url: p[1], window: p.count >= 4 ? Int(p[2]) ?? 1 : 1, tab: p.count >= 4 ? Int(p[3]) ?? 1 : 1)
+        }
+    }
+
+    /// Play/pause inside the tab, for browsers whose user turned on "Allow JavaScript from Apple Events".
+    /// Fixed text: nothing from the page or the tab title goes into it.
+    public static let toggleJS = "(()=>{const m=[...document.querySelectorAll('video,audio')];const p=m.find(e=>!e.paused)||m[0];if(!p)return'none';p.paused?p.play():p.pause();return'ok'})()"
+
+    /// Script for one of: "toggle" (JavaScript in the tab) or "show" (bring that tab forward).
+    public static func tabScript(bundleID: String, action: String, window: Int, tab: Int) -> String? {
+        guard window > 0, tab > 0 else { return nil }
+        let safari = bundleID == "com.apple.Safari"
+        switch action {
+        case "toggle":
+            return safari
+                ? "tell application id \"\(bundleID)\" to do JavaScript \"\(toggleJS)\" in tab \(tab) of window \(window)"
+                : "tell application id \"\(bundleID)\" to execute tab \(tab) of window \(window) javascript \"\(toggleJS)\""
+        case "show":
+            return safari
+                ? "tell application id \"\(bundleID)\"\nset current tab of window \(window) to tab \(tab) of window \(window)\nset index of window \(window) to 1\nactivate\nend tell"
+                : "tell application id \"\(bundleID)\"\nset active tab index of window \(window) to \(tab)\nset index of window \(window) to 1\nactivate\nend tell"
+        default:
+            return nil
         }
     }
 

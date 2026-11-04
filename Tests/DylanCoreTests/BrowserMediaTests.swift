@@ -3,12 +3,9 @@ import Testing
 
 @Suite struct BrowserMediaTests {
     @Test func picksTheMediaTab() {
-        let tabs: [(title: String, url: String)] = [
-            ("Inbox (3) - Gmail", "https://mail.google.com/mail/u/0/#inbox"),
-            ("(2) Sore di Kemang - Arsa - YouTube", "https://www.youtube.com/watch?v=abc"),
-        ]
-        #expect(BrowserMedia.pick(tabs) == .init(title: "Sore di Kemang - Arsa", artist: "", site: "YouTube"))
-        #expect(BrowserMedia.pick([("YouTube", "https://www.youtube.com/")]) == nil)    // home page, not a video
+        let tabs = BrowserMedia.parseTabs("Inbox (3) - Gmail\thttps://mail.google.com/mail/u/0/#inbox\t1\t1\n(2) Sore di Kemang - Arsa - YouTube\thttps://www.youtube.com/watch?v=abc\t2\t3\n")
+        #expect(BrowserMedia.pick(tabs) == .init(title: "Sore di Kemang - Arsa", artist: "", site: "YouTube", window: 2, tab: 3))
+        #expect(BrowserMedia.pick([.init(title: "YouTube", url: "https://www.youtube.com/")]) == nil)    // home page, not a video
     }
 
     @Test func sites() {
@@ -29,6 +26,11 @@ import Testing
         #expect(!BrowserMedia.vlcScript.contains("& tab &"))
         #expect(!script.contains("& tab &") && script.range(of: "set sep")!.lowerBound < script.range(of: "tell application")!.lowerBound)
         #expect(BrowserMedia.parseTabs("A\thttps://a\nB\thttps://b\n").map(\.url) == ["https://a", "https://b"])
+        let show = BrowserMedia.tabScript(bundleID: "com.google.Chrome", action: "show", window: 2, tab: 3)
+        #expect(show?.contains("set active tab index of window 2 to 3") == true)
+        #expect(BrowserMedia.tabScript(bundleID: "com.apple.Safari", action: "toggle", window: 1, tab: 1)?.contains("do JavaScript") == true)
+        #expect(BrowserMedia.tabScript(bundleID: "com.google.Chrome", action: "toggle", window: 0, tab: 1) == nil)
+        #expect(!BrowserMedia.toggleJS.contains("\""))   // safe inside the AppleScript string
         let v = BrowserMedia.parseVLC("true\tFilm Keluarga.mkv\t5400\t61")
         #expect(v?.playing == true && v?.title == "Film Keluarga" && v?.duration == 5400 && v?.position == 61)
         #expect(BrowserMedia.parseVLC("") == nil)
