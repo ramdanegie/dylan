@@ -32,7 +32,9 @@ final class LockScreenProvider {
     private func locked() {
         guard AppModel.shared.features.isEnabled(.lockScreen), !unavailable, panel == nil, let screen = NSScreen.main else { return }
         let size = NSSize(width: 420, height: 150)
-        let frame = NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height - 120, width: size.width, height: size.height)
+        // Below the system clock (seen on a locked macOS 27.2: the clock fills roughly the top quarter).
+        let frame = NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - screen.frame.height * 0.28 - size.height,
+                           width: size.width, height: size.height)
         let p = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         p.isOpaque = false
         p.backgroundColor = .clear
@@ -111,6 +113,8 @@ struct LockScreenWidgets: View {
                 if let w = WeatherProvider.shared.current { Label("\(Int(w.temperature.rounded()))°", systemImage: Weather.describe(w.code).symbol) }
             }
             .font(DY.font(13, .semibold)).foregroundStyle(DY.fg)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(Capsule().fill(Color.black.opacity(0.45)))
             if let m = model.media, m.isPlaying {
                 HStack(spacing: 10) {
                     Artwork(image: m.artwork, size: 40)
