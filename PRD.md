@@ -236,6 +236,18 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-77 | Hapus background gambar di shelf, lokal dengan Vision (macOS 14+); hasil PNG transparan masuk shelf | Could |
 | FR-86 | Floating basket: goyang kursor saat men-drag file → keranjang kecil muncul di dekat kursor (berguna di monitor eksternal yang jauh dari notch) | Could |
 | FR-87 | Salin teks dari gambar (OCR, Vision `VNRecognizeTextRequest`) untuk item gambar di clipboard dan shelf | Could |
+| FR-88 | **Screenshot:** capture area, jendela, atau layar penuh dari menu bar (D38) atau notch yang melebar jadi pemilih mode (D39); shortcut ⌥⇧1/2/3 (tidak bentrok dengan ⇧⌘3/4/5 macOS), timer 3/5/10 detik, loupe koordinat + warna piksel, notch dan ikon desktop tidak ikut terekam | Should |
+| FR-89 | Hasil capture di notch sebagai P2 (D40): thumbnail bisa diseret ke app lain atau Shelf, langsung disalin; tombol Percantik, Simpan, Pin (jendela melayang), Teks. Riwayat lokal (default 30 hari) dan ⌥⇧E membuka capture terakhir | Should |
+| FR-90 | Capture teks (OCR) ⌥⇧T: teks area langsung disalin (Vision, Indonesia & English, di Mac); QR code yang terbaca ditawarkan sebagai link | Should |
+| FR-91 | Scrolling capture ⌥⇧4 (D42): pilih area lalu scroll; potongan disambung, header lengket dibuang, batas 20.000 px, Esc menyimpan yang sudah terambil | Could |
+| FR-92 | Editor anotasi (D41): panah, kotak, teks, sorot, blur/piksel, nomor urut, crop, ambil warna; undo/redo; blur otomatis data sensitif (detektor rahasia Clipboard); ekspor PNG @2x / JPG / WebP | Could |
+| FR-93 | Studio percantik (D44): bingkai (macOS, browser, kaca), sudut, bayangan, rasio + preset sosial (X, Instagram, LinkedIn), latar gradien/mesh + grain, tata letak 3D, jumlah salinan, ukuran; Salin hasil siap tempel | Could |
+| FR-94 | Rekam layar dari menu Screenshot (D38: "Segera") | Won't (v1.x) |
+| FR-95 | **Suhu & Kipas:** tab Suhu di notch (D45) dengan suhu CPU, GPU, SSD, baterai (IOHID, tanpa root), RPM tiap kipas dan grafik CPU; hanya muncul di Mac yang punya kipas dan bisa disembunyikan | Should |
+| FR-96 | Preset kipas Otomatis (default, dikendalikan macOS), Senyap, Seimbang, Performa, Maksimal, dan Kurva, dari notch, menu bar Fan ▸ (D46), dan shortcut ⌃⌥⇧0–4; titik kecil di ikon menu bar saat bukan Otomatis | Should |
+| FR-97 | Status kipas di notch (D47): Compact P3 saat mode manual; Peek P1 "terlalu panas" saat ≥ 95 °C selama 30 dtk, menyebut proses terberat dan tombol Kipas maks (muncul lagi paling cepat 15 menit); Compact P2 "Kembali ke Otomatis" | Should |
+| FR-98 | Settings Suhu & Kipas (D48): mode per kipas (Otomatis, RPM tetap, Kurva), kurva 4 titik pada sensor pilihan dengan respons Cepat/Halus (rata-rata 10 dtk), kembali otomatis saat suhu turun (< 65 °C selama 5 menit), ambang peringatan, suhu di menu bar, °C/°F | Should |
+| FR-99 | Helper kipas (D49): daemon `SMAppService` yang menulis `F<n>Md`/`F<n>Tg` ke SMC, dipasang sekali dengan password admin; hanya menerima Dylan yang ditandatangani tim yang sama; tidak pernah di bawah RPM minimum pabrik; kembali ke Otomatis bila Dylan keluar, crash, sleep, atau diam 10 dtk; tidak menyentuh kipas yang diatur app lain | Should |
 | FR-46 | Scratchpad: catatan cepat dalam satu hover | Could |
 | FR-79 | Kamera cermin: preview kamera depan di Expanded untuk cek penampilan sebelum meeting; kamera hanya aktif selama panel terbuka | Could |
 | FR-81 | "Waktunya berangkat": untuk event dengan lokasi fisik, hitung waktu tempuh (MapKit) dan beri P1 saat harus berangkat | Could |
@@ -265,11 +277,11 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | Latensi | Hover → Peek < 100 ms setelah delay; event hook → tampil < 300 ms |
 | Hook Claude Code | `dylan hook` selesai < 50 ms untuk event biasa. **Fail-open:** bila Dylan mati atau hang, hook langsung keluar tanpa output dan tidak pernah mengganggu Claude Code |
 | Stabilitas | Bertahan saat sleep/wake, ganti layar, ganti Space, dan restart Dylan. Crash Dylan tidak memengaruhi terminal/agent |
-| Privasi | Tanpa telemetry/analytics. Tanpa jaringan kecuali yang opt-in: GitHub, cuaca, lirik (LRCLIB), Spotify Web API/oEmbed, tukar token OAuth Discord ke `discord.com`. Data Discord sendiri lewat socket lokal ke app Discord; Dylan tidak punya server |
+| Privasi | Tanpa telemetry/analytics. Tanpa jaringan kecuali yang opt-in: GitHub, cuaca (nama kota dikirim ke geocoding Open-Meteo sekali, lalu koordinat dibulatkan 2 desimal), lirik (LRCLIB, judul + artis), waktu tempuh Apple Maps untuk "Waktunya berangkat" (lokasi kamu + tujuan event), Spotify Web API (akun opsional, PKCE dengan Client ID milik user; refresh token di Keychain)/oEmbed, tukar token OAuth Discord ke `discord.com`. Data Discord sendiri lewat socket lokal ke app Discord; Dylan tidak punya server |
 | Keamanan | Socket hanya bisa diakses user sendiri (0600). Dylan tidak menjalankan perintah yang datang lewat socket. Edit file config selalu dengan backup |
 | Aksesibilitas | Label VoiceOver di semua kontrol; navigasi keyboard di Expanded; kontras teks ≥ 4,5:1 |
 | Kompatibilitas | macOS 15+, diuji di macOS 27, Apple Silicon (Intel tidak ditargetkan) |
-| Bahasa | UI Bahasa Indonesia dan English (FR-18), lengkap di v1.0. Semua string di String Catalog (`Localizable.xcstrings`); tidak ada teks UI yang di-hard-code. Format tanggal, jam, durasi, dan angka mengikuti bahasa terpilih. Bahasa lain bisa ditambah tanpa mengubah kode |
+| Bahasa | UI Bahasa Indonesia dan English (FR-18), lengkap di v1.0. Semua string di `Localizable.strings` per bahasa (`id.lproj`, `en.lproj`; String Catalog butuh `xcstringstool` yang hanya ada di Xcode); tidak ada teks UI yang di-hard-code, dan unit test memastikan kedua bahasa punya key dan argumen yang sama. Format tanggal, jam, durasi, dan angka mengikuti bahasa terpilih. Bahasa lain bisa ditambah tanpa mengubah kode |
 | Face Unlock (v2.0) | Layar menyala → terbuka ≤ 2 s; kamera hanya aktif ≤ 8 s per percobaan (lampu hijau kamera menyala selama itu); 0 dari 20 percobaan pakai foto wajahmu berhasil membuka; embedding tidak pernah keluar dari Mac |
 
 ## 1.9 Metrik Sukses (pemakaian pribadi, 2 minggu)
@@ -473,7 +485,7 @@ dylan-mac/
 │   │   ├── Bridge/            # SocketServer
 │   │   ├── Providers/         # Media, Lyrics, Discord, Notifications, Calendar, Reminders, Timer, Battery, Bluetooth, HUD, Privacy, Focus, Clipboard, Shelf, ColorPicker, KeepAwake, Weather, Downloads, Stats, LockScreen, FaceUnlock; [Dev] Agents, Commands, Ports, GitHub, Scripts, Docker
 │   │   └── UI/                # tab, komponen, theme
-│   └── dylan/                 # executable CLI, dibundel ke Dylan.app/Contents/MacOS/dylan
+│   └── DylanCLI/              # executable CLI, dibundel ke Dylan.app/Contents/Helpers/dylan
 └── Tests/
     ├── DylanCoreTests/
     └── Fixtures/              # payload hook asli dari spike T0.4
@@ -829,6 +841,19 @@ Protokol dan perintah ada di §2.6.
 - Per-fitur: urutan & on/off tab; daftar app yang menyembunyikan notch saat di depan (mis. game, Keynote).
 - Bentuk di notch fisik selalu hitam pekat (§3.3) supaya tetap menyatu dengan hardware.
 
+### F23 — Screenshot (FR-88 s/d FR-94, design D38–D44)
+- **Capture** lewat ScreenCaptureKit (izin Screen Recording, diminta saat capture pertama). Layar dibekukan dulu, lalu area dipilih di atas gambar beku: loupe membaca warna dari gambar itu, dan jendela Dylan dikecualikan dari capture.
+- **Mode** dipilih di bar berbentuk notch (Area 1, Jendela 2, Layar 3, Scroll 4, Teks 5; Spasi ganti mode, Esc batal, ⇧ kunci rasio, ⌥ dari tengah, panah geser 1 px). Timer menunda pembekuan layar.
+- **Hasil**: disalin ke clipboard (bisa diatur), file asli disimpan di riwayat `~/Library/Application Support/Dylan/Captures` (0700), opsional juga ke `~/Pictures/Dylan`. Notch P2 dengan thumbnail yang bisa diseret.
+- **Studio & editor** memakai file yang sama; ekspor tidak pernah menimpa file asli, jadi edit bisa diulang.
+- **Privasi**: semua lokal, tanpa jaringan; blur otomatis memakai detektor rahasia yang sama dengan Clipboard; riwayat dihapus otomatis setelah masa simpan.
+
+### F24 — Suhu & Kipas (FR-95 s/d FR-99, design D45–D49)
+- **Baca** tanpa root: suhu dari sensor IOHID (`PMU tdie*` CPU, `PMU TP*g` GPU, `NAND` SSD, `gas gauge battery`), kipas dari SMC (`FNum`, `F<n>Ac/Mn/Mx/Md/Tg`). Polling 2 dtk saat tab Suhu terbuka, 10 dtk di latar hanya bila mode bukan Otomatis atau peringatan panas aktif. Spike M1 Pro (macOS 27.2): `F<n>Md` ui8, `F<n>Tg` flt, tanpa key `Ftst`.
+- **Tulis** hanya lewat helper root (`Contents/Library/LaunchDaemons`, `SMAppService.daemon`). Klien divalidasi dengan code-signing requirement (identifier + team). Butuh build yang ditandatangani identitas Apple Development/Developer ID (`DYLAN_SIGN_IDENTITY`); build ad-hoc hanya memantau suhu.
+- **Keamanan**: helper menjepit target ke `[F<n>Mn, F<n>Mx]`, mengembalikan kipas yang ia ambil ke Otomatis saat koneksi putus, SIGTERM, atau 10 dtk tanpa heartbeat. Dylan mengirim Otomatis sebelum sleep. Bila kipas sudah manual tanpa Dylan (mis. Macs Fan Control), Dylan menampilkan "Dikendalikan app lain" dan tidak mengubah apa pun sampai user memilih preset.
+- **Mac tanpa kipas** (`FNum` = 0): bagian kipas, preset, dan menu Fan disembunyikan; tab Suhu tetap ada.
+
 ## 2.6 Bridge, CLI & Konfigurasi
 
 **Socket:** `~/Library/Application Support/Dylan/dylan.sock`, mode 0600, satu JSON per baris, selalu berisi `"v": 1`.
@@ -861,19 +886,19 @@ Protokol dan perintah ada di §2.6.
 | `dylan hook claude` / `dylan hook codex` | Dipanggil oleh hook agent |
 | `dylan doctor` | Cek app jalan, socket, hook terpasang, versi `claude`, izin |
 
-**Hook Claude Code yang dipasang** (digabung ke `~/.claude/settings.json`; `<APP>` = path absolut `Dylan.app`, ditulis literal saat pemasangan):
+**Hook Claude Code yang dipasang** (digabung ke `~/.claude/settings.json`; `<APP>` = path absolut `Dylan.app`, ditulis literal saat pemasangan; CLI ada di `Contents/Helpers` karena `Contents/MacOS/Dylan` dan `…/dylan` adalah nama yang sama di disk case-insensitive):
 
 ```json
 {
   "hooks": {
-    "SessionStart":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "PreToolUse":        [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "PostToolUse":       [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "Notification":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "PermissionRequest": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 60 }] }],
-    "Stop":              [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }],
-    "SessionEnd":        [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/MacOS/dylan hook claude", "timeout": 5 }] }]
+    "SessionStart":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "PreToolUse":        [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "PostToolUse":       [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "Notification":      [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "PermissionRequest": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 60 }] }],
+    "Stop":              [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }],
+    "SessionEnd":        [{ "hooks": [{ "type": "command", "command": "<APP>/Contents/Helpers/dylan hook claude", "timeout": 5 }] }]
   }
 }
 ```
@@ -920,7 +945,9 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 | Focus (`NSFocusStatusUsageDescription`) | Status Focus (FR-72) | Saat fitur dinyalakan; lihat catatan entitlement di §F19 |
 | Full Disk Access | Hanya bila spike T3.5 memilih store notifikasi (FR-68 opsi b) | Opsional, dengan penjelasan |
 | Password admin | Touch ID untuk `sudo` (FR-29) | Dijalankan sendiri oleh user di terminal |
-| Screen Recording | **Tidak dipakai** (color picker memakai `NSColorSampler`, visualizer memakai process tap) | — |
+| Password admin (Login Items & Extensions) | Helper kipas (FR-99), sekali saja | Saat memilih preset selain Otomatis pertama kali |
+| Screen Recording | Hanya Screenshot (FR-88 s/d FR-91). Color picker tetap memakai `NSColorSampler`, visualizer memakai process tap | Saat capture pertama |
+| Full Disk Access | Status Focus (FR-72): macOS 27 melindungi `~/Library/DoNotDisturb` | Opsional, dijelaskan di Settings → Perangkat |
 | Jaringan | GitHub (lewat `gh`), cuaca, lirik, Spotify oEmbed/Web API, tukar token Discord | Opt-in per fitur |
 
 - Tidak memakai sandbox, karena perlu `~/.claude`, `lsof`, socket, dan menjalankan `gh`/`git`. Hardened runtime + ad-hoc sign.
@@ -940,6 +967,7 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 - **Agent:** Dylan tidak pernah mengizinkan apa pun secara otomatis; setiap izin butuh klik user. Tidak ada "izinkan selalu" di v1.0.
 - **Edit config user** (`~/.claude/settings.json`, `~/.zshrc`): selalu dengan backup, diff, persetujuan, dan penulisan atomik.
 - **Notifikasi, pesan, Discord:** isi hanya di memori selama tampil; riwayat hanya menyimpan "app · waktu". Token Discord & Spotify di Keychain. Dylan tidak membaca database chat app mana pun.
+- **Artwork Spotify:** Spotify hanya memberi URL artwork, jadi Dylan mengunduhnya dari CDN Spotify sekali per lagu saat fitur Musik aktif.
 - **Lirik & cuaca:** permintaan ke LRCLIB berisi judul/artis/album/durasi lagu; ke Open-Meteo berisi koordinat yang dibulatkan ke 2 desimal (± 1 km). Keduanya dijelaskan di Settings sebelum dinyalakan.
 - **Kamera cermin:** hanya aktif selama panel terbuka (maks 60 s); tidak merekam atau menyimpan apa pun.
 - **Lock screen:** hanya jam, musik, baterai, cuaca. Tidak ada notifikasi, pesan, atau data pribadi.
@@ -1073,7 +1101,7 @@ Semua teks UI tersedia dalam dua bahasa (FR-18). Tombol ditulis dalam `[kurung]`
 
 | Task | Isi | AC |
 |---|---|---|
-| **T0.1** Setup | SwiftPM: target `DylanCore`, app `Dylan`, CLI `dylan`, test. `scripts/build.sh` membundel `.app` (CLI di `Contents/MacOS`), ad-hoc sign, opsi `--run` dan `--test` | `./scripts/build.sh --test --run` sukses; app jalan tanpa ikon Dock |
+| **T0.1** Setup | SwiftPM: target `DylanCore`, app `Dylan`, CLI `dylan`, test. `scripts/build.sh` membundel `.app` (CLI di `Contents/Helpers`, karena "Dylan" dan "dylan" bentrok di disk case-insensitive), ad-hoc sign, opsi `--run` dan `--test` | `./scripts/build.sh --test --run` sukses; app jalan tanpa ikon Dock |
 | **T0.2** Panel notch | NSPanel di atas notch: geometri dari safe area, level, Spaces, fullscreen, klik tembus di luar bentuk, animasi ukuran saat hover | Closed tak terlihat; menu bar tetap bisa diklik; animasi 120 fps; tidak mencuri fokus. Temuan di `docs/spike-notch.md` |
 | **T0.3** Media | AppleScript + distributed notification untuk Spotify/Music (termasuk shuffle, repeat, volume, `play track <uri>`); uji pendekatan `mediaremote-adapter` untuk browser di macOS 27 + cek lisensinya | `docs/spike-media.md`: apa yang jalan + keputusan |
 | **T0.4** [Dev] Hook Claude Code | `dylan hook claude` → socket. Rekam payload asli semua event jadi fixture. Uji `PermissionRequest`: apakah prompt terminal tertahan selama hook menunggu, format keputusan, perilaku timeout. Catat nilai `__CFBundleIdentifier`/`TERM_PROGRAM` di VS Code, Zed, dan Terminal | `docs/spike-claude-hooks.md` + fixture di `Tests/Fixtures/`; keputusan default FR-9 |
@@ -1096,7 +1124,7 @@ Semua teks UI tersedia dalam dua bahasa (FR-18). Tombol ditulis dalam `[kurung]`
 | **T1.10** Meeting | EventKit, link meeting, countdown, Join | AC §F6; unit test parser link |
 | **T1.11** Timer/Pomodoro | §F7 | Tetap akurat setelah sleep 5 menit |
 | **T1.12** Mode Presentasi | §F12 + uji `sharingType` | Hasil uji Zoom/Meet di `docs/presentation-mode.md` |
-| **T1.13** Settings, onboarding, bahasa, login item, menu bar | §F14, FR-18, D1, D16, D17; String Catalog id + en untuk semua copy §3.4 | Setting tersimpan antar restart; onboarding bisa dilewati; tidak ada string yang belum diterjemahkan (cek `xcstrings` + snapshot English) |
+| **T1.13** Settings, onboarding, bahasa, login item, menu bar | §F14, FR-18, D1, D16, D17; `Localizable.strings` id + en untuk semua copy §3.4 | Setting tersimpan antar restart; onboarding bisa dilewati; tidak ada string yang belum diterjemahkan (cek `xcstrings` + snapshot English) |
 | **T1.14** Profil Umum/Developer | FR-17: `Profile.swift` menentukan provider, tab, izin, dan langkah onboarding yang aktif | Unit test; profil Umum tidak pernah menjalankan provider [Dev] atau meminta izinnya |
 | **T1.15** Baterai & charging | FR-70, D30 | Colok/cabut charger tampil < 1 s; peringatan 20%/10% |
 | **T1.16** AirPods & Bluetooth | FR-44, D31, sesuai keputusan T0.6 | Tersambung/terputus tampil < 2 s |
