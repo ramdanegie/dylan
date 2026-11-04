@@ -37,7 +37,8 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp -R Sources/Dylan/Resources/*.lproj "$APP/Contents/Resources/"
 
 ICONSET="design/Dyland Notch Mockups/icon/Dylan.iconset"
-if [[ ! -f Resources/Dylan.icns && -d "$ICONSET" ]]; then
+# Rebuilt whenever an iconset file is newer than the .icns, so a new icon never stays stale.
+if [[ -d "$ICONSET" ]] && { [[ ! -f Resources/Dylan.icns ]] || [[ -n "$(find "$ICONSET" -newer Resources/Dylan.icns -print -quit)" ]]; }; then
   TMP="$(mktemp -d)/Dylan.iconset"; mkdir -p "$TMP"
   for f in "$ICONSET"/*.png; do n="$(basename "$f")"; cp "$f" "$TMP/${n/-2x/@2x}"; done
   iconutil -c icns "$TMP" -o Resources/Dylan.icns
