@@ -68,6 +68,8 @@ final class StudioModel {
         }
     }
     var marks: [Mark] = [] { didSet { rebuildWorking() } }
+    /// The arrow / box / highlight being dragged, drawn live from the first point (not part of undo).
+    var draft: Mark?
     /// Blurs found by OCR: never undone or reset, so a secret cannot come back by accident.
     var autoBlurs: [Mark] = [] { didSet { rebuildWorking() } }
     /// Copy, Save and drag wait for OCR, so an unblurred picture never leaves the editor.
@@ -429,7 +431,7 @@ struct AnnotationLayer: View {
     var body: some View {
         Canvas { ctx, size in
             let lw = max(2, min(size.width, size.height) / 160)   // line width follows the picture size (D41)
-            for m in model.marks where m.kind != .blur {
+            for m in model.marks + [model.draft].compactMap({ $0 }) where m.kind != .blur {
                 let wa = model.toWorking(m.a), wb = model.toWorking(m.b)
                 let a = CGPoint(x: wa.x * size.width, y: wa.y * size.height), b = CGPoint(x: wb.x * size.width, y: wb.y * size.height)
                 switch m.kind {
@@ -568,8 +570,11 @@ struct StudioView: View {
             let clamped = CGPoint(x: min(max(p.x, 0), 1), y: min(max(p.y, 0), 1))
             if dragStart == nil { dragStart = clamped }
             dragNow = clamped
+            if let s = dragStart, let kind: Mark.Kind = [.arrow: .arrow, .rect: .rect, .highlight: .highlight][model.tool] {
+                model.draft = Mark(kind: kind, a: model.toOriginal(s), b: model.toOriginal(clamped), color: model.ink)
+            }
         }.onEnded { _ in
-            defer { dragStart = nil; dragNow = nil }
+            defer { dragStart = nil; dragNow = nil; model.draft = nil }
             guard let wa = dragStart, let wb = dragNow else { return }
             let moved = hypot(wa.x - wb.x, wa.y - wb.y) > 0.005
             let a = model.toOriginal(wa), b = model.toOriginal(wb)

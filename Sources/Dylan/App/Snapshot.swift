@@ -9,6 +9,7 @@ enum Snapshot {
     /// Views that use AppKit layers draw a static SwiftUI stand-in while this is set.
     static var rendering = false
     nonisolated(unsafe) static var studioSample = false
+    nonisolated(unsafe) static var enrollStep: Int?
 
     static func render(to dir: URL) {
         rendering = true
@@ -91,6 +92,9 @@ enum Snapshot {
             ("D23-expanded-media", { music(); m.selectedTab = .media; m.notchState = .expanded }),
             ("D9-expanded-agents", { agentWorking(); m.selectedTab = .agents; m.notchState = .expanded }),
             ("D44-studio", { Snapshot.studioSample = true }),
+            ("D19-enroll-1", { Snapshot.enrollStep = 0 }),
+            ("D19-enroll-3", { Snapshot.enrollStep = 2 }),
+            ("D19-enroll-4", { Snapshot.enrollStep = 3 }),
             ("D45-thermal", {
                 let f = FanProvider.shared
                 f.fans = [SMC.Fan(index: 0, rpm: 3240, min: 1200, max: 5779, manual: false, target: 3240),
@@ -135,6 +139,16 @@ enum Snapshot {
                 .frame(width: g.panelFrame.width, height: g.panelFrame.height)
                 .background(LinearGradient(colors: [Color(white: 0.85), Color(white: 0.7)], startPoint: .top, endPoint: .bottom))
                 .transaction { $0.animation = nil }
+            if let step = Snapshot.enrollStep {
+                Snapshot.enrollStep = nil
+                let r = ImageRenderer(content: FaceEnrollView(done: {}, step: step).background(Color(nsColor: .windowBackgroundColor)))
+                r.scale = 2
+                if let cg = r.cgImage, let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
+                    try? png.write(to: dir.appendingPathComponent("\(name)-\(lang).png"))
+                    print("✓ \(name)-\(lang).png")
+                }
+                continue
+            }
             if Snapshot.studioSample {
                 // Studio on a sample "screenshot": the sample notch image itself, framed and beautified.
                 Snapshot.studioSample = false

@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, discord, devices, thermal, utilities, clipboard, screenshot, agents, terminal, features, about
+    case general, appearance, liveActivity, media, discord, devices, thermal, utilities, clipboard, screenshot, faceUnlock, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -38,6 +38,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .utilities: return "wrench.and.screwdriver"
         case .clipboard: return "doc.on.clipboard"
         case .screenshot: return "camera.viewfinder"
+        case .faceUnlock: return "faceid"
         case .agents: return "sparkle"
         case .terminal: return "terminal"
         case .features: return "checklist"
@@ -96,6 +97,7 @@ struct SettingsView: View {
         case .discord: DiscordSettings()
         case .clipboard: ClipboardSettings()
         case .screenshot: ScreenshotSettings()
+        case .faceUnlock: FaceUnlockSettings()
         case .thermal: ThermalSettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
@@ -377,8 +379,6 @@ struct UtilitySettings: View {
     private var model: AppModel { AppModel.shared }
     var body: some View {
         FeatureToggles(features: [.shelf, .colorPicker, .weather, .downloads, .scratchpad, .mirror])
-        // Face Unlock is for everyone (PRD §F15), not a Developer setting.
-        FaceUnlockSettings()
         Section(L("weather.title")) {
             TextField(L("weather.city"), text: Binding(get: { model.weatherCity }, set: { model.weatherCity = $0 }))
                 .onSubmit { WeatherProvider.shared.cityChanged() }
@@ -828,25 +828,31 @@ enum App {
 /// FR-50–55 (experimental): the warning comes first, then enrollment with the verified password.
 struct FaceUnlockSettings: View {
     private var face: FaceUnlockProvider { FaceUnlockProvider.shared }
-    @StateBox private var password = ""
-    @StateBox private var understood = false
 
     var body: some View {
-        Section(L("faceUnlock.title")) {
-            SwiftUI.Text(L("faceUnlock.warning")).font(.caption).foregroundStyle(.orange)
+        Section {
             if face.enrolled {
-                Toggle(L("faceUnlock.enable"), isOn: Binding(get: { face.vault.settings.enabled }, set: { face.vault.settings.enabled = $0; face.save() }))
-                Stepper(L("faceUnlock.maxLocked", face.vault.settings.maxLockedMinutes),
-                        value: Binding(get: { face.vault.settings.maxLockedMinutes }, set: { face.vault.settings.maxLockedMinutes = $0; face.save() }), in: 5...240, step: 5)
+                Toggle(isOn: Binding(get: { face.vault.settings.enabled }, set: { face.vault.settings.enabled = $0; face.save() })) {
+                    SwiftUI.Text(L("faceUnlock.enable"))
+                    SwiftUI.Text(L("faceUnlock.enableHint")).font(.caption).foregroundStyle(.secondary)
+                }
+                LabeledContent(L("faceUnlock.maxLockedLabel")) {
+                    Stepper(L("faceUnlock.minutes", face.vault.settings.maxLockedMinutes),
+                            value: Binding(get: { face.vault.settings.maxLockedMinutes }, set: { face.vault.settings.maxLockedMinutes = $0; face.save() }), in: 5...240, step: 5)
+                }
                 if !AXIsProcessTrusted() { SwiftUI.Text(L("faceUnlock.needsAccessibility")).font(.caption).foregroundStyle(.secondary) }
-                Button(L("faceUnlock.delete"), role: .destructive) { face.deleteEnrollment() }
+                HStack {
+                    Button(L("faceUnlock.reenroll")) { FaceEnrollWindow.show() }
+                    Spacer()
+                    Button(L("faceUnlock.delete"), role: .destructive) { face.deleteEnrollment() }
+                }
             } else {
-                Toggle(L("faceUnlock.understood"), isOn: $understood)
-                SecureField(L("faceUnlock.password"), text: $password).disabled(!understood)
-                Button(L("faceUnlock.enroll")) { face.enroll(password: password); password = "" }
-                    .disabled(!understood || password.isEmpty || face.busy)
+                SwiftUI.Text(L("faceUnlock.warning")).font(.caption).foregroundStyle(.orange)
+                Button(L("faceUnlock.enroll")) { FaceEnrollWindow.show() }
             }
             if let s = face.status { SwiftUI.Text(s).font(.caption).foregroundStyle(.secondary) }
+        } header: {
+            HStack { SwiftUI.Text(L("faceUnlock.title")); Badge() }
         }
         if !face.vault.log.events.isEmpty {
             Section(L("faceUnlock.log")) {

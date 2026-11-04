@@ -103,7 +103,6 @@ final class FaceUnlockProvider {
     @ObservationIgnored private var bestIdentity: Double = 0
     @ObservationIgnored private var startedAt = Date()
     @ObservationIgnored private var enrollPrints: [[Float]] = []
-    @ObservationIgnored private var enrollPassword: String?
     @ObservationIgnored private var watchdog: DispatchWorkItem?
     @ObservationIgnored private var unlockCheck: DispatchWorkItem?
 
@@ -183,55 +182,91 @@ final class FaceUnlockProvider {
 
     private func record(_ e: FaceUnlockEvent) { vault.log.append(e); save() }
 
-    // MARK: Enrollment (FR-50)
+    // MARK: Enrollment (FR-50, design D19: risks → camera → password → ready)
 
-    /// Verifies the login password, captures ~6 s of the user's face (no images kept), seals the template.
-    func enroll(password: String) {
-        guard !busy else { return }
-        guard Self.verify(password: password) else { status = L("faceUnlock.wrongPassword"); return }
+    /// Frames kept for the template (design: "20/20 frame").
+    static let enrollTarget = 20
+    enum EnrollState: Equatable { case idle, capturing, captured, failed(String) }
+    var enrollState: EnrollState = .idle
+    var enrollCount = 0
+    /// Faces in the latest frame, so the wizard can say "only one face".
+    var enrollFaces = 0
+    /// The running camera, for the wizard's live preview (never stored).
+    private(set) var enrollCamera: FaceCamera?
+    @ObservationIgnored private var lastEnrollFrame = Date.distantPast
+
+    /// Step 2: the camera runs with a preview while the user turns their head; one print every 0.25 s.
+    func beginEnrollCapture() {
+        cancelEnroll()
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized: break
         case .notDetermined:
-            // First use: ask, then start again with the same (verified) password.
             AVCaptureDevice.requestAccess(for: .video) { @Sendable granted in
                 Task { @MainActor in
-                    if granted { FaceUnlockProvider.shared.enroll(password: password) } else { FaceUnlockProvider.shared.status = L("faceUnlock.noCamera") }
+                    if granted { FaceUnlockProvider.shared.beginEnrollCapture() }
+                    else { FaceUnlockProvider.shared.enrollState = .failed(L("faceUnlock.noCamera")) }
                 }
             }
             return
-        default: status = L("faceUnlock.noCamera"); return
+        default: enrollState = .failed(L("faceUnlock.noCamera")); return
         }
-        busy = true
-        status = L("faceUnlock.lookAtCamera")
         enrollPrints = []
-        enrollPassword = password
-        startedAt = Date()
-        camera = FaceCamera { frame in
+        enrollCount = 0
+        enrollState = .capturing
+        enrollCamera = FaceCamera(duration: 30) { frame in
             DispatchQueue.main.async { MainActor.assumeIsolated { FaceUnlockProvider.shared.enrollFrame(frame) } }
         }
-        guard camera != nil else { busy = false; enrollPassword = nil; status = L("faceUnlock.noCamera"); return }
-        arm(after: 8) { $0.finishEnrollment() }
+        guard enrollCamera != nil else { enrollState = .failed(L("faceUnlock.noCamera")); return }
+        arm(after: 30) { $0.endEnrollCapture() }
     }
 
     private func enrollFrame(_ frame: FaceCamera.Frame) {
-        guard busy, camera != nil else { return }
-        if frame.faceCount == 1, let f = frame.print { enrollPrints.append(f) }
-        if Date().timeIntervalSince(startedAt) > 6 || enrollPrints.count >= 24 { finishEnrollment() }
+        guard enrollState == .capturing else { return }
+        enrollFaces = frame.faceCount
+        guard frame.faceCount == 1, let f = frame.print, Date().timeIntervalSince(lastEnrollFrame) >= 0.25 else { return }
+        lastEnrollFrame = Date()
+        enrollPrints.append(f)
+        enrollCount = enrollPrints.count
+        if enrollCount >= Self.enrollTarget { endEnrollCapture() }
     }
 
-    private func finishEnrollment() {
-        guard busy else { return }
+    private func endEnrollCapture() {
+        guard enrollState == .capturing else { return }
         watchdog?.cancel(); watchdog = nil
-        camera?.stop(); camera = nil
-        busy = false
-        let password = enrollPassword
-        enrollPassword = nil
-        guard let password, let t = FaceMatcher.enroll(enrollPrints, now: Date()) else { status = L("faceUnlock.enrollFailed"); return }
+        enrollCamera?.stop(); enrollCamera = nil
+        enrollState = enrollPrints.count >= FaceMatcher.minimumFrames ? .captured : .failed(L("faceUnlock.enrollFailed"))
+    }
+
+    /// Batal / closing the wizard: camera off, nothing kept.
+    func cancelEnroll() {
+        if enrollState == .capturing { watchdog?.cancel(); watchdog = nil }
+        enrollCamera?.stop(); enrollCamera = nil
+        enrollPrints = []
+        enrollCount = 0
+        enrollState = .idle
+    }
+
+    /// Step 3: the password is verified before anything is stored; then the template is sealed and the feature is on.
+    func completeEnrollment(password: String) -> String? {
+        guard enrollState == .captured else { return L("faceUnlock.enrollFailed") }
+        guard Self.verify(password: password) else { return L("faceUnlock.wrongPassword") }
+        guard let t = FaceMatcher.enroll(enrollPrints, now: Date()) else { return L("faceUnlock.enrollFailed") }
         Keychain.set(password, "faceunlock.password")
         vault.template = t
+        vault.settings.enabled = true
         save()
         status = L("faceUnlock.enrolled", enrollPrints.count)
         enrollPrints = []
+        enrollState = .idle
+        return nil
+    }
+
+    /// "Coba kunci sekarang" (D19 step 4): the system lock, like ⌃⌘Q.
+    static func lockNow() {
+        guard let h = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_NOW),
+              let sym = dlsym(h, "SACLockScreenImmediate") else { return }
+        typealias Lock = @convention(c) () -> Int32
+        _ = unsafeBitCast(sym, to: Lock.self)()
     }
 
     /// Everything goes: password, template, settings, log, file and key.
@@ -327,7 +362,7 @@ enum Speech {
 }
 
 /// Built-in camera frames → Vision, ~10 per second, on its own queue. Virtual, USB and Continuity cameras are
-/// refused (doc: Dylan vs Glance #3). Stops by itself after 8 s.
+/// refused (doc: Dylan vs Glance #3). Stops by itself after `duration` (8 s for unlocking).
 nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     struct Frame: Sendable {
         var faceCount: Int
@@ -338,12 +373,13 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
         var print: [Float]?
     }
 
-    private let session = AVCaptureSession()
+    /// Read by the enrollment preview layer only; frames are never written anywhere.
+    let session = AVCaptureSession()
     private let queue = DispatchQueue(label: "dylan.facecamera")
     private let onFrame: @Sendable (Frame) -> Void
     private var lastFrame: CFTimeInterval = 0
 
-    init?(onFrame: @escaping @Sendable (Frame) -> Void) {
+    init?(duration: TimeInterval = 8, onFrame: @escaping @Sendable (Frame) -> Void) {
         self.onFrame = onFrame
         super.init()
         guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized,
@@ -359,7 +395,7 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
         session.addInput(input); session.addOutput(output)
         session.commitConfiguration()
         queue.async { self.session.startRunning() }
-        queue.asyncAfter(deadline: .now() + 8) { self.session.stopRunning() }
+        queue.asyncAfter(deadline: .now() + duration) { self.session.stopRunning() }
     }
 
     func stop() { queue.async { self.session.stopRunning() } }
