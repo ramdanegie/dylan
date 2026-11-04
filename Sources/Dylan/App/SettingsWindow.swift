@@ -365,6 +365,8 @@ struct UtilitySettings: View {
     private var model: AppModel { AppModel.shared }
     var body: some View {
         FeatureToggles(features: [.shelf, .colorPicker, .weather, .downloads, .scratchpad, .mirror])
+        // Face Unlock is for everyone (PRD §F15), not a Developer setting.
+        FaceUnlockSettings()
         Section(L("weather.title")) {
             TextField(L("weather.city"), text: Binding(get: { model.weatherCity }, set: { model.weatherCity = $0 }))
                 .onSubmit { WeatherProvider.shared.cityChanged() }
@@ -638,7 +640,6 @@ struct TerminalSettings: View {
             }
         }
         TouchIDSudoCard()
-        FaceUnlockSettings()
     }
 }
 
