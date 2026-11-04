@@ -121,6 +121,13 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("scratchpad", .utilities, [46], .v1_3, built: true),
         .init("mirror", .utilities, [79], .v1_3, built: true, req: true),
         .init("lockScreen", .utilities, [80], .v1_3, built: true, experimental: true, req: true),
+        .init("screenshot", .utilities, [88], .v1_1, req: true),
+        .init("screenshotResult", .utilities, [89], .v1_1),
+        .init("screenshotText", .utilities, [90], .v1_1),
+        .init("screenshotScroll", .utilities, [91], .v1_1),
+        .init("screenshotEditor", .utilities, [92], .v1_1),
+        .init("screenshotStudio", .utilities, [93], .v1_1),
+        .init("screenRecording", .utilities, [94], .v2_0),
         // Security
         .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, built: true, experimental: true, req: true),
         // Developer

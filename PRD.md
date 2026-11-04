@@ -236,6 +236,13 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-77 | Hapus background gambar di shelf, lokal dengan Vision (macOS 14+); hasil PNG transparan masuk shelf | Could |
 | FR-86 | Floating basket: goyang kursor saat men-drag file → keranjang kecil muncul di dekat kursor (berguna di monitor eksternal yang jauh dari notch) | Could |
 | FR-87 | Salin teks dari gambar (OCR, Vision `VNRecognizeTextRequest`) untuk item gambar di clipboard dan shelf | Could |
+| FR-88 | **Screenshot:** capture area, jendela, atau layar penuh dari menu bar (D38) atau notch yang melebar jadi pemilih mode (D39); shortcut ⌥⇧1/2/3 (tidak bentrok dengan ⇧⌘3/4/5 macOS), timer 3/5/10 detik, loupe koordinat + warna piksel, notch dan ikon desktop tidak ikut terekam | Should |
+| FR-89 | Hasil capture di notch sebagai P2 (D40): thumbnail bisa diseret ke app lain atau Shelf, langsung disalin; tombol Percantik, Simpan, Pin (jendela melayang), Teks. Riwayat lokal (default 30 hari) dan ⌥⇧E membuka capture terakhir | Should |
+| FR-90 | Capture teks (OCR) ⌥⇧T: teks area langsung disalin (Vision, Indonesia & English, di Mac); QR code yang terbaca ditawarkan sebagai link | Should |
+| FR-91 | Scrolling capture ⌥⇧4 (D42): pilih area lalu scroll; potongan disambung, header lengket dibuang, batas 20.000 px, Esc menyimpan yang sudah terambil | Could |
+| FR-92 | Editor anotasi (D41): panah, kotak, teks, sorot, blur/piksel, nomor urut, crop, ambil warna; undo/redo; blur otomatis data sensitif (detektor rahasia Clipboard); ekspor PNG @2x / JPG / WebP | Could |
+| FR-93 | Studio percantik (D44): bingkai (macOS, browser, kaca), sudut, bayangan, rasio + preset sosial (X, Instagram, LinkedIn), latar gradien/mesh + grain, tata letak 3D, jumlah salinan, ukuran; Salin hasil siap tempel | Could |
+| FR-94 | Rekam layar dari menu Screenshot (D38: "Segera") | Won't (v1.x) |
 | FR-46 | Scratchpad: catatan cepat dalam satu hover | Could |
 | FR-79 | Kamera cermin: preview kamera depan di Expanded untuk cek penampilan sebelum meeting; kamera hanya aktif selama panel terbuka | Could |
 | FR-81 | "Waktunya berangkat": untuk event dengan lokasi fisik, hitung waktu tempuh (MapKit) dan beri P1 saat harus berangkat | Could |
@@ -829,6 +836,13 @@ Protokol dan perintah ada di §2.6.
 - Per-fitur: urutan & on/off tab; daftar app yang menyembunyikan notch saat di depan (mis. game, Keynote).
 - Bentuk di notch fisik selalu hitam pekat (§3.3) supaya tetap menyatu dengan hardware.
 
+### F23 — Screenshot (FR-88 s/d FR-94, design D38–D44)
+- **Capture** lewat ScreenCaptureKit (izin Screen Recording, diminta saat capture pertama). Layar dibekukan dulu, lalu area dipilih di atas gambar beku: loupe membaca warna dari gambar itu, dan jendela Dylan dikecualikan dari capture.
+- **Mode** dipilih di bar berbentuk notch (Area 1, Jendela 2, Layar 3, Scroll 4, Teks 5; Spasi ganti mode, Esc batal, ⇧ kunci rasio, ⌥ dari tengah, panah geser 1 px). Timer menunda pembekuan layar.
+- **Hasil**: disalin ke clipboard (bisa diatur), file asli disimpan di riwayat `~/Library/Application Support/Dylan/Captures` (0700), opsional juga ke `~/Pictures/Dylan`. Notch P2 dengan thumbnail yang bisa diseret.
+- **Studio & editor** memakai file yang sama; ekspor tidak pernah menimpa file asli, jadi edit bisa diulang.
+- **Privasi**: semua lokal, tanpa jaringan; blur otomatis memakai detektor rahasia yang sama dengan Clipboard; riwayat dihapus otomatis setelah masa simpan.
+
 ## 2.6 Bridge, CLI & Konfigurasi
 
 **Socket:** `~/Library/Application Support/Dylan/dylan.sock`, mode 0600, satu JSON per baris, selalu berisi `"v": 1`.
@@ -920,7 +934,8 @@ Prinsip: izin hanya diminta saat fitur yang membutuhkannya dinyalakan, tidak per
 | Focus (`NSFocusStatusUsageDescription`) | Status Focus (FR-72) | Saat fitur dinyalakan; lihat catatan entitlement di §F19 |
 | Full Disk Access | Hanya bila spike T3.5 memilih store notifikasi (FR-68 opsi b) | Opsional, dengan penjelasan |
 | Password admin | Touch ID untuk `sudo` (FR-29) | Dijalankan sendiri oleh user di terminal |
-| Screen Recording | **Tidak dipakai** (color picker memakai `NSColorSampler`, visualizer memakai process tap) | — |
+| Screen Recording | Hanya Screenshot (FR-88 s/d FR-91). Color picker tetap memakai `NSColorSampler`, visualizer memakai process tap | Saat capture pertama |
+| Full Disk Access | Status Focus (FR-72): macOS 27 melindungi `~/Library/DoNotDisturb` | Opsional, dijelaskan di Settings → Perangkat |
 | Jaringan | GitHub (lewat `gh`), cuaca, lirik, Spotify oEmbed/Web API, tukar token Discord | Opt-in per fitur |
 
 - Tidak memakai sandbox, karena perlu `~/.claude`, `lsof`, socket, dan menjalankan `gh`/`git`. Hardened runtime + ad-hoc sign.
