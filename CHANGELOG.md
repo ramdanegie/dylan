@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.1.3] - 2026-11-04
 
 ### Added
 - Screenshot editor: after Save, the notch shows "Click to open in Finder" with the file path and a Finder button.
