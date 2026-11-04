@@ -64,6 +64,8 @@ Developers get a **Developer Mode** on top: watch AI coding agents, long-running
 2. Open it and drag **Dylan** to **Applications**.
 3. Open Dylan. Test builds are not notarized yet, so macOS cannot verify it: click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine /Applications/Dylan.app`.)
 
+Dylan can tell you when a new version is out (Settings → About → Check for updates) and shows what changed after each update; see [CHANGELOG.md](CHANGELOG.md).
+
 Dylan lives in the menu bar and the notch. Permissions (Screen Recording, Accessibility, Calendar…) are only asked for when you turn on a feature that needs them.
 
 ## Live Activity API
@@ -96,7 +98,7 @@ cd dylan
 ## Privacy
 
 - Local first: no telemetry, no analytics, no account, no server.
-- Network access is opt-in per feature: GitHub (through `gh`), weather, lyrics, Spotify, Discord token exchange, Apple Maps travel time.
+- Network access is opt-in per feature: GitHub (through `gh`), weather, lyrics, Spotify, Discord token exchange, Apple Maps travel time, and the update check (Settings → About; it only fetches the release list).
 - Developer features are off by default and ask for nothing until you turn on Developer Mode.
 - Idle CPU stays under 1%.
 

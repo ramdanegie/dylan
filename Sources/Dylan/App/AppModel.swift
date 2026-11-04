@@ -102,6 +102,8 @@ enum NotchAction: Equatable {
     case fan(String)
     /// "Riwayat" on the Face Unlock result (D21).
     case faceUnlockHistory
+    /// "View" on the update notice.
+    case showUpdate
 }
 
 @Observable
@@ -730,6 +732,7 @@ final class AppModel {
         case .capture(let action, let arg): ScreenshotService.shared.perform(action, arg)
         case .fan(let action): FanProvider.shared.perform(action)
         case .faceUnlockHistory: SettingsWindow.show(section: .faceUnlock)
+        case .showUpdate: UpdateWindow.show()
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -766,6 +769,8 @@ final class AppModel {
             return [(L("button.open"), .normal, .capture("openLink", String(a.url!.dropFirst(3))))]
         case .capture where a.url?.hasPrefix("text:") == true:
             return [(L("shot.showText"), .normal, .capture("showText", String(a.url!.dropFirst(5))))]
+        case .notify where a.id == "update":
+            return [(L("update.view"), .normal, .showUpdate)]
         case .notify where a.id == "faceunlock":
             return [(L("faceUnlock.history"), .normal, .faceUnlockHistory)]
         case .thermal where a.id == "fan-hot":

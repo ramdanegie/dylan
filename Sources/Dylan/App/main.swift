@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installMenuBar()
         refreshProviders()
         observeProviders()
+        UpdateService.shared.launched()   // What's New after an update; daily check only if turned on
 
         let dnc = DistributedNotificationCenter.default()
         dnc.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { _ in
@@ -150,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(NSMenuItem(title: L("faceUnlock.turnOff"), action: #selector(disableFaceUnlock), keyEquivalent: ""))
         }
         menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: L("update.check"), action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: L("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         for i in menu.items where i.action != #selector(NSApplication.terminate(_:)) { i.target = self }
@@ -218,6 +220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return m
     }
 
+    @objc private func checkForUpdates() { UpdateService.shared.check(manual: true); UpdateWindow.show() }
     @objc private func pickFanPreset(_ sender: NSMenuItem) { FanProvider.shared.setPreset(FanPreset.allCases[sender.tag]) }
     @objc private func openFanSettings() { SettingsWindow.show(section: .thermal) }
 

@@ -804,11 +804,35 @@ struct FeatureSupportSettings: View {
 }
 
 struct AboutSettings: View {
+    private var updates: UpdateService { UpdateService.shared }
+
     var body: some View {
         Section {
             LabeledContent("Dylan", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
             SwiftUI.Text(L("about.body")).foregroundStyle(.secondary)
             Link("github.com/ramdanegie/dylan", destination: URL(string: "https://github.com/ramdanegie/dylan")!)
+        }
+        Section(L("update.title")) {
+            Toggle(isOn: Binding(get: { updates.autoCheck }, set: { updates.autoCheck = $0 })) {
+                SwiftUI.Text(L("update.auto"))
+                SwiftUI.Text(L("update.autoHint")).font(.caption).foregroundStyle(.secondary)
+            }
+            HStack {
+                Button(L("update.checkNow")) { updates.check(manual: true) }.disabled(updates.state == .checking)
+                Button(L("update.whatsNew")) { WhatsNewWindow.show() }.disabled(updates.whatsNew() == nil)
+                Spacer()
+                SwiftUI.Text(statusText).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var statusText: String {
+        switch updates.state {
+        case .idle: return ""
+        case .checking: return L("update.checking")
+        case .upToDate: return L("update.upToDate", updates.current)
+        case .available(let r): return L("update.available", r.version?.description ?? r.tag)
+        case .failed: return L("update.failed")
         }
     }
 }
