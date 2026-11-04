@@ -840,7 +840,20 @@ struct FaceUnlockSettings: View {
                     Stepper(L("faceUnlock.minutes", face.vault.settings.maxLockedMinutes),
                             value: Binding(get: { face.vault.settings.maxLockedMinutes }, set: { face.vault.settings.maxLockedMinutes = $0; face.save() }), in: 5...240, step: 5)
                 }
-                if !AXIsProcessTrusted() { SwiftUI.Text(L("faceUnlock.needsAccessibility")).font(.caption).foregroundStyle(.secondary) }
+                // Why it would not try on the next wake (the most common: no Accessibility, no password unlock yet).
+                if let issue = face.readinessIssue {
+                    HStack {
+                        Label(L("faceUnlock.denial.\(issue.rawValue)"), systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
+                        Spacer()
+                        if issue == .noAccessibility {
+                            Button(L("faceUnlock.openAccessibility")) {
+                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                            }
+                        }
+                    }
+                } else {
+                    Label(L("faceUnlock.readyNow"), systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
+                }
                 HStack {
                     Button(L("faceUnlock.reenroll")) { FaceEnrollWindow.show() }
                     Spacer()
@@ -860,7 +873,9 @@ struct FaceUnlockSettings: View {
                     HStack {
                         SwiftUI.Text(e.at.formatted(date: .abbreviated, time: .shortened))
                         SwiftUI.Text(L("faceUnlock.result.\(e.result.rawValue)"))
-                        if let r = e.reason { SwiftUI.Text(r).foregroundStyle(.secondary) }
+                        if let r = e.reason {
+                            SwiftUI.Text(FaceUnlockPolicy.Denial(rawValue: r).map { L("faceUnlock.denial.\($0.rawValue)") } ?? r).foregroundStyle(.secondary)
+                        }
                         Spacer()
                         if let i = e.identity { SwiftUI.Text(String(format: "%.2f", i)).monospacedDigit().foregroundStyle(.secondary) }
                     }

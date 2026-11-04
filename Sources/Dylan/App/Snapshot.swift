@@ -92,6 +92,21 @@ enum Snapshot {
             ("D23-expanded-media", { music(); m.selectedTab = .media; m.notchState = .expanded }),
             ("D9-expanded-agents", { agentWorking(); m.selectedTab = .agents; m.notchState = .expanded }),
             ("D44-studio", { Snapshot.studioSample = true }),
+            ("D21-face-compact", {
+                m.center.post(Activity(id: "faceunlock", kind: .notify, priority: .p1, state: .success, symbol: "faceid", label: L("faceUnlock.short"),
+                                       value: "09.12", detail: L("faceUnlock.unlockedDetail", "09.12", "18 m"), progress: 0.93, url: "faceunlock:history", startedAt: now), now: now)
+                m.notchState = .compact
+            }),
+            ("D21-face-peek", {
+                m.center.post(Activity(id: "faceunlock", kind: .notify, priority: .p1, state: .success, symbol: "faceid", label: L("faceUnlock.short"),
+                                       value: "09.12", detail: L("faceUnlock.unlockedDetail", "09.12", "18 m"), progress: 0.93, url: "faceunlock:history", startedAt: now), now: now)
+                m.notchState = .peek
+            }),
+            ("D21-face-off", {
+                m.center.post(Activity(id: "faceunlock", kind: .notify, priority: .p1, state: .failure, symbol: "xmark", label: L("faceUnlock.short"),
+                                       value: L("faceUnlock.off"), detail: L("faceUnlock.offTooMany"), url: "faceunlock:history", startedAt: now), now: now)
+                m.notchState = .peek
+            }),
             ("D19-enroll-1", { Snapshot.enrollStep = 0 }),
             ("D19-enroll-3", { Snapshot.enrollStep = 2 }),
             ("D19-enroll-4", { Snapshot.enrollStep = 3 }),

@@ -11,6 +11,11 @@ final class StudioWindow: NSWindow {
 
     static func open(_ url: URL, annotate: Bool = false) {
         guard let image = NSImage(contentsOf: url), let cg = VisionTools.cgImage(image) else { return }
+        open(image: cg, url: url, annotate: annotate)
+    }
+
+    /// Straight from the capture in memory: no round trip through the PNG that is still being written.
+    static func open(image cg: CGImage, url: URL, annotate: Bool = false) {
         let model = StudioModel(original: cg, url: url)
         model.annotating = annotate
         let w = StudioWindow(contentRect: CGRect(x: 0, y: 0, width: 1180, height: 760), styleMask: [.titled, .closable, .resizable, .miniaturizable],
@@ -18,6 +23,13 @@ final class StudioWindow: NSWindow {
         w.title = "Studio · \(cg.width / 2) × \(cg.height / 2)"
         w.isReleasedWhenClosed = false
         w.contentView = NSHostingView(rootView: StudioView(model: model))
+        // Copy and Save as icons right after the traffic lights (user feedback), easy to reach.
+        let actions = NSTitlebarAccessoryViewController()
+        actions.layoutAttribute = .leading
+        let host = NSHostingView(rootView: TitlebarActions(model: model))
+        host.frame = CGRect(x: 0, y: 0, width: 84, height: 28)
+        actions.view = host
+        w.addTitlebarAccessoryViewController(actions)
         w.center()
         NSApp.activate()
         w.makeKeyAndOrderFront(nil)
@@ -525,11 +537,6 @@ struct StudioView: View {
                 if ScreenshotService.canWriteWebP { Text("WebP").tag("webp") }
             }
             .frame(width: 80)
-            Button(L("shot.save")) { model.saveFile() }.disabled(model.blurPending)
-            Button { model.copy() } label: {
-                HStack(spacing: 6) { Text(L("shot.copy")); Text("⌘C").opacity(0.75) }
-            }
-            .keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent).disabled(model.blurPending)
         }
         .padding(.horizontal, 12).frame(height: 46)
     }
@@ -646,11 +653,30 @@ struct StudioView: View {
             if key == "z" { flags.contains(.shift) ? model.redo() : model.undo(); return true }
             // ⌘C copies the edited picture (text fields keep their own ⌘C: KeyCatcher skips them).
             if key == "c", !model.blurPending { model.copy(); return true }
+            if key == "s", !model.blurPending { model.saveFile(); return true }
             return false
         }
         guard model.annotating, let t = StudioModel.Tool.allCases.first(where: { $0.key == key }) else { return false }
         model.tool = t
         return true
+    }
+}
+
+/// Copy and Save in the title bar (user feedback: like the reference, right after the traffic lights).
+struct TitlebarActions: View {
+    var model: StudioModel
+    var body: some View {
+        HStack(spacing: 8) {
+            Button { model.copy() } label: { Image(systemName: "doc.on.doc").font(.system(size: 14)) }
+                .help(L("shot.copy") + " (⌘C)").accessibilityLabel(L("shot.copy"))
+            Divider().frame(height: 16)
+            Button { model.saveFile() } label: { Image(systemName: "square.and.arrow.down").font(.system(size: 14)) }
+                .help(L("shot.save") + " (⌘S)").accessibilityLabel(L("shot.save"))
+        }
+        .buttonStyle(.borderless)
+        .disabled(model.blurPending)
+        .padding(.horizontal, 8)
+        .frame(height: 28)
     }
 }
 

@@ -127,55 +127,89 @@ final class ScreenshotService {
 
     /// Stores the original, copies it, saves a file if asked, and shows the result in the notch (D40).
     func finished(_ image: CGImage, kind: String = "image") {
-        let url = Self.store(image, in: Self.historyDir, ext: "png")
+        // The name is reserved now and the pixels are encoded off the main thread, so the editor opens at once
+        // from the picture in memory (user feedback: no visible lag between the click and the editor).
+        let url = Self.reserve(in: Self.historyDir, ext: "png")
         lastCapture = url
-        pruneHistory()
-        if ShotPrefs.after != .saveOnly {
-            if ShotPrefs.d.bool(forKey: "shot.autoBeautify"), let url {
-                // Wait for the sensitive-data blur so the beautified copy never leaks what the editor would hide.
-                let model = StudioModel(original: image, url: url)
-                Task {
-                    if ShotPrefs.autoBlur { await model.autoBlurSensitive().value }
-                    self.copy(model.render() ?? image)
-                }
-            } else { copy(image) }
+        let after = ShotPrefs.after, beautify = ShotPrefs.d.bool(forKey: "shot.autoBeautify")
+        let alsoSave = ShotPrefs.saveFile || after == .saveOnly, folder = ShotPrefs.folder, format = ShotPrefs.format
+        let plainCopy = after != .saveOnly && !beautify
+        // A later copy (⌘C in the editor) wins over this background one.
+        let clipboardTurn = NSPasteboard.general.changeCount
+        Task.detached(priority: .userInitiated) {
+            if let url, !Self.write(image, to: url, ext: "png") { try? FileManager.default.removeItem(at: url) }
+            if alsoSave { Self.store(image, in: folder, ext: format) }
+            let clip = plainCopy ? Self.pasteboardData(image) : nil
+            await MainActor.run {
+                let s = ScreenshotService.shared
+                if let clip, NSPasteboard.general.changeCount == clipboardTurn { s.setPasteboard(clip) }
+                s.pruneHistory()
+                if after == .notch || after == .saveOnly, let url { s.postResult(url, width: image.width, height: image.height) }
+            }
         }
-        if ShotPrefs.saveFile || ShotPrefs.after == .saveOnly { _ = Self.store(image, in: ShotPrefs.folder, ext: ShotPrefs.format) }
-        if ShotPrefs.after == .studio, let url { StudioWindow.open(url); return }
-        if ShotPrefs.after == .editor, let url { StudioWindow.open(url, annotate: true); return }
-        guard let url else { return }
-        let now = Date()
+        if after != .saveOnly, beautify, let url {
+            // Wait for the sensitive-data blur so the beautified copy never leaks what the editor would hide.
+            let model = StudioModel(original: image, url: url)
+            Task {
+                if ShotPrefs.autoBlur { await model.autoBlurSensitive().value }
+                self.copy(model.render() ?? image)
+            }
+        }
+        if after == .studio, let url { StudioWindow.open(image: image, url: url) }
+        if after == .editor, let url { StudioWindow.open(image: image, url: url, annotate: true) }
+    }
+
+    private func postResult(_ url: URL, width: Int, height: Int) {
+        let now = Date(), s = max(1, Int(screenScale))
         AppModel.shared.center.post(Activity(
             id: "capture-\(url.lastPathComponent)", kind: .capture, priority: .p2, state: .success, symbol: "camera.viewfinder",
-            label: ShotPrefs.after == .saveOnly ? L("shot.saved") : L("shot.copied"), value: "\(image.width / max(1, Int(screenScale)))×\(image.height / max(1, Int(screenScale)))",
-            detail: L("shot.copiedDetail", image.width / max(1, Int(screenScale)), image.height / max(1, Int(screenScale))),
+            label: ShotPrefs.after == .saveOnly ? L("shot.saved") : L("shot.copied"), value: "\(width / s)×\(height / s)",
+            detail: L("shot.copiedDetail", width / s, height / s),
             genericDetail: L("shot.copied"), url: "capture:" + url.path, startedAt: now), now: now)
         AppModel.shared.scheduleTick()
     }
 
     private var screenScale: CGFloat { ShotPrefs.retina ? (NSScreen.main?.backingScaleFactor ?? 2) : 1 }
 
-    func copy(_ image: CGImage) {
+    func copy(_ image: CGImage) { setPasteboard(Self.pasteboardData(image)) }
+
+    struct Clip: Sendable { var png: Data?; var tiff: Data? }
+
+    nonisolated static func pasteboardData(_ image: CGImage) -> Clip {
+        let rep = NSBitmapImageRep(cgImage: image)
+        return Clip(png: rep.representation(using: .png, properties: [:]), tiff: rep.tiffRepresentation)
+    }
+
+    func setPasteboard(_ c: Clip) {
         let pb = NSPasteboard.general
         pb.clearContents()
-        let rep = NSBitmapImageRep(cgImage: image)
-        if let png = rep.representation(using: .png, properties: [:]) { pb.setData(png, forType: .png) }
-        if let tiff = rep.tiffRepresentation { pb.setData(tiff, forType: .tiff) }
+        if let png = c.png { pb.setData(png, forType: .png) }
+        if let tiff = c.tiff { pb.setData(tiff, forType: .tiff) }
+    }
+
+    /// A free "Dylan <date>" name, claimed with an empty file so a quick second capture cannot take it. 0700 folder.
+    static func reserve(in dir: URL, ext: String) -> URL? {
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let path = Shelf.freePath(dir: dir.path, name: CaptureStore.fileName(Date(), ext: ext))
+        return FileManager.default.createFile(atPath: path, contents: nil) ? URL(fileURLWithPath: path) : nil
     }
 
     /// Writes PNG/JPG/WebP with a free "Dylan <date>" name; 0700 folder, never overwrites.
     @discardableResult
-    static func store(_ image: CGImage, in dir: URL, ext: String) -> URL? {
+    nonisolated static func store(_ image: CGImage, in dir: URL, ext: String) -> URL? {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let path = Shelf.freePath(dir: dir.path, name: CaptureStore.fileName(Date(), ext: ext))
-        let url = URL(fileURLWithPath: path)
+        let url = URL(fileURLWithPath: Shelf.freePath(dir: dir.path, name: CaptureStore.fileName(Date(), ext: ext)))
+        if write(image, to: url, ext: ext) { return url }
+        // No WebP encoder on this Mac: fall back to PNG rather than lose the capture.
+        return ext == "webp" ? store(image, in: dir, ext: "png") : nil
+    }
+
+    @discardableResult
+    nonisolated static func write(_ image: CGImage, to url: URL, ext: String) -> Bool {
         let type: UTType = ext == "jpg" ? .jpeg : (ext == "webp" ? .webP : .png)
-        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil) else {
-            // No WebP encoder on this Mac: fall back to PNG rather than lose the capture.
-            return ext == "webp" ? store(image, in: dir, ext: "png") : nil
-        }
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil) else { return false }
         CGImageDestinationAddImage(dest, image, ext == "jpg" ? [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary : nil)
-        return CGImageDestinationFinalize(dest) ? url : nil
+        return CGImageDestinationFinalize(dest)
     }
 
     static var canWriteWebP: Bool {

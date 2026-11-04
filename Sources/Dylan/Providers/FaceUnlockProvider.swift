@@ -21,7 +21,11 @@ final class FaceUnlockProvider {
     @ObservationIgnored private var lockManual = false
     @ObservationIgnored private var typedThisLock = false
     @ObservationIgnored private var deniedLoggedThisLock = false
-    @ObservationIgnored private var lastPasswordUnlock: Date?
+    /// Persisted in the vault: restarting Dylan must not force another password unlock (restarting the Mac still does).
+    private var lastPasswordUnlock: Date? {
+        get { vault.lastPasswordUnlock }
+        set { vault.lastPasswordUnlock = newValue }
+    }
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var camera: FaceCamera?
 
@@ -60,18 +64,31 @@ final class FaceUnlockProvider {
         guard vault.template != nil else { lockedAt = nil; return }   // never enrolled: nothing to record
         let now = Date()
         unlockCheck?.cancel(); unlockCheck = nil
+        let m = AppModel.shared
         if typedThisLock {
-            let failed = vault.log.failuresSinceLastUnlock
             record(.init(at: now, result: .unlocked))
             vault.consecutiveFailures = 0
-            AppModel.shared.center.post(Activity(id: "faceunlock", kind: .notify, priority: .p1, state: .success, symbol: "faceid",
-                                                 label: L("faceUnlock.short"), detail: L("faceUnlock.unlocked", failed), startedAt: now), now: now)
-            AppModel.shared.scheduleTick()
+            // D21: Compact "Wajah · 09.12", then an automatic Peek with the score, the time and how long it was locked.
+            let time = now.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(L10n.locale))
+            let locked = DurationFormat.long(now.timeIntervalSince(lockedAt ?? now), language: L10n.language)
+            m.center.post(Activity(id: "faceunlock", kind: .notify, priority: .p1, state: .success, symbol: "faceid",
+                                   label: L("faceUnlock.short"), value: time, detail: L("faceUnlock.unlockedDetail", time, locked),
+                                   progress: lastIdentity, url: "faceunlock:history", startedAt: now), now: now)
+            m.autoPeekUntil = now.addingTimeInterval(4)
+            if m.notchState == .closed || m.notchState == .compact { m.notchState = .peek }
+            m.scheduleTick()
         } else {
             // A manual unlock (password or Touch ID — macOS does not say which) resets the failures.
             lastPasswordUnlock = now
             vault.consecutiveFailures = 0
+            if let notice = pendingNotice {
+                m.center.post(Activity(id: "faceunlock", kind: .notify, priority: .p1, state: .failure, symbol: "xmark",
+                                       label: L("faceUnlock.short"), value: L("faceUnlock.off"), detail: notice,
+                                       url: "faceunlock:history", startedAt: now), now: now)
+                m.scheduleTick()
+            }
         }
+        pendingNotice = nil
         lockedAt = nil
         typedThisLock = false
         save()
@@ -105,6 +122,10 @@ final class FaceUnlockProvider {
     @ObservationIgnored private var enrollPrints: [[Float]] = []
     @ObservationIgnored private var watchdog: DispatchWorkItem?
     @ObservationIgnored private var unlockCheck: DispatchWorkItem?
+    /// Match score of the attempt that typed the password, for the notch (D21 "skor 0,93").
+    @ObservationIgnored private var lastIdentity: Double = 0
+    /// Nothing Dylan shows is visible on the lock screen, so a "turned off" notice waits for the next unlock (D21).
+    @ObservationIgnored private var pendingNotice: String?
 
     private func attempt() {
         guard camera == nil, vault.template != nil else { return }
@@ -160,8 +181,10 @@ final class FaceUnlockProvider {
         guard passed else {
             vault.consecutiveFailures += 1
             record(.init(at: Date(), result: .failed, reason: reason, identity: identity, steps: steps))
+            if vault.consecutiveFailures >= FaceUnlockPolicy.maxFailures { pendingNotice = L("faceUnlock.offTooMany") }
             return
         }
+        lastIdentity = identity
         // Re-check right before typing: unlocked meanwhile, or the policy changed (e.g. Presentation Mode).
         guard Self.screenLocked, FaceUnlockPolicy(settings: vault.settings).denial(facts) == nil,
               let password = Keychain.get("faceunlock.password") else { return }
@@ -175,6 +198,7 @@ final class FaceUnlockProvider {
             guard Self.screenLocked, p.typedThisLock else { return }
             p.record(.init(at: Date(), result: .failed, reason: "passwordRejected", identity: identity, steps: steps))
             p.disable()
+            p.pendingNotice = L("faceUnlock.offPassword")
         } }
         unlockCheck = w
         DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: w)
@@ -254,6 +278,7 @@ final class FaceUnlockProvider {
         Keychain.set(password, "faceunlock.password")
         vault.template = t
         vault.settings.enabled = true
+        lastPasswordUnlock = Date()   // the login password was just verified, in this boot
         save()
         status = L("faceUnlock.enrolled", enrollPrints.count)
         enrollPrints = []
@@ -261,12 +286,29 @@ final class FaceUnlockProvider {
         return nil
     }
 
-    /// "Coba kunci sekarang" (D19 step 4): the system lock, like ⌃⌘Q.
+    /// "Coba kunci sekarang" (D19 step 4): lock like ⌃⌘Q, then turn the display off. The camera only starts when the
+    /// screen wakes, so a lock screen that is already on would never try.
     static func lockNow() {
         guard let h = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_NOW),
               let sym = dlsym(h, "SACLockScreenImmediate") else { return }
         typealias Lock = @convention(c) () -> Int32
         _ = unsafeBitCast(sym, to: Lock.self)()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+            p.arguments = ["displaysleepnow"]
+            try? p.run()
+        }
+    }
+
+    /// Why the next wake would not try, ignoring the lock itself (Settings shows it). nil = ready.
+    var readinessIssue: FaceUnlockPolicy.Denial? {
+        guard enrolled else { return .notEnrolled }
+        let f = FaceUnlockPolicy.Facts(now: Date(), screenLocked: true, lockedAt: Date(), lockWasManual: false,
+                                       bootTime: Self.bootTime, lastPasswordUnlock: lastPasswordUnlock,
+                                       consecutiveFailures: vault.consecutiveFailures, passwordTypedThisLock: false, enrolled: true,
+                                       accessibilityTrusted: AXIsProcessTrusted(), presentationMode: AppModel.shared.presentationMode, network: nil)
+        return FaceUnlockPolicy(settings: vault.settings).denial(f)
     }
 
     /// Everything goes: password, template, settings, log, file and key.
