@@ -63,12 +63,22 @@ private struct StorageView: View {
             footer
         }
         .frame(minWidth: 620, minHeight: 420)
-        .alert(L("storage.confirmTitle", p.plan.count, StorageProvider.bytes(p.plan.bytes)), isPresented: $confirm) {
+        .alert(L("storage.confirmTitle", p.plan.count), isPresented: $confirm) {
             Button(L("storage.clean"), role: .destructive) { p.clean() }
             Button(L("button.cancel"), role: .cancel) {}
         } message: {
-            SwiftUI.Text(L("storage.confirmBody", p.plan.deleted, p.plan.trashed))
+            SwiftUI.Text(confirmText)
         }
+    }
+
+    /// Says exactly what happens to each kind of item (review: Empty Trash cannot be undone; the Trash frees nothing yet).
+    private var confirmText: String {
+        let plan = p.plan
+        var lines: [String] = []
+        if plan.deleted > 0 { lines.append(L("storage.confirmDeleted", plan.deleted, StorageProvider.bytes(plan.deletedBytes))) }
+        if plan.emptiesTrash { lines.append(L("storage.confirmEmptyTrash", StorageProvider.bytes(plan.trashBytes))) }
+        if plan.trashed > 0 { lines.append(L("storage.confirmTrashed", plan.trashed, StorageProvider.bytes(plan.trashedBytes))) }
+        return lines.joined(separator: "\n\n")
     }
 
     private var header: some View {

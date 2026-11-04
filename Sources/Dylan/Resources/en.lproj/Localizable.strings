@@ -1088,8 +1088,7 @@
 "storage.reveal" = "Show in Finder";
 "storage.selectCategory" = "Select all %@";
 "storage.blockedTitle" = "Can't scan without Full Disk Access";
-"storage.confirmTitle" = "Clean %1$ld items (%2$@)?";
-"storage.confirmBody" = "%1$ld items are deleted for good (only things that rebuild themselves). %2$ld items move to the Trash and can still be put back.";
+"storage.confirmTitle" = "Clean %ld items?";
 "storage.freed" = "%@ freed";
 "storage.movedToTrash" = "%ld items in the Trash";
 "storage.failed" = "%ld failed";
@@ -1133,5 +1132,10 @@
 "storage.impact.xcodeDeviceSupport" = "Safe. Downloaded again when that device is plugged in.";
 "storage.impact.simulatorCaches" = "Safe. iOS simulator caches, rebuilt automatically.";
 "storage.impact.packageCaches" = "Safe. Packages download again when needed.";
-"storage.impact.nodeModules" = "Not touched for 30 days. Run npm install again when you open that project.";
+"storage.impact.nodeModules" = "Not reinstalled for 30 days. Run npm install again when you open that project.";
 "storage.scanningCount" = "Scanning… %1$ld of %2$ld";
+"storage.confirmDeleted" = "%1$ld items are deleted for good (%2$@): caches, logs and build output that rebuild themselves.";
+"storage.confirmEmptyTrash" = "The Trash is emptied (%@). This can't be undone.";
+"storage.confirmTrashed" = "%1$ld items move to the Trash (%2$@). They can still be put back; the space returns once the Trash is emptied.";
+"storage.cautious" = "May hold your own data (IDE local history, virtualenvs); check first";
+"storage.skippedRunning" = "%ld skipped because their app is running";

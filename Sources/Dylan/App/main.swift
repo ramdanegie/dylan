@@ -288,6 +288,36 @@ if let i = arguments.firstIndex(of: "--snapshot"), i + 1 < arguments.count {
     Snapshot.render(to: URL(fileURLWithPath: arguments[i + 1]))
     exit(0)
 }
+// Self-test of the Clean path on a throwaway home folder in /private/tmp (never the user's files or Trash).
+if arguments.contains("--storage-selftest") {
+    let fm = FileManager.default
+    let base = "/private/tmp/dylan-storage-selftest-\(getpid())"
+    func mk(_ rel: String, _ bytes: Int = 4096) {
+        let path = base + "/" + rel
+        try? fm.createDirectory(atPath: (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+        fm.createFile(atPath: path, contents: Data(count: bytes))
+    }
+    mk("Library/Caches/com.test.app/blob", 2_000_000)
+    mk(".Trash/old.bin")
+    mk("Downloads/keep.txt")
+    try? fm.createSymbolicLink(atPath: base + "/Library/Caches/link", withDestinationPath: base + "/Downloads")
+    let scanner = StorageScanner(home: base, running: [], capturesDir: base + "/none")
+    let trashRow = scanner.scan(.trash).0
+    mk(".Trash/new.bin")   // arrives after the scan: must survive "Empty Trash"
+    let cache = StorageItem(category: .appCaches, title: "test", path: base + "/Library/Caches/com.test.app", size: 1)
+    let link = StorageItem(category: .appCaches, title: "link", path: base + "/Library/Caches/link", size: 1)
+    let r = StorageCleaner(home: base).clean([cache] + trashRow + [link])
+    let checks: [(String, Bool)] = [
+        ("cache deleted", !fm.fileExists(atPath: cache.path)),
+        ("trash member removed", !fm.fileExists(atPath: base + "/.Trash/old.bin")),
+        ("file trashed after the scan kept", fm.fileExists(atPath: base + "/.Trash/new.bin")),
+        ("symlink refused", r.failed == 1 && fm.fileExists(atPath: base + "/Downloads/keep.txt")),
+        ("trash folder kept", fm.fileExists(atPath: base + "/.Trash")),
+    ]
+    for (name, ok) in checks { print(ok ? "PASS" : "FAIL", name) }
+    try? fm.removeItem(atPath: base)
+    exit(checks.allSatisfy(\.1) ? 0 : 1)
+}
 // Read-only: prints what Optimize Storage would offer, deletes nothing.
 if arguments.contains("--storage-scan") {
     let s = StorageScanner(home: NSHomeDirectory(), running: Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)),

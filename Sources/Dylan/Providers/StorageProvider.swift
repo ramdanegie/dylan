@@ -21,6 +21,7 @@ final class StorageProvider {
     var total: Int64 = 0
 
     @ObservationIgnored private var scanTask: Task<Void, Never>?
+    @ObservationIgnored private var scanGeneration = 0
     @ObservationIgnored private var timer: Timer?
 
     var plan: StorageRules.Plan { StorageRules.plan(items, selected: selected) }
@@ -64,6 +65,8 @@ final class StorageProvider {
 
     func scan() {
         scanTask?.cancel()
+        scanGeneration += 1
+        let generation = scanGeneration
         scanning = true
         result = nil
         items = []
@@ -71,8 +74,8 @@ final class StorageProvider {
         blocked = []
         refreshDisk()
         let developer = AppModel.shared.isDeveloper
-        // Caches of running apps start unchecked (the app may be using them right now).
-        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        // What running apps use starts unchecked (and is checked again before cleaning).
+        let running = Self.runningApps()
         let categories = StorageCategory.allCases.filter { developer || !$0.isDeveloper }
         let capturesDir = ScreenshotService.historyDir.path
         scanned = 0
@@ -83,45 +86,62 @@ final class StorageProvider {
             await withTaskGroup(of: (StorageCategory, [StorageItem], Bool).self) { group in
                 for c in categories { group.addTask { let (f, d) = scanner.scan(c); return (c, f, d) } }
                 for await (c, found, denied) in group {
-                    if Task.isCancelled { return }
                     await MainActor.run {
-                    let p = StorageProvider.shared
-                    let known = Set(p.items.map(\.id))
-                    let found = found.filter { !known.contains($0.id) }   // a big old download is listed once
-                    p.items += found
-                    p.selected.formUnion(found.filter(\.selectedByDefault).map(\.id))
-                    if denied { p.blocked.insert(c) }
-                    p.scanned += 1
+                        let p = StorageProvider.shared
+                        guard p.scanGeneration == generation else { return }   // a newer scan started
+                        p.items += found
+                        if denied { p.blocked.insert(c) }
+                        p.scanned += 1
                     }
                 }
             }
             await MainActor.run {
                 let p = StorageProvider.shared
-                // Same order every time: by category, biggest first.
+                guard p.scanGeneration == generation else { return }
+                // One row per path, nothing listed twice, nested rows dropped; then the default checks.
                 let order = Dictionary(uniqueKeysWithValues: StorageCategory.allCases.enumerated().map { ($1, $0) })
-                p.items.sort { (order[$0.category]!, -$0.size) < (order[$1.category]!, -$1.size) }
+                p.items = StorageRules.normalize(p.items).sorted { (order[$0.category]!, -$0.size) < (order[$1.category]!, -$1.size) }
+                p.selected = Set(p.items.filter(\.selectedByDefault).map(\.id))
                 p.scanning = false
             }
         }
     }
 
+    /// Bundle ids of running apps (Xcode, Chrome, JetBrains IDEs…), read on the main thread.
+    static func runningApps() -> Set<String> { Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)) }
+
     // MARK: Clean
 
     func clean() {
-        let chosen = items.filter { selected.contains($0.id) }
-        guard !chosen.isEmpty, !cleaning else { return }
+        guard !cleaning, !scanning else { return }
+        // Checked again now: an app may have started since the scan.
+        let running = Self.runningApps()
+        let chosen = items.filter { selected.contains($0.id) && !StorageRules.isRunning($0.appID, in: running) }
+        let skipped = items.filter { selected.contains($0.id) }.count - chosen.count
+        guard !chosen.isEmpty else { result = L("storage.skippedRunning", skipped); return }
         cleaning = true
+        refreshDisk()
+        let freeBefore = free
+        let capturesDir = ScreenshotService.historyDir.path
         Task.detached(priority: .userInitiated) {
             let r = StorageCleaner(home: NSHomeDirectory()).clean(chosen)
+            // Anything that went to the Trash changes the Trash row: list it again, so "Empty Trash" never removes
+            // something the user has not seen.
+            let trashRow = StorageScanner(home: NSHomeDirectory(), running: running, capturesDir: capturesDir).scan(.trash).0
             await MainActor.run {
                 let p = StorageProvider.shared
                 p.cleaning = false
-                p.items.removeAll { r.done.contains($0.id) }
+                p.items.removeAll { r.done.contains($0.id) || $0.category == .trash }
+                p.items.append(contentsOf: trashRow)
                 p.selected.subtract(r.done)
+                p.selected = p.selected.filter { id in p.items.contains { $0.id == id } }
                 p.refreshDisk()
-                var parts = [L("storage.freed", Self.bytes(r.freed))]
+                let freed = max(0, p.free - freeBefore)
+                // The change in free space, not a sum of sizes (hard links, clones and snapshots make that wrong).
+                var parts = [L("storage.freed", Self.bytes(freed))]
                 if r.trashed > 0 { parts.append(L("storage.movedToTrash", r.trashed)) }
                 if r.failed > 0 { parts.append(L("storage.failed", r.failed)) }
+                if skipped > 0 { parts.append(L("storage.skippedRunning", skipped)) }
                 p.result = parts.joined(separator: " · ")
                 AppModel.shared.center.remove("storage-low", now: Date())
             }
@@ -150,16 +170,18 @@ nonisolated struct StorageScanner: Sendable {
     /// (items, true when macOS refused to list a folder that exists).
     func scan(_ c: StorageCategory) -> ([StorageItem], Bool) {
         switch c {
-        case .appCaches: return children(of: url("Library/Caches"), c, min: 20 * StorageRules.mb, title: cacheTitle, runningCheck: true)
+        case .appCaches: return appCaches()
         case .logs: return children(of: url("Library/Logs"), c, min: 5 * StorageRules.mb)
         case .trash:
             let trash = url(".Trash")
             guard let kids = list(trash) else { return ([], fm.fileExists(atPath: trash.path)) }
             let size = kids.reduce(Int64(0)) { $0 + allocated($1) }
-            // One row; cleaning empties it (each child is removed).
-            // The .Trash folder itself is refused by isRemovable; the cleaner only empties it (see StorageCleaner).
+            // One row. It remembers exactly what it saw (path → inode): emptying removes those and nothing added later.
+            // The .Trash folder itself is refused by isRemovable; the cleaner only removes these members.
+            var members: [String: UInt64] = [:]
+            for k in kids { if let ino = Self.inode(k.path) { members[k.path] = ino } }
             return (size > 0 ? [StorageItem(category: c, title: L("storage.emptyTrash"), path: trash.path, size: size,
-                                            note: L("storage.items", kids.count))] : [], false)
+                                            note: L("storage.items", kids.count), members: members)] : [], false)
         case .downloads:
             let dl = url("Downloads")
             guard let kids = list(dl) else { return ([], fm.fileExists(atPath: dl.path)) }
@@ -218,23 +240,70 @@ nonisolated struct StorageScanner: Sendable {
             guard !isSymlink(u) else { return nil }
             let size = allocated(u)
             guard size >= min else { return nil }
-            let running = runningCheck && StorageRules.bundleID(cacheFolder: u.lastPathComponent).map(self.running.contains) == true
-            return item(c, u, size: size, title: title?(u), note: running ? L("storage.appRunning") : nil, running: running)
+            let app = runningCheck ? StorageRules.bundleID(cacheFolder: u.lastPathComponent) : c.appID
+            let running = StorageRules.isRunning(app, in: self.running)
+            return item(c, u, size: size, title: title?(u), note: running ? L("storage.appRunning") : nil, running: running, appID: app)
         }
         return (found, false)
     }
 
     /// Every scanned path goes through `isRemovable`; anything else is simply not offered.
-    private func item(_ c: StorageCategory, _ u: URL, size: Int64, title: String? = nil, note: String? = nil, running: Bool = false) -> StorageItem? {
+    private func item(_ c: StorageCategory, _ u: URL, size: Int64, title: String? = nil, note: String? = nil, running: Bool = false,
+                      appID: String? = nil, cautious: Bool = false) -> StorageItem? {
         guard StorageRules.isRemovable(u.path, home: home) else { return nil }
-        return StorageItem(category: c, title: title ?? u.lastPathComponent, path: u.path, size: size, note: note, running: running)
+        let app = appID ?? c.appID
+        let isRunning = running || StorageRules.isRunning(app, in: self.running)
+        return StorageItem(category: c, title: title ?? u.lastPathComponent, path: u.path, size: size,
+                           note: note ?? (isRunning ? L("storage.appRunning") : nil), running: isRunning, appID: app, cautious: cautious)
+    }
+
+    /// ~/Library/Caches, one row per app. Vendor folders (Google, JetBrains) are listed per app inside them, and caches that
+    /// also keep user data (IDE local history, Poetry virtualenvs) are marked cautious: never pre-checked.
+    private func appCaches() -> ([StorageItem], Bool) {
+        let root = url("Library/Caches")
+        guard let kids = list(root) else { return ([], fm.fileExists(atPath: root.path)) }
+        var out: [StorageItem] = []
+        for u in kids where !isSymlink(u) {
+            let name = u.lastPathComponent
+            if StorageRules.vendorCacheFolders.contains(name), let inner = list(u) {
+                for v in inner where !isSymlink(v) {
+                    let size = allocated(v)
+                    guard size >= 20 * StorageRules.mb else { continue }
+                    let rel = name + "/" + v.lastPathComponent
+                    let cautious = StorageRules.isCautiousCache(rel)
+                    if let i = item(.appCaches, v, size: size, title: vendorTitle(name, v.lastPathComponent),
+                                    note: cautious ? L("storage.cautious") : nil,
+                                    appID: StorageRules.vendorChildAppID(vendor: name, child: v.lastPathComponent), cautious: cautious) { out.append(i) }
+                }
+                continue
+            }
+            let size = allocated(u)
+            guard size >= 20 * StorageRules.mb else { continue }
+            let cautious = StorageRules.isCautiousCache(name)
+            if let i = item(.appCaches, u, size: size, title: cacheTitle(u), note: cautious ? L("storage.cautious") : nil,
+                            appID: StorageRules.bundleID(cacheFolder: name), cautious: cautious) { out.append(i) }
+        }
+        return (out, false)
+    }
+
+    private func vendorTitle(_ vendor: String, _ child: String) -> String {
+        if vendor == "Google" && child == "Chrome" { return "Google Chrome" }
+        return vendor == "JetBrains" ? "JetBrains " + child : child
+    }
+
+    static func inode(_ path: String) -> UInt64? {
+        var st = stat()
+        return lstat(path, &st) == 0 ? UInt64(st.st_ino) : nil
     }
 
     /// Files over 1 GB in the folders people keep their own things in. Packages (Photos Library, apps, Final Cut
     /// libraries) are skipped whole: they are never offered as "a large file".
     private func largeFiles() -> ([StorageItem], Bool) {
         var out: [StorageItem] = []
+        var denied = false
         for rel in ["Desktop", "Documents", "Movies", "Downloads"] {
+            // A folder macOS will not let Dylan read must not look like "nothing to clean".
+            if fm.fileExists(atPath: url(rel).path), list(url(rel)) == nil { denied = true; continue }
             guard let e = fm.enumerator(at: url(rel), includingPropertiesForKeys: [.totalFileAllocatedSizeKey, .isRegularFileKey, .isPackageKey],
                                         options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { continue }
             for case let u as URL in e {
@@ -245,16 +314,18 @@ nonisolated struct StorageScanner: Sendable {
                 out.append(i)
             }
         }
-        return (Array(out.sorted { $0.size > $1.size }.prefix(50)), false)
+        return (Array(out.sorted { $0.size > $1.size }.prefix(50)), denied)
     }
 
     /// node_modules not touched for 30 days, in project folders under the home folder (not Library or hidden).
     private func nodeModules() -> ([StorageItem], Bool) {
         var out: [StorageItem] = []
+        var denied = false
         let skipTop: Set<String> = ["Library", "Applications", "Movies", "Music", "Pictures", "Public"]
         guard let tops = list(URL(fileURLWithPath: home)) else { return ([], false) }
         let cutoff = Date().addingTimeInterval(-30 * 86_400)
         for top in tops where !top.lastPathComponent.hasPrefix(".") && !skipTop.contains(top.lastPathComponent) && !isSymlink(top) {
+            if list(top) == nil { if (try? top.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true { denied = true }; continue }
             guard let e = fm.enumerator(at: top, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { continue }
             for case let u as URL in e {
                 if e.level > 6 { e.skipDescendants(); continue }
@@ -265,7 +336,7 @@ nonisolated struct StorageScanner: Sendable {
                 if let i = item(.nodeModules, u, size: allocated(u), title: project) { out.append(i) }
             }
         }
-        return (out.filter { $0.size > 20 * StorageRules.mb }.sorted { $0.size > $1.size }, false)
+        return (out.filter { $0.size > 20 * StorageRules.mb }.sorted { $0.size > $1.size }, denied)
     }
 
     // MARK: Sizes
@@ -307,29 +378,39 @@ nonisolated struct StorageScanner: Sendable {
 nonisolated struct StorageCleaner: Sendable {
     let home: String
 
-    struct Result: Sendable { var done: Set<String> = []; var freed: Int64 = 0; var trashed = 0; var failed = 0 }
+    struct Result: Sendable { var done: Set<String> = []; var trashed = 0; var failed = 0 }
+
+    /// The real path must be the path we were given: a symlink anywhere in it, or a case or firmlink mismatch, refuses.
+    private func isExact(_ path: String) -> Bool {
+        guard let real = realpath(path, nil) else { return false }
+        defer { free(real) }
+        // Compared as given: standardizingPath would turn /private/tmp into /tmp and refuse every real path there.
+        return String(cString: real) == path
+    }
 
     func clean(_ items: [StorageItem]) -> Result {
         var r = Result()
         let fm = FileManager.default
+        let trashRoot = (home as NSString).appendingPathComponent(".Trash")
         for i in items {
             let u = URL(fileURLWithPath: i.path)
-            // Checked again right before removing: same rules as the scan, still there, not a symlink.
-            let link = (try? u.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true
-            let isTrashRoot = i.category == .trash && i.path == (home as NSString).appendingPathComponent(".Trash")
-            guard !link, fm.fileExists(atPath: i.path), isTrashRoot || StorageRules.isRemovable(i.path, home: home) else { r.failed += 1; continue }
-            do {
-                if isTrashRoot {
-                    // Empty the Trash: its children, never the folder.
-                    for kid in try fm.contentsOfDirectory(at: u, includingPropertiesForKeys: nil, options: []) { try fm.removeItem(at: kid) }
-                } else if i.category.action == .delete {
-                    try fm.removeItem(at: u)
-                } else {
-                    try fm.trashItem(at: u, resultingItemURL: nil)
+            if i.category == .trash {
+                // Empty Trash: only the members the scan listed, each still the same file (inode); one locked file does
+                // not stop the rest.
+                guard i.path == trashRoot, isExact(trashRoot) else { r.failed += 1; continue }
+                var ok = true
+                for (path, ino) in i.members {
+                    guard (path as NSString).deletingLastPathComponent == trashRoot, StorageScanner.inode(path) == ino else { continue }
+                    do { try fm.removeItem(atPath: path) } catch { ok = false; r.failed += 1 }
                 }
+                if ok { r.done.insert(i.id) }
+                continue
+            }
+            // Checked again right before removing: same rules as the scan, still there, no symlink in the path.
+            guard fm.fileExists(atPath: i.path), isExact(i.path), StorageRules.isRemovable(i.path, home: home) else { r.failed += 1; continue }
+            do {
+                if i.category.action == .delete { try fm.removeItem(at: u) } else { try fm.trashItem(at: u, resultingItemURL: nil); r.trashed += 1 }
                 r.done.insert(i.id)
-                // Items moved to the Trash only free space once the Trash is emptied.
-                if i.category.action == .delete || isTrashRoot { r.freed += i.size } else { r.trashed += 1 }
             } catch {
                 r.failed += 1
             }

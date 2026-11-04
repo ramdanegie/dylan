@@ -33,15 +33,25 @@ public enum StorageCategory: String, CaseIterable, Sendable {
 
     public var action: StorageAction {
         switch self {
-        // Emptying the Trash is the point; node_modules is rebuilt by `npm install`.
-        case .appCaches, .logs, .xcodeDerivedData, .xcodeDeviceSupport, .simulatorCaches, .packageCaches, .trash, .nodeModules: return .delete
-        case .downloads, .largeFiles, .iosBackups, .dylanCaptures, .xcodeArchives: return .trash
+        // Low impact is deleted so the space comes back; emptying the Trash is the point of that row.
+        case .appCaches, .logs, .xcodeDerivedData, .xcodeDeviceSupport, .simulatorCaches, .packageCaches, .trash: return .delete
+        // Medium and high impact go to the Trash (PRD §F25), including node_modules.
+        case .downloads, .largeFiles, .iosBackups, .dylanCaptures, .xcodeArchives, .nodeModules: return .trash
         }
     }
 
     /// Shown only in Developer Mode.
     public var isDeveloper: Bool {
         [.xcodeDerivedData, .xcodeArchives, .xcodeDeviceSupport, .simulatorCaches, .packageCaches, .nodeModules].contains(self)
+    }
+
+    /// The app that uses this category's files: it must not be running while they are removed.
+    public var appID: String? {
+        switch self {
+        case .xcodeDerivedData, .xcodeArchives, .xcodeDeviceSupport: return "com.apple.dt.Xcode"
+        case .simulatorCaches: return "com.apple.iphonesimulator"
+        default: return nil
+        }
     }
 }
 
@@ -54,13 +64,21 @@ public struct StorageItem: Identifiable, Equatable, Sendable {
     /// e.g. "the app is running" — such items start unchecked.
     public var note: String?
     public var running: Bool
+    /// The app using these files (checked again right before cleaning). A trailing "." matches a bundle-id prefix.
+    public var appID: String?
+    /// May hold the user's own data although it sits in a cache folder (IDE local history, virtualenvs): never pre-checked.
+    public var cautious: Bool
+    /// Empty Trash only: the Trash's children seen by the scan (path → inode). Nothing else is removed.
+    public var members: [String: UInt64]
 
-    public init(category: StorageCategory, title: String, path: String, size: Int64, note: String? = nil, running: Bool = false) {
+    public init(category: StorageCategory, title: String, path: String, size: Int64, note: String? = nil, running: Bool = false,
+                appID: String? = nil, cautious: Bool = false, members: [String: UInt64] = [:]) {
         self.category = category; self.title = title; self.path = path; self.size = size; self.note = note; self.running = running
+        self.appID = appID; self.cautious = cautious; self.members = members
     }
 
-    /// FR-102: only low-impact items start checked, and never the cache of an app that is running.
-    public var selectedByDefault: Bool { category.impact == .low && !running }
+    /// FR-102: only low-impact items start checked, never what a running app uses, never a cautious cache.
+    public var selectedByDefault: Bool { category.impact == .low && !running && !cautious }
 }
 
 public enum StorageRules {
@@ -78,18 +96,66 @@ public enum StorageRules {
 
     /// The last check before anything is removed (also run on scanned paths): strictly inside the home folder,
     /// at least two levels down unless it is a non-protected top-level item, and outside the places above.
+    /// Text rules only, compared case-insensitively (APFS usually is); the cleaner also requires the real path to equal
+    /// this one, so a symlink anywhere in it is refused.
     public static func isRemovable(_ path: String, home: String) -> Bool {
-        let p = (path as NSString).standardizingPath, h = (home as NSString).standardizingPath
+        let p = (path as NSString).standardizingPath.lowercased(), h = (home as NSString).standardizingPath.lowercased()
         guard p.hasPrefix(h + "/"), !p.contains("/../") else { return false }
         let rel = String(p.dropFirst(h.count + 1))
         let parts = rel.split(separator: "/")
         guard let first = parts.first else { return false }
-        if parts.count == 1 && (protectedTop.contains(String(first)) || first.hasPrefix(".")) { return false }
+        if parts.count == 1 && (protectedTop.contains { $0.lowercased() == first } || first.hasPrefix(".")) { return false }
         // The category roots themselves (~/Library/Caches, ~/Library/Logs, …) stay.
-        if parts.count == 2 && first == "Library" { return false }
+        if parts.count == 2 && first == "library" { return false }
         // Media libraries are the user's photos and music, whatever their size.
-        if parts.contains(where: { libraryExtensions.contains(($0 as NSString).pathExtension.lowercased()) }) { return false }
-        return !neverInside.contains { rel.hasPrefix($0) || rel == $0.trimmingCharacters(in: CharacterSet(charactersIn: "/")) }
+        if parts.contains(where: { libraryExtensions.contains(($0 as NSString).pathExtension) }) { return false }
+        return !neverInside.contains { n in
+            let n = n.lowercased()
+            return rel.hasPrefix(n) || rel == n.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        }
+    }
+
+    /// Cache folders that also keep user data: JetBrains/Android Studio Local History, Poetry virtualenvs.
+    public static func isCautiousCache(_ relativeToCaches: String) -> Bool {
+        let r = relativeToCaches.lowercased()
+        return ["jetbrains", "androidstudio", "pypoetry", "localhistory"].contains { r.contains($0) }
+    }
+
+    /// Vendor folders in ~/Library/Caches that hold several apps; their children are listed one by one.
+    public static let vendorCacheFolders: Set<String> = ["Google", "JetBrains"]
+
+    /// The app behind a child of a vendor cache folder ("Google/Chrome", "Google/AndroidStudio2024.2", "JetBrains/IntelliJIdea2024.3").
+    public static func vendorChildAppID(vendor: String, child: String) -> String? {
+        switch vendor {
+        case "Google": return child.hasPrefix("AndroidStudio") ? "com.google.android.studio" : child == "Chrome" ? "com.google.Chrome" : nil
+        case "JetBrains": return "com.jetbrains."
+        default: return nil
+        }
+    }
+
+    /// Does `appID` (or the "com.jetbrains." prefix form) match a running app?
+    public static func isRunning(_ appID: String?, in running: Set<String>) -> Bool {
+        guard let appID else { return false }
+        return appID.hasSuffix(".") ? running.contains { $0.hasPrefix(appID) } : running.contains(appID)
+    }
+
+    /// One row per path, and no row inside another row (the outer one already covers it). When two categories claim
+    /// the same path, the one that moves it to the Trash wins.
+    public static func normalize(_ items: [StorageItem]) -> [StorageItem] {
+        var byPath: [String: StorageItem] = [:]
+        for i in items {
+            if let old = byPath[i.path], !(old.category.action == .delete && i.category.action == .trash) { continue }
+            byPath[i.path] = i
+        }
+        let paths = byPath.keys.sorted()
+        var kept: [StorageItem] = []
+        var lastOuter: String?
+        for p in paths {
+            if let o = lastOuter, p.hasPrefix(o + "/") { continue }
+            lastOuter = p
+            kept.append(byPath[p]!)
+        }
+        return kept
     }
 
     /// Downloads worth showing: big and untouched for a month, or an installer left over for a week.
@@ -125,15 +191,23 @@ public enum StorageRules {
         return parts.count >= 2 && parts.allSatisfy({ !$0.isEmpty }) && !name.hasSuffix(".noindex") ? name : nil
     }
 
+    /// What "Clean" will do, said truthfully: deleted (rebuilds itself), Trash emptied (cannot be undone), moved to the
+    /// Trash (frees nothing until the Trash is emptied).
     public struct Plan: Equatable, Sendable {
-        public var count = 0, bytes: Int64 = 0, deleted = 0, trashed = 0
+        public var count = 0, bytes: Int64 = 0
+        public var deleted = 0, deletedBytes: Int64 = 0
+        public var emptiesTrash = false, trashBytes: Int64 = 0
+        public var trashed = 0, trashedBytes: Int64 = 0
+        public init() {}
     }
 
     public static func plan(_ items: [StorageItem], selected: Set<String>) -> Plan {
         var p = Plan()
         for i in items where selected.contains(i.id) {
             p.count += 1; p.bytes += i.size
-            if i.category.action == .delete { p.deleted += 1 } else { p.trashed += 1 }
+            if i.category == .trash { p.emptiesTrash = true; p.trashBytes += i.size }
+            else if i.category.action == .delete { p.deleted += 1; p.deletedBytes += i.size }
+            else { p.trashed += 1; p.trashedBytes += i.size }
         }
         return p
     }

@@ -1088,8 +1088,7 @@
 "storage.reveal" = "Tampilkan di Finder";
 "storage.selectCategory" = "Pilih semua %@";
 "storage.blockedTitle" = "Tidak bisa dipindai tanpa Full Disk Access";
-"storage.confirmTitle" = "Bersihkan %1$ld item (%2$@)?";
-"storage.confirmBody" = "%1$ld item dihapus permanen (hanya yang dibuat ulang otomatis). %2$ld item dipindah ke Trash dan masih bisa dikembalikan.";
+"storage.confirmTitle" = "Bersihkan %ld item?";
 "storage.freed" = "%@ dibebaskan";
 "storage.movedToTrash" = "%ld item di Trash";
 "storage.failed" = "%ld gagal";
@@ -1133,5 +1132,10 @@
 "storage.impact.xcodeDeviceSupport" = "Aman. Diunduh ulang otomatis saat perangkat itu dicolok lagi.";
 "storage.impact.simulatorCaches" = "Aman. Cache simulator iOS, dibuat ulang otomatis.";
 "storage.impact.packageCaches" = "Aman. Paket diunduh ulang saat dibutuhkan.";
-"storage.impact.nodeModules" = "Tidak disentuh lebih dari 30 hari. Jalankan npm install lagi saat membuka project itu.";
+"storage.impact.nodeModules" = "Tidak dipasang ulang lebih dari 30 hari. Jalankan npm install lagi saat membuka project itu.";
 "storage.scanningCount" = "Memindai… %1$ld dari %2$ld";
+"storage.confirmDeleted" = "%1$ld item dihapus permanen (%2$@): cache, log, dan hasil build yang dibuat ulang otomatis.";
+"storage.confirmEmptyTrash" = "Trash dikosongkan (%@). Ini tidak bisa dibatalkan.";
+"storage.confirmTrashed" = "%1$ld item dipindah ke Trash (%2$@). Masih bisa dikembalikan; ruangnya baru kembali setelah Trash dikosongkan.";
+"storage.cautious" = "Mungkin berisi data milikmu (riwayat lokal IDE, virtualenv); periksa dulu";
+"storage.skippedRunning" = "%ld dilewati karena app-nya sedang berjalan";
