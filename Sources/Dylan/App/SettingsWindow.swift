@@ -23,9 +23,34 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, discord, devices, thermal, utilities, clipboard, screenshot, faceUnlock, agents, terminal, features, about
+    case general, appearance, liveActivity, media, discord, devices, thermal, storage, faceUnlock, utilities, clipboard, screenshot, agents, terminal, features, about
     var id: String { rawValue }
-    var isDeveloper: Bool { self == .agents || self == .terminal }
+    /// Sidebar groups by purpose (FR-104).
+    enum Group: CaseIterable { case basics, notch, system, tools, developer, info
+        var title: String? {
+            switch self {
+            case .basics: return nil
+            case .notch: return L("settings.group.notch")
+            case .system: return L("settings.group.system")
+            case .tools: return L("settings.group.tools")
+            case .developer: return L("settings.developer")
+            case .info: return L("settings.group.info")
+            }
+        }
+    }
+
+    var group: Group {
+        switch self {
+        case .general, .appearance: return .basics
+        case .liveActivity, .media, .discord: return .notch
+        case .devices, .thermal, .storage, .faceUnlock: return .system
+        case .utilities, .clipboard, .screenshot: return .tools
+        case .agents, .terminal: return .developer
+        case .features, .about: return .info
+        }
+    }
+
+    var isDeveloper: Bool { group == .developer }
     var symbol: String {
         switch self {
         case .general: return "gearshape"
@@ -35,6 +60,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .discord: return "headphones"
         case .devices: return "battery.100percent.bolt"
         case .thermal: return "fan"
+        case .storage: return "internaldrive"
         case .utilities: return "wrench.and.screwdriver"
         case .clipboard: return "doc.on.clipboard"
         case .screenshot: return "camera.viewfinder"
@@ -55,12 +81,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                ForEach(SettingsSection.allCases.filter { !$0.isDeveloper }) { s in
-                    Label(s.title, systemImage: s.symbol).tag(s)
-                }
-                if model.isDeveloper {
-                    Section(L("settings.developer")) {
-                        ForEach(SettingsSection.allCases.filter(\.isDeveloper)) { s in Label(s.title, systemImage: s.symbol).tag(s) }
+                ForEach(SettingsSection.Group.allCases.filter { $0 != .developer || model.isDeveloper }, id: \.self) { g in
+                    let sections = SettingsSection.allCases.filter { $0.group == g }
+                    if let title = g.title {
+                        Section(title) { ForEach(sections) { s in Label(s.title, systemImage: s.symbol).tag(s) } }
+                    } else {
+                        ForEach(sections) { s in Label(s.title, systemImage: s.symbol).tag(s) }
                     }
                 }
             }
@@ -99,6 +125,7 @@ struct SettingsView: View {
         case .screenshot: ScreenshotSettings()
         case .faceUnlock: FaceUnlockSettings()
         case .thermal: ThermalSettings()
+        case .storage: StorageSettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
         case .features: FeatureSupportSettings()

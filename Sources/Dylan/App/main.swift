@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Hotkeys.setScreenshotKeys(f.isEnabled(.screenshot))
         f.isEnabled(.thermal) ? FanProvider.shared.start() : FanProvider.shared.stop()
         Hotkeys.setFanKeys(f.isEnabled(.thermal) && FanProvider.shared.hasFans)
+        f.isEnabled(.storage) ? StorageProvider.shared.start() : StorageProvider.shared.stop()
         refreshStatusItem()
         f.isEnabled(.lockScreen) ? LockScreenProvider.shared.start() : LockScreenProvider.shared.stop()
         FaceUnlockProvider.shared.start()
@@ -151,6 +152,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(NSMenuItem(title: L("faceUnlock.turnOff"), action: #selector(disableFaceUnlock), keyEquivalent: ""))
         }
         menu.addItem(.separator())
+        if AppModel.shared.features.isEnabled(.storage) {
+            menu.addItem(NSMenuItem(title: L("storage.menu"), action: #selector(openStorage), keyEquivalent: ""))
+        }
         menu.addItem(NSMenuItem(title: L("about.menu"), action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("update.check"), action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
@@ -222,6 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showAbout() { About.showPanel() }
+    @objc private func openStorage() { StorageWindow.show() }
     @objc private func checkForUpdates() { UpdateService.shared.check(manual: true); UpdateWindow.show() }
     @objc private func pickFanPreset(_ sender: NSMenuItem) { FanProvider.shared.setPreset(FanPreset.allCases[sender.tag]) }
     @objc private func openFanSettings() { SettingsWindow.show(section: .thermal) }
@@ -281,6 +286,22 @@ let arguments = CommandLine.arguments
 if let i = arguments.firstIndex(of: "--snapshot"), i + 1 < arguments.count {
     if let l = arguments.firstIndex(of: "--lang"), l + 1 < arguments.count { L10n.forcedLanguage = arguments[l + 1] }
     Snapshot.render(to: URL(fileURLWithPath: arguments[i + 1]))
+    exit(0)
+}
+// Read-only: prints what Optimize Storage would offer, deletes nothing.
+if arguments.contains("--storage-scan") {
+    let s = StorageScanner(home: NSHomeDirectory(), running: Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)),
+                           capturesDir: ScreenshotService.historyDir.path)
+    for c in StorageCategory.allCases {
+        let t0 = Date()
+        let (items, denied) = s.scan(c)
+        print(String(format: "  (%.1f s)", Date().timeIntervalSince(t0)))
+        let total = items.reduce(Int64(0)) { $0 + $1.size }
+        print("\(c.rawValue) [\(c.impact) → \(c.action)] \(items.count) items, \(StorageProvider.bytes(total))\(denied ? " (no access)" : "")")
+        for i in items.sorted(by: { $0.size > $1.size }).prefix(5) {
+            print("   \(i.selectedByDefault ? "[x]" : "[ ]") \(StorageProvider.bytes(i.size))  \(i.title)  \((i.path as NSString).abbreviatingWithTildeInPath)\(i.note.map { "  (\($0))" } ?? "")")
+        }
+    }
     exit(0)
 }
 
