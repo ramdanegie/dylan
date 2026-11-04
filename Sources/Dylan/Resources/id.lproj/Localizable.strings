@@ -1029,3 +1029,9 @@
 "faceUnlock.denial.untrustedNetwork" = "Bukan Wi-Fi tepercaya";
 "faceUnlock.denial.presentationMode" = "Mode Presentasi menyala";
 "faceUnlock.denial.noAccessibility" = "Butuh izin Accessibility untuk mengetik password";
+"faceUnlock.history" = "Riwayat";
+"faceUnlock.score" = "skor %@";
+"faceUnlock.unlockedDetail" = "Dibuka dengan wajah · %1$@ · terkunci %2$@";
+"faceUnlock.off" = "Dimatikan";
+"faceUnlock.offTooMany" = "Face Unlock dimatikan. Buka kunci manual sekali untuk mengaktifkan lagi.";
+"faceUnlock.offPassword" = "Face Unlock dimatikan: password login berubah. Daftarkan ulang di Settings.";

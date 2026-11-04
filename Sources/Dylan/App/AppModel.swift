@@ -100,6 +100,8 @@ enum NotchAction: Equatable {
     case capture(String, String)
     /// max / processes on the over-temperature peek (D47).
     case fan(String)
+    /// "Riwayat" on the Face Unlock result (D21).
+    case faceUnlockHistory
 }
 
 @Observable
@@ -727,6 +729,7 @@ final class AppModel {
         case .banner(let action, let id): NotificationProvider.shared.perform(action, bannerID: id)
         case .capture(let action, let arg): ScreenshotService.shared.perform(action, arg)
         case .fan(let action): FanProvider.shared.perform(action)
+        case .faceUnlockHistory: SettingsWindow.show(section: .faceUnlock)
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -763,6 +766,8 @@ final class AppModel {
             return [(L("button.open"), .normal, .capture("openLink", String(a.url!.dropFirst(3))))]
         case .capture where a.url?.hasPrefix("text:") == true:
             return [(L("shot.showText"), .normal, .capture("showText", String(a.url!.dropFirst(5))))]
+        case .notify where a.id == "faceunlock":
+            return [(L("faceUnlock.history"), .normal, .faceUnlockHistory)]
         case .thermal where a.id == "fan-hot":
             // "Fan max" disappears once the fans are already at max (D47).
             return (a.url == "fan:max" ? [(L("fan.maxButton"), NotchButton.Kind.primaryAction, NotchAction.fan("max"))] : [])

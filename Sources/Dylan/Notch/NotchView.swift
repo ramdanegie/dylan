@@ -229,6 +229,15 @@ struct RightEar: View {
         case .meeting:
             Countdown(meetingStart: activity.startedAt.addingTimeInterval(MeetingSchedule.soonWindow),
                       color: activity.priority == .p0 ? DY.action : DY.fg)
+        case .notify where activity.id == "faceunlock":
+            // D21: the time in Compact, the match score in Peek (carried in `progress`), "Dimatikan" in red.
+            if activity.state == .failure {
+                ValueText(text: activity.value, color: DY.fail)
+            } else if let score = activity.progress, NotchRootView.displayState(model) == .peek {
+                ValueText(text: L("faceUnlock.score", score.formatted(.number.precision(.fractionLength(2)).locale(L10n.locale))), color: DY.fg2)
+            } else {
+                ValueText(text: activity.value)
+            }
         default:
             let v = model.displayValue(activity)
             ValueText(text: activity.kind == .agent && activity.state == .running && model.presentationMode ? "" : v,

@@ -1029,3 +1029,9 @@
 "faceUnlock.denial.untrustedNetwork" = "Not a trusted Wi-Fi";
 "faceUnlock.denial.presentationMode" = "Presentation Mode is on";
 "faceUnlock.denial.noAccessibility" = "Needs Accessibility to type the password";
+"faceUnlock.history" = "History";
+"faceUnlock.score" = "score %@";
+"faceUnlock.unlockedDetail" = "Unlocked with your face · %1$@ · locked %2$@";
+"faceUnlock.off" = "Turned off";
+"faceUnlock.offTooMany" = "Face Unlock turned off. Unlock by hand once to turn it back on.";
+"faceUnlock.offPassword" = "Face Unlock turned off: your login password changed. Enroll again in Settings.";
