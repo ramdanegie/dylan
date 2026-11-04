@@ -1057,3 +1057,6 @@
 "update.notNotarized" = "Build ini belum dinotarisasi: setelah memasang, buka System Settings → Privacy & Security → Open Anyway.";
 "shot.openInFinder" = "Klik untuk membuka di Finder";
 "shot.finder" = "Finder";
+"about.madeBy" = "Dibuat oleh";
+"about.madeByName" = "Dibuat oleh %@";
+"about.menu" = "Tentang Dylan";

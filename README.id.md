@@ -124,6 +124,10 @@ Issue dan pull request sangat diterima, dari laporan bug sampai aktivitas notch 
 
 Kalau Dylan berguna buatmu, ⭐ membantu orang lain menemukannya.
 
+## Pembuat
+
+Dibuat oleh **Egie Ramdan** · [github.com/ramdanegie](https://github.com/ramdanegie)
+
 ## Lisensi
 
 [MIT](LICENSE)

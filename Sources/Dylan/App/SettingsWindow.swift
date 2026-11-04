@@ -803,6 +803,25 @@ struct FeatureSupportSettings: View {
     }
 }
 
+/// Who made Dylan: Settings → About and the standard About panel (from the menu bar).
+enum About {
+    static let author = "Egie Ramdan"
+    static let profile = URL(string: "https://github.com/ramdanegie")!
+    static let repository = URL(string: "https://github.com/ramdanegie/dylan")!
+
+    static func showPanel() {
+        let center = NSMutableParagraphStyle()
+        center.alignment = .center
+        let base: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.labelColor, .paragraphStyle: center]
+        let credits = NSMutableAttributedString(string: L("about.madeByName", author) + "\n", attributes: base)
+        credits.append(NSAttributedString(string: "github.com/ramdanegie", attributes: base.merging([.link: profile]) { $1 }))
+        credits.append(NSAttributedString(string: "  ·  ", attributes: base))
+        credits.append(NSAttributedString(string: "Source code", attributes: base.merging([.link: repository]) { $1 }))
+        NSApp.activate()
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+    }
+}
+
 struct AboutSettings: View {
     private var updates: UpdateService { UpdateService.shared }
 
@@ -810,7 +829,11 @@ struct AboutSettings: View {
         Section {
             LabeledContent("Dylan", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
             SwiftUI.Text(L("about.body")).foregroundStyle(.secondary)
-            Link("github.com/ramdanegie/dylan", destination: URL(string: "https://github.com/ramdanegie/dylan")!)
+            LabeledContent(L("about.madeBy")) { SwiftUI.Text(About.author).fontWeight(.medium) }
+            HStack(spacing: 16) {
+                Link(destination: About.profile) { Label("github.com/ramdanegie", systemImage: "person.crop.circle") }
+                Link(destination: About.repository) { Label("Source code", systemImage: "chevron.left.forwardslash.chevron.right") }
+            }
         }
         Section(L("update.title")) {
             Toggle(isOn: Binding(get: { updates.autoCheck }, set: { updates.autoCheck = $0 })) {

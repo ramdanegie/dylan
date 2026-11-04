@@ -2,6 +2,11 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Ditambahkan
+- Tentang menampilkan pembuat, Egie Ramdan, dengan tautan ke GitHub dan source code (Settings → Tentang, dan "Tentang Dylan" di menu bar).
+
 ## [0.1.3] - 2026-11-04
 
 ### Ditambahkan
