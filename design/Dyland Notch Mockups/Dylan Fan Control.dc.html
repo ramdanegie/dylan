@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#E9E8E4;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:#1d1d1f}a:hover{color:#000}
+input[type=range]{accent-color:#0A6CFF}
+@keyframes dy-spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<section style="padding:64px; display:flex; flex-direction:column; gap:64px; width:2160px; color:#1d1d1f">
+
+<div style="display:flex; flex-direction:column; gap:8px">
+  <div style="font-size:13px; font-weight:600; color:#5f5f64; letter-spacing:.02em">DYLAN · FITUR BARU · SUHU &amp; KIPAS</div>
+  <div style="font-size:40px; font-weight:700; letter-spacing:-.02em">Fan Control — D45–D49</div>
+  <div style="font-size:15px; color:#5f5f64; max-width:1000px; text-wrap:pretty">Pantau suhu CPU, GPU, SSD, dan baterai, lalu atur kipas: preset sekali klik, RPM tetap, atau kurva berdasarkan sensor. Default tetap <b>Otomatis (sistem)</b>. Kontrol kipas butuh helper dengan izin admin, dan kipas selalu kembali ke Otomatis saat Dylan keluar, crash, atau Mac sleep. Semua angka di bawah disimulasikan dan bergerak. Lihat juga <a href="Dylan Onboarding - Settings v1.1.dc.html">Fitur yang didukung</a>.</div>
+</div>
+
+<div style="display:grid; grid-template-columns:1080px 940px; gap:60px; align-items:start">
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D45</span><span style="font-size:17px; font-weight:650">Notch Expanded — tab Suhu</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">klik preset untuk mencoba</span></div>
+    <div style="position:relative; height:420px; border-radius:12px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.34 0.03 262))">
+      <div style="position:absolute; top:0; left:0; right:0; height:32px; background:rgba(0,0,0,.16)"></div>
+      <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:680px; height:322px; background:#000; border-radius:0 0 32px 32px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+        <div style="height:32px; display:grid; grid-template-columns:240px 200px 240px; align-items:center">
+          <div style="display:flex; gap:2px; padding-left:14px"><span style="height:22px; padding:0 9px; color:rgba(255,255,255,.55); font-size:12px; font-weight:600; display:flex; align-items:center">Home</span><span style="height:22px; padding:0 9px; color:rgba(255,255,255,.55); font-size:12px; font-weight:600; display:flex; align-items:center">Stats</span><span style="height:22px; padding:0 9px; border-radius:11px; background:rgba(255,255,255,.14); color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center">Suhu</span></div>
+          <div></div>
+          <div style="display:flex; justify-content:flex-end; padding-right:16px; color:rgba(255,255,255,.55)">MacBook Pro 16″ · M4 Max</div>
+        </div>
+        <div style="padding:10px 16px 16px; display:grid; grid-template-columns:220px minmax(0,1fr) 150px; gap:10px; height:290px; box-sizing:border-box">
+          <div style="border-radius:18px; background:rgba(255,255,255,.06); padding:14px; display:flex; flex-direction:column; gap:10px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline"><span style="color:rgba(255,255,255,.55)">CPU</span><span style="font-size:11px; color:{{ cpuTone }}; font-weight:600">{{ cpuState }}</span></div>
+            <div style="display:flex; align-items:baseline; gap:2px"><span style="font-size:44px; font-weight:650; color:#fff; letter-spacing:-.02em; line-height:1">{{ cpu }}</span><span style="font-size:18px; color:rgba(255,255,255,.55)">°C</span></div>
+            <svg width="190" height="54" viewBox="0 0 190 54" style="display:block"><polyline points="{{ spark }}" fill="none" stroke="{{ cpuTone }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; font-size:11.5px; margin-top:auto">
+              <span style="color:rgba(255,255,255,.55)">GPU</span><span style="text-align:right; color:#fff">{{ gpu }}°</span>
+              <span style="color:rgba(255,255,255,.55)">SSD</span><span style="text-align:right; color:#fff">{{ ssd }}°</span>
+              <span style="color:rgba(255,255,255,.55)">Baterai</span><span style="text-align:right; color:#fff">{{ bat }}°</span>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-rows:1fr 1fr; gap:10px">
+            <sc-for list="{{ fans }}" as="f" hint-placeholder-count="2">
+              <div style="border-radius:18px; background:rgba(255,255,255,.06); padding:12px 14px; display:flex; align-items:center; gap:14px">
+                {{ f.glyph }}
+                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:6px">
+                  <div style="display:flex; justify-content:space-between; align-items:baseline"><span style="color:rgba(255,255,255,.55)">{{ f.name }}</span><span style="font-size:11px; color:rgba(255,255,255,.45)">{{ f.range }}</span></div>
+                  <div style="display:flex; align-items:baseline; gap:4px"><span style="font-size:24px; font-weight:650; color:#fff">{{ f.rpm }}</span><span style="color:rgba(255,255,255,.55)">rpm</span></div>
+                  <div style="height:4px; border-radius:2px; background:rgba(255,255,255,.1); overflow:hidden"><div style="height:4px; width:{{ f.pct }}%; background:{{ f.bar }}; border-radius:2px; transition:width .6s ease"></div></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border-radius:18px; background:rgba(255,255,255,.06); padding:8px; display:flex; flex-direction:column; gap:2px">
+            <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+              <span onClick="{{ p.pick }}" style="height:34px; padding:0 10px; border-radius:10px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:{{ p.bg }}; color:{{ p.fg }}; font-size:12px; font-weight:600">{{ p.label }}<span style="font-size:10.5px; font-weight:500; color:{{ p.sub }}">{{ p.hint }}</span></span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12.5px; line-height:1.55; color:#3a3a3c; text-wrap:pretty">Tab <b>Suhu</b> hanya muncul di Mac yang punya kipas, dan bisa disembunyikan. Preset berlaku untuk semua kipas; <b>Kurva</b> memakai kurva dari Settings (D48). Angka kipas memakai <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">.contentTransition(.numericText())</span>; kecepatan putaran ikon kipas mengikuti RPM dan diam saat Reduce Motion.</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D46</span><span style="font-size:17px; font-weight:650">Menu bar — Fan ▸</span></div>
+    <div style="position:relative; height:420px; border-radius:12px; overflow:hidden; background:linear-gradient(180deg, #F7F7F8 0%, #EEEDEB 100%); box-shadow:0 0 0 .5px rgba(0,0,0,.14)">
+      <div style="position:absolute; top:0; left:0; right:0; height:40px; background:linear-gradient(180deg, #4B74B8, #4169AE); display:flex; align-items:center; gap:22px; padding:0 20px; color:#fff; font-size:13px">
+        <span style="height:28px; padding:0 12px; border-radius:14px; background:rgba(255,255,255,.28); display:flex; align-items:center; gap:8px"><span style="position:relative; width:22px; height:10px; border-radius:5px; background:#fff"><span style="position:absolute; right:2px; top:2px; width:6px; height:6px; border-radius:3px; background:#4B74B8"></span></span><span style="font-size:12px; font-weight:600">{{ cpu }}°</span></span>
+        <span style="margin-left:auto; font-weight:500">Rab 4 Nov  09.41</span>
+      </div>
+      <div style="position:absolute; top:46px; left:20px; width:300px; border-radius:12px; background:rgba(252,252,253,.9); backdrop-filter:blur(30px); box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 16px 40px rgba(0,0,0,.18); padding:6px; display:flex; flex-direction:column; font-size:13.5px">
+        <div style="height:28px; padding:0 12px; display:flex; align-items:center; color:#a0a0a5; font-weight:500">Dylan</div>
+        <div style="height:1px; background:rgba(0,0,0,.1); margin:4px 10px"></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center; justify-content:space-between"><span>Open notch</span><span style="color:#a0a0a5">⌃⌥ Space</span></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center; justify-content:space-between"><span>Screenshot</span><span style="font-size:11px; color:#a0a0a5">▶</span></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center; justify-content:space-between; background:#0A6CFF; color:#fff"><span>Fan</span><span style="font-size:11px">▶</span></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center; justify-content:space-between"><span>Presentation Mode</span><span style="color:#a0a0a5">⌃⌥⌘H</span></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center">Keep awake</div>
+        <div style="height:1px; background:rgba(0,0,0,.1); margin:4px 10px"></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center; justify-content:space-between"><span>Settings…</span><span style="color:#a0a0a5">⌘ ,</span></div>
+        <div style="height:28px; padding:0 12px; border-radius:7px; display:flex; align-items:center; justify-content:space-between"><span>Quit Dylan</span><span style="color:#a0a0a5">⌘Q</span></div>
+      </div>
+      <div style="position:absolute; top:112px; left:314px; width:340px; border-radius:12px; background:rgba(252,252,253,.94); backdrop-filter:blur(30px); box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 16px 40px rgba(0,0,0,.2); padding:6px; display:flex; flex-direction:column; font-size:13.5px">
+        <div style="padding:6px 12px 8px; display:flex; flex-direction:column; gap:3px"><span style="font-size:12px; color:#5f5f64">CPU {{ cpu }}° · GPU {{ gpu }}°</span><span style="font-size:12px; color:#5f5f64">{{ fanLine }}</span></div>
+        <div style="height:1px; background:rgba(0,0,0,.1); margin:0 10px 4px"></div>
+        <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+          <div onClick="{{ p.pick }}" style="height:28px; padding:0 12px 0 8px; border-radius:7px; display:flex; align-items:center; gap:6px; cursor:pointer" style-hover="background:rgba(0,0,0,.06)"><span style="width:16px; text-align:center; font-size:12px; font-weight:700">{{ p.check }}</span><span style="flex:1">{{ p.menu }}</span><span style="color:#a0a0a5; font-size:12px">{{ p.key }}</span></div>
+        </sc-for>
+        <div style="height:1px; background:rgba(0,0,0,.1); margin:4px 10px"></div>
+        <div style="height:28px; padding:0 12px 0 30px; border-radius:7px; display:flex; align-items:center">Fan Settings…</div>
+      </div>
+      <div style="position:absolute; left:20px; bottom:20px; width:280px; font-size:12px; line-height:1.5; color:#5f5f64; text-wrap:pretty">Opsional: suhu CPU tampil di samping ikon menu bar (Settings → Suhu &amp; Kipas).</div>
+    </div>
+    <div style="font-size:12.5px; line-height:1.55; color:#3a3a3c; text-wrap:pretty">Shortcut preset <b>⌃⌥⇧0–4</b>. Memilih preset selain Otomatis menyalakan titik kecil di ikon menu bar, supaya mode manual tidak terlupa.</div>
+  </div>
+</div>
+
+<div style="display:flex; flex-direction:column; gap:14px">
+  <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D47</span><span style="font-size:17px; font-weight:650">Notch — status &amp; peringatan</span></div>
+  <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:24px">
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-size:13px; font-weight:600">Mode manual aktif · Compact <span style="font-weight:400; color:#5f5f64">· P3, hanya saat bukan Otomatis</span></div>
+      <div style="position:relative; height:70px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+        <div style="position:absolute; top:0; left:0; right:0; height:32px; background:rgba(0,0,0,.16)"></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+          <div style="display:flex; align-items:center; gap:6px; padding-left:12px">{{ miniFan }}<span>{{ presetShort }}</span></div><div></div>
+          <div style="display:flex; justify-content:flex-end; padding-right:12px">{{ rpmL }}</div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#5f5f64; line-height:1.5; text-wrap:pretty">Muncul hanya saat mode manual dan tidak ada aktivitas lain. Bila ada aktivitas lain, cukup titik di ikon menu bar.</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-size:13px; font-weight:600">Terlalu panas · Peek otomatis <span style="font-weight:400; color:#5f5f64">· P1 · ≥ 95°C selama 30 dtk</span></div>
+      <div style="position:relative; height:110px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+        <div style="position:absolute; top:0; left:0; right:0; height:32px; background:rgba(0,0,0,.16)"></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:400px; height:76px; background:#000; border-radius:0 0 18px 18px; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+          <div style="height:32px; display:grid; grid-template-columns:100px 200px 100px; align-items:center"><div style="display:flex; align-items:center; gap:6px; padding-left:14px"><span style="width:5px; height:12px; border-radius:3px; background:#FF9F0A; box-shadow:0 3px 0 1px #FF9F0A"></span><span style="color:#FF9F0A; font-weight:650">97°C</span></div><div></div><div style="display:flex; justify-content:flex-end; padding-right:14px; color:rgba(255,255,255,.55)">5.800 rpm</div></div>
+          <div style="height:44px; padding:0 10px 0 14px; display:flex; align-items:center; gap:6px"><span style="flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12.5px">CPU panas<span style="color:rgba(255,255,255,.55)"> · Xcode 380%</span></span><span style="height:24px; padding:0 10px; border-radius:12px; background:#FF9F0A; color:#000; font-size:11.5px; font-weight:650; display:flex; align-items:center">Kipas maks</span><span style="height:24px; padding:0 10px; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; display:flex; align-items:center">Proses</span></div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#5f5f64; line-height:1.5; text-wrap:pretty">Menyebut proses terberat. Tombol hilang bila kipas sudah maksimal; muncul lagi paling cepat 15 menit kemudian.</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-size:13px; font-weight:600">Kembali ke Otomatis · Compact hasil <span style="font-weight:400; color:#5f5f64">· P2 · 5 dtk</span></div>
+      <div style="position:relative; height:70px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, oklch(0.5 0.035 255), oklch(0.36 0.03 260))">
+        <div style="position:absolute; top:0; left:0; right:0; height:32px; background:rgba(0,0,0,.16)"></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:392px; height:32px; background:#000; border-radius:0 0 12px 12px; display:grid; grid-template-columns:96px 200px 96px; align-items:center; color:rgba(255,255,255,.85); font-size:12px; font-weight:500" style-before="content:''; position:absolute; top:0; left:-8px; width:8px; height:8px; background:radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px)" style-after="content:''; position:absolute; top:0; right:-8px; width:8px; height:8px; background:radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px)">
+          <div style="display:flex; align-items:center; gap:6px; padding-left:12px"><span style="color:#30D158; font-weight:700">✓</span><span>Otomatis</span></div><div></div>
+          <div style="display:flex; justify-content:flex-end; padding-right:12px; color:rgba(255,255,255,.55)">CPU 61°</div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#5f5f64; line-height:1.5; text-wrap:pretty">Dipicu "Kembali otomatis saat suhu turun" (opsional, &lt; 65°C selama 5 menit) atau saat Mac bangun dari sleep.</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1300px 720px; gap:60px; align-items:start">
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D48</span><span style="font-size:17px; font-weight:650">Settings — Suhu &amp; Kipas</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:#5f5f64">interaktif: mode per kipas, kurva, sensor</span></div>
+    <div style="height:760px; border-radius:12px; overflow:hidden; display:grid; grid-template-columns:200px minmax(0,1fr); background:#F6F5F3; box-shadow:0 0 0 .5px rgba(0,0,0,.18), 0 24px 60px rgba(0,0,0,.18); color:#1d1d1f; font-size:13px">
+      <div style="background:#ECEBE8; padding:14px 10px; display:flex; flex-direction:column; gap:1px; border-right:.5px solid rgba(0,0,0,.1)">
+        <div style="display:flex; gap:8px; padding:0 6px 16px"><span style="width:12px; height:12px; border-radius:6px; background:#FF5F57"></span><span style="width:12px; height:12px; border-radius:6px; background:#FEBC2E"></span><span style="width:12px; height:12px; border-radius:6px; background:#28C840"></span></div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Umum</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Tampilan</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Live Activity</div>
+        <div style="height:10px"></div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Media</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Discord</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Notifikasi</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Perangkat &amp; Sistem</div>
+        <div style="height:26px; padding:0 10px; border-radius:6px; display:flex; align-items:center; background:rgba(0,0,0,.09); font-weight:600">Suhu &amp; Kipas</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Utilitas</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Clipboard</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Screenshot</div>
+        <div style="height:22px; padding:10px 10px 0; font-size:10.5px; font-weight:700; color:#8a8a8e; letter-spacing:.04em">DEVELOPER</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Agents</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Terminal</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Integrasi</div>
+        <div style="height:10px"></div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Face Unlock</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Fitur yang didukung</div>
+        <div style="height:26px; padding:0 10px; display:flex; align-items:center">Tentang</div>
+      </div>
+      <div style="padding:22px 26px; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:16px 20px; align-content:start; overflow:hidden">
+        <div style="grid-column:1 / -1; display:flex; align-items:center; gap:12px"><span style="font-size:20px; font-weight:700">Suhu &amp; Kipas</span><span style="height:22px; padding:0 9px; border-radius:11px; background:#E3F4E7; color:#1a7f37; font-size:11.5px; font-weight:650; display:flex; align-items:center; gap:6px"><span style="width:6px; height:6px; border-radius:3px; background:#30B350"></span>Helper aktif</span><span style="margin-left:auto; font-size:12px; color:#5f5f64">2 kipas · 24 sensor</span></div>
+
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <span style="font-size:12px; font-weight:600; color:#5f5f64; padding:0 4px">Kipas</span>
+          <div style="border-radius:10px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1)">
+            <sc-for list="{{ fanRows }}" as="r" hint-placeholder-count="2">
+              <div style="padding:10px 12px; display:flex; flex-direction:column; gap:8px; border-bottom:{{ r.line }}">
+                <div style="display:flex; align-items:center; gap:10px">{{ r.glyph }}<span style="font-weight:600">{{ r.name }}</span><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px; color:#5f5f64">{{ r.rpm }} rpm</span>
+                  <span style="margin-left:auto; display:flex; padding:2px; border-radius:6px; background:#E6E5E2; font-size:12px">
+                    <sc-for list="{{ r.modes }}" as="m" hint-placeholder-count="3"><span onClick="{{ m.pick }}" style="height:22px; padding:0 9px; border-radius:4px; display:flex; align-items:center; cursor:pointer; background:{{ m.bg }}; box-shadow:{{ m.sh }}; font-weight:{{ m.fw }}">{{ m.label }}</span></sc-for>
+                  </span>
+                </div>
+                <sc-if value="{{ r.isFixed }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:#5f5f64"><span style="width:40px">{{ r.min }}</span><input type="range" min="{{ r.min }}" max="{{ r.max }}" step="100" value="{{ r.fixed }}" onChange="{{ r.onFixed }}" style="flex:1"><span style="width:40px; text-align:right">{{ r.max }}</span></div>
+                </sc-if>
+                <sc-if value="{{ r.isAuto }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:#5f5f64">Dikendalikan macOS. Dylan hanya membaca.</span></sc-if>
+                <sc-if value="{{ r.isCurve }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:#5f5f64">Mengikuti kurva {{ sensorName }} di kanan.</span></sc-if>
+                <sc-if value="{{ r.presetNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:#5f5f64">{{ r.presetNote }}</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <span style="font-size:12px; font-weight:600; color:#5f5f64; padding:10px 4px 0">Sensor</span>
+          <div style="border-radius:10px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1)">
+            <sc-for list="{{ sensors }}" as="s" hint-placeholder-count="7">
+              <div style="min-height:32px; padding:0 12px; display:grid; grid-template-columns:minmax(0,1fr) 120px 48px 34px; gap:10px; align-items:center; border-bottom:{{ s.line }}">
+                <span>{{ s.name }}</span>
+                <span style="height:4px; border-radius:2px; background:#ECEBE8; overflow:hidden"><span style="display:block; height:4px; width:{{ s.pct }}%; background:{{ s.tone }}; border-radius:2px; transition:width .6s ease"></span></span>
+                <span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px">{{ s.v }}°</span>
+                <span onClick="{{ s.pick }}" style="font-size:11px; color:{{ s.pickFg }}; font-weight:600; cursor:pointer; text-align:right">{{ s.pickLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="display:flex; justify-content:space-between; padding:0 4px"><span style="font-size:12px; font-weight:600; color:#5f5f64">Kurva · {{ sensorName }}</span><span style="font-size:12px; color:#5f5f64">sekarang {{ curveNow }}</span></div>
+          <div style="border-radius:10px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1); padding:12px 12px 10px; display:flex; flex-direction:column; gap:10px">
+            <svg width="100%" viewBox="0 0 420 220" style="display:block">
+              <line x1="34" y1="10" x2="34" y2="190" stroke="#E6E5E2" stroke-width="1"></line>
+              <line x1="34" y1="190" x2="414" y2="190" stroke="#E6E5E2" stroke-width="1"></line>
+              <line x1="34" y1="100" x2="414" y2="100" stroke="#F0EFEC" stroke-width="1"></line>
+              <line x1="34" y1="55" x2="414" y2="55" stroke="#F0EFEC" stroke-width="1"></line>
+              <line x1="34" y1="145" x2="414" y2="145" stroke="#F0EFEC" stroke-width="1"></line>
+              <text x="28" y="194" font-size="10" fill="#8a8a8e" text-anchor="end">0%</text>
+              <text x="28" y="104" font-size="10" fill="#8a8a8e" text-anchor="end">50%</text>
+              <text x="28" y="14" font-size="10" fill="#8a8a8e" text-anchor="end">100%</text>
+              <text x="34" y="208" font-size="10" fill="#8a8a8e">30°</text>
+              <text x="216" y="208" font-size="10" fill="#8a8a8e" text-anchor="middle">65°</text>
+              <text x="414" y="208" font-size="10" fill="#8a8a8e" text-anchor="end">100°</text>
+              <polygon points="{{ curveArea }}" fill="rgba(10,108,255,.08)"></polygon>
+              <polyline points="{{ curvePts }}" fill="none" stroke="#0A6CFF" stroke-width="2.5" stroke-linejoin="round"></polyline>
+              <line x1="{{ nowX }}" y1="10" x2="{{ nowX }}" y2="190" stroke="#FF9F0A" stroke-width="1.5" stroke-dasharray="3 3"></line>
+              <sc-for list="{{ curveDots }}" as="d" hint-placeholder-count="4"><circle cx="{{ d.x }}" cy="{{ d.y }}" r="5.5" fill="#fff" stroke="#0A6CFF" stroke-width="2.5"></circle></sc-for>
+              <circle cx="{{ nowX }}" cy="{{ nowY }}" r="5" fill="#FF9F0A"></circle>
+            </svg>
+            <sc-for list="{{ curveSliders }}" as="c" hint-placeholder-count="4">
+              <div style="display:grid; grid-template-columns:44px minmax(0,1fr) 40px; gap:8px; align-items:center; font-size:12px"><span style="color:#5f5f64">{{ c.t }}°C</span><input type="range" min="0" max="100" value="{{ c.v }}" onChange="{{ c.on }}" style="width:100%"><span style="text-align:right; font-family:ui-monospace,'SF Mono',Menlo,monospace">{{ c.v }}%</span></div>
+            </sc-for>
+            <div style="display:flex; gap:8px; align-items:center; font-size:12px; color:#5f5f64"><span>Respons</span><span style="display:flex; padding:2px; border-radius:6px; background:#E6E5E2"><span style="height:20px; padding:0 8px; display:flex; align-items:center">Cepat</span><span style="height:20px; padding:0 8px; border-radius:4px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.12); display:flex; align-items:center; color:#1d1d1f; font-weight:600">Halus · 10 dtk</span></span><span onClick="{{ resetCurve }}" style="margin-left:auto; color:#0A6CFF; font-weight:600; cursor:pointer">Reset kurva</span></div>
+          </div>
+
+          <span style="font-size:12px; font-weight:600; color:#5f5f64; padding:10px 4px 0">Keamanan &amp; tampilan</span>
+          <div style="border-radius:10px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1)">
+            <div style="min-height:36px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.08)"><span>Otomatis saat Dylan keluar / sleep</span><span style="font-size:12px; color:#5f5f64">selalu</span></div>
+            <div style="min-height:36px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.08)"><span>Kembali otomatis saat suhu turun</span><span style="width:30px; height:18px; border-radius:9px; background:#0A6CFF; position:relative; flex:none"><span style="position:absolute; top:2px; right:2px; width:14px; height:14px; border-radius:7px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></span></div>
+            <div style="min-height:36px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.08)"><span>Peringatan panas</span><span style="height:24px; padding:0 10px; border-radius:6px; box-shadow:0 0 0 .5px rgba(0,0,0,.2); font-size:12.5px; display:flex; align-items:center; gap:6px">≥ 95°C <span style="font-size:8px; color:#5f5f64">▼</span></span></div>
+            <div style="min-height:36px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:.5px solid rgba(0,0,0,.08)"><span>Suhu di menu bar</span><span style="width:30px; height:18px; border-radius:9px; background:#C9C8C4; position:relative; flex:none"><span style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:7px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></span></div>
+            <div style="min-height:36px; padding:0 12px; display:flex; align-items:center; justify-content:space-between"><span>Satuan</span><span style="display:flex; padding:2px; border-radius:6px; background:#E6E5E2; font-size:12px"><span style="height:20px; padding:0 9px; border-radius:4px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.12); display:flex; align-items:center; font-weight:600">°C</span><span style="height:20px; padding:0 9px; display:flex; align-items:center">°F</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:10px"><span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; padding:2px 6px; border-radius:5px; background:#1d1d1f; color:#fff">D49</span><span style="font-size:17px; font-weight:650">Izin helper &amp; Mac tanpa kipas</span></div>
+    <div style="border-radius:14px; background:#FBFBFA; box-shadow:0 0 0 .5px rgba(0,0,0,.16), 0 24px 60px rgba(0,0,0,.14); padding:26px 28px 20px; display:flex; flex-direction:column; gap:16px">
+      <div style="display:flex; align-items:center; gap:14px"><span style="width:52px; height:52px; border-radius:12px; background:#1d1d1f; color:#fff; display:flex; align-items:center; justify-content:center; flex:none">{{ bigFan }}</span><div style="display:flex; flex-direction:column; gap:4px"><span style="font-size:19px; font-weight:700">Izinkan Dylan mengatur kipas</span><span style="font-size:13px; color:#5f5f64">Sekali saja, butuh password admin</span></div></div>
+      <div style="display:flex; flex-direction:column; gap:10px; font-size:13px; line-height:1.5; color:#3a3a3c">
+        <div style="display:flex; gap:10px"><span style="font-weight:700; color:#1d1d1f; width:16px">1</span><span>Dylan memasang helper kecil (Login Items &amp; Extensions) yang menulis kecepatan kipas ke SMC. Membaca suhu tidak butuh helper.</span></div>
+        <div style="display:flex; gap:10px"><span style="font-weight:700; color:#1d1d1f; width:16px">2</span><span>Helper hanya menerima perintah dari Dylan yang ditandatangani, dan tidak bisa menurunkan kipas di bawah batas minimum pabrik.</span></div>
+        <div style="display:flex; gap:10px"><span style="font-weight:700; color:#1d1d1f; width:16px">3</span><span>Bila Dylan berhenti merespons selama 10 detik, helper mengembalikan kipas ke Otomatis sendiri.</span></div>
+      </div>
+      <div style="border-radius:10px; background:#FFF4CC; color:#5C4300; font-size:12.5px; line-height:1.5; padding:10px 12px; text-wrap:pretty">Kipas yang lebih kencang bikin Mac lebih bising dan baterai lebih boros. Mode Senyap bisa membuat Mac membatasi performa saat panas.</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:4px"><span style="font-size:12.5px; color:#0A6CFF; font-weight:500">Hapus helper nanti di Settings</span><div style="display:flex; gap:8px"><span style="height:30px; padding:0 14px; border-radius:8px; color:#3a3a3c; font-size:13px; font-weight:500; display:flex; align-items:center">Hanya pantau suhu</span><span style="height:30px; padding:0 18px; border-radius:8px; background:#0A6CFF; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center">Pasang helper</span></div></div>
+    </div>
+    <div style="border-radius:12px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1); padding:14px 16px; display:flex; gap:14px; align-items:flex-start">
+      <span style="width:36px; height:36px; border-radius:9px; background:#ECEBE8; display:flex; align-items:center; justify-content:center; font-size:15px; color:#5f5f64; flex:none">—</span>
+      <div style="display:flex; flex-direction:column; gap:4px; font-size:13px; line-height:1.5"><span style="font-weight:650">MacBook Air: tanpa kipas</span><span style="color:#3a3a3c; text-wrap:pretty">Bagian Kipas, preset, dan menu Fan disembunyikan. Tab Suhu tetap ada dan menampilkan sensor serta status <b>throttling</b> ("Mac menurunkan performa untuk mendinginkan diri").</span></div>
+    </div>
+    <div style="border-radius:12px; background:#fff; box-shadow:0 0 0 .5px rgba(0,0,0,.1); padding:14px 16px; display:flex; flex-direction:column; gap:8px; font-size:12.5px; line-height:1.5">
+      <span style="font-weight:650; font-size:13px">Catatan implementasi</span>
+      <span style="color:#3a3a3c">Baca: IOHID sensor (Apple Silicon) + SMC key <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">F0Ac/F0Mn/F0Mx</span>. Tulis: <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">F0Md</span> (mode) + <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">F0Tg</span> (target) lewat helper <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px">SMAppService.daemon</span>.</span>
+      <span style="color:#3a3a3c">Polling 2 dtk saat tab Suhu terbuka, 10 dtk di latar. Kurva dihaluskan (rata-rata 10 dtk) supaya kipas tidak naik-turun.</span>
+      <span style="color:#3a3a3c">Butuh <b>spike</b> per generasi chip (M1–M4) sebelum rilis; key SMC berbeda antar model.</span>
+    </div>
+  </div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { t: 0, preset: 'auto', modes: { L: 'curve', R: 'curve' }, fixed: { L: 3200, R: 3200 }, curve: [10, 30, 65, 100], sensor: 'cpu', hist: [] };
+  componentDidMount() { this.iv = setInterval(() => this.setState(s => { const t = s.t + 1; const h = [...s.hist, this.cpuAt(t)].slice(-40); return { t, hist: h }; }), 700); }
+  componentWillUnmount() { clearInterval(this.iv); }
+  cpuAt(t) { return Math.round(68 + 9 * Math.sin(t / 6) + 4 * Math.sin(t / 2.3)); }
+  renderVals() {
+    const s = this.state, rm = !!this.props.reduceMotion;
+    const cpu = this.cpuAt(s.t), gpu = cpu - 9 + Math.round(2 * Math.sin(s.t / 3)), ssd = 44 + Math.round(2 * Math.sin(s.t / 9)), bat = 33;
+    const temps = { cpu, gpu, ssd, bat, ecore: cpu - 12, mem: cpu - 16, amb: 29 };
+    const T = [40, 60, 75, 90];
+    const sensorT = temps[s.sensor];
+    const curvePct = t => { if (t <= T[0]) return s.curve[0]; if (t >= T[3]) return s.curve[3]; for (let i = 0; i < 3; i++) if (t <= T[i + 1]) { const k = (t - T[i]) / (T[i + 1] - T[i]); return s.curve[i] + k * (s.curve[i + 1] - s.curve[i]); } return 100; };
+    const FAN = { L: [1200, 5800, 'Kipas kiri'], R: [1200, 6200, 'Kipas kanan'] };
+    const presetPct = { auto: Math.max(0, (cpu - 70) * 2.2), quiet: Math.min(25, Math.max(0, (cpu - 60) * 1.2)), balanced: Math.max(8, (cpu - 50) * 1.6), perf: Math.max(40, (cpu - 40) * 1.6), max: 100 };
+    const pctFor = k => {
+      if (s.preset !== 'curve') return Math.min(100, presetPct[s.preset]);
+      const m = s.modes[k];
+      if (m === 'auto') return Math.min(100, presetPct.auto);
+      if (m === 'fixed') return (s.fixed[k] - FAN[k][0]) / (FAN[k][1] - FAN[k][0]) * 100;
+      return curvePct(sensorT);
+    };
+    const rpmOf = k => Math.round((FAN[k][0] + (FAN[k][1] - FAN[k][0]) * pctFor(k) / 100) / 10) * 10;
+    const fmt = n => n.toLocaleString('id-ID');
+    const glyph = (rpm, size, color, key) => React.createElement('span', { key, style: { width: size, height: size, borderRadius: '50%', flex: 'none', display: 'inline-block', background: `conic-gradient(${color} 0 40deg, transparent 40deg 90deg, ${color} 90deg 130deg, transparent 130deg 180deg, ${color} 180deg 220deg, transparent 220deg 270deg, ${color} 270deg 310deg, transparent 310deg)`, WebkitMask: 'radial-gradient(circle, transparent 0 18%, #000 19% 100%)', mask: 'radial-gradient(circle, transparent 0 18%, #000 19% 100%)', animation: rm ? 'none' : `dy-spin ${Math.max(.18, 2600 / Math.max(rpm, 400)).toFixed(2)}s linear infinite` } });
+    const rL = rpmOf('L'), rR = rpmOf('R');
+    const tone = t => t >= 90 ? '#FF453A' : t >= 80 ? '#FF9F0A' : '#30D158';
+    const P = [['auto', 'Otomatis', 'sistem', 'Otomatis (sistem)', '⌃⌥⇧0'], ['quiet', 'Senyap', '≤ 25%', 'Senyap', '⌃⌥⇧1'], ['balanced', 'Seimbang', '', 'Seimbang', '⌃⌥⇧2'], ['perf', 'Performa', '≥ 40%', 'Performa', '⌃⌥⇧3'], ['max', 'Maksimal', '100%', 'Maksimal', '⌃⌥⇧4'], ['curve', 'Kurva', 'custom', 'Kurva custom', '']];
+    const presets = P.map(([k, label, hint, menu, key]) => ({ label, hint, menu, key, check: s.preset === k ? '✓' : '', bg: s.preset === k ? '#fff' : 'transparent', fg: s.preset === k ? '#000' : 'rgba(255,255,255,.85)', sub: s.preset === k ? '#5f5f64' : 'rgba(255,255,255,.4)', pick: () => this.setState({ preset: k }) }));
+    const fans = ['L', 'R'].map(k => { const rpm = k === 'L' ? rL : rR; return { name: FAN[k][2], range: fmt(FAN[k][0]) + '–' + fmt(FAN[k][1]), rpm: fmt(rpm), pct: Math.round((rpm - FAN[k][0]) / (FAN[k][1] - FAN[k][0]) * 100), bar: s.preset === 'max' ? '#FF9F0A' : '#fff', glyph: glyph(rpm, 44, 'rgba(255,255,255,.85)', k) }; });
+    const fanRows = ['L', 'R'].map((k, i) => {
+      const rpm = k === 'L' ? rL : rR, m = s.preset === 'curve' ? s.modes[k] : s.preset === 'auto' ? 'auto' : null;
+      const pName = (P.find(p => p[0] === s.preset) || [])[1];
+      const setMode = mm => this.setState(st => (mm === 'auto' && st.preset !== 'curve') ? { preset: 'auto' } : { preset: 'curve', modes: { ...st.modes, [k]: mm } });
+      return {
+        name: FAN[k][2], rpm: fmt(rpm), line: i === 0 ? '.5px solid rgba(0,0,0,.08)' : 'none', glyph: glyph(rpm, 18, '#1d1d1f', k + 's'),
+        modes: [['auto', 'Otomatis'], ['fixed', 'RPM tetap'], ['curve', 'Kurva']].map(([mk, label]) => ({ label, bg: m === mk ? '#fff' : 'transparent', sh: m === mk ? '0 1px 2px rgba(0,0,0,.12)' : 'none', fw: m === mk ? 600 : 400, pick: () => setMode(mk) })),
+        isFixed: m === 'fixed', isAuto: m === 'auto', isCurve: m === 'curve', presetNote: m === null ? `Preset ${pName} aktif dari notch atau menu bar. Pilih mode di sini untuk mengatur per kipas.` : '',
+        min: FAN[k][0], max: FAN[k][1], fixed: s.fixed[k], onFixed: e => { const v = +e.target.value; this.setState(st => ({ fixed: { ...st.fixed, [k]: v } })); }
+      };
+    });
+    const SN = [['cpu', 'CPU (P-core, maks)'], ['ecore', 'CPU (E-core)'], ['gpu', 'GPU'], ['mem', 'Memori'], ['ssd', 'SSD'], ['bat', 'Baterai'], ['amb', 'Udara sekitar']];
+    const sensors = SN.map(([k, name], i) => ({ name, v: temps[k], pct: Math.min(100, Math.round((temps[k] - 20) / 85 * 100)), tone: tone(temps[k]), line: i < SN.length - 1 ? '.5px solid rgba(0,0,0,.08)' : 'none', pickLabel: s.sensor === k ? 'kurva' : 'pakai', pickFg: s.sensor === k ? '#0A6CFF' : '#a0a0a5', pick: () => this.setState({ sensor: k }) }));
+    const X = t => 34 + (t - 30) / 70 * 380, Y = p => 190 - p / 100 * 180;
+    const pts = [[30, s.curve[0]], ...T.map((t, i) => [t, s.curve[i]]), [100, s.curve[3]]];
+    const curvePts = pts.map(([t, p]) => X(t).toFixed(1) + ',' + Y(p).toFixed(1)).join(' ');
+    const nowP = curvePct(sensorT);
+    const hist = s.hist.length ? s.hist : [cpu];
+    const spark = hist.map((v, i) => (190 - (hist.length - 1 - i) * (190 / 39)).toFixed(1) + ',' + (50 - (v - 50) / 45 * 46).toFixed(1)).join(' ');
+    return {
+      cpu, gpu, ssd, bat, spark, cpuTone: tone(cpu), cpuState: cpu >= 90 ? 'Panas' : cpu >= 80 ? 'Hangat' : 'Normal',
+      fans, presets, fanRows, sensors,
+      fanLine: `Kiri ${fmt(rL)} · Kanan ${fmt(rR)} rpm`,
+      presetShort: P.find(p => p[0] === s.preset)[1], rpmL: fmt(rL), miniFan: glyph(rL, 13, 'rgba(255,255,255,.85)', 'mini'), bigFan: glyph(2400, 30, '#fff', 'big'),
+      sensorName: SN.find(x => x[0] === s.sensor)[1].split(' (')[0], curveNow: `${sensorT}°C → ${Math.round(nowP)}%`,
+      curvePts, curveArea: curvePts + ' 414,190 34,190', nowX: X(Math.max(30, Math.min(100, sensorT))).toFixed(1), nowY: Y(nowP).toFixed(1),
+      curveDots: T.map((t, i) => ({ x: X(t).toFixed(1), y: Y(s.curve[i]).toFixed(1) })),
+      curveSliders: T.map((t, i) => ({ t, v: s.curve[i], on: e => { const v = +e.target.value; this.setState(st => { const c = [...st.curve]; c[i] = v; for (let j = i + 1; j < 4; j++) c[j] = Math.max(c[j], v); for (let j = i - 1; j >= 0; j--) c[j] = Math.min(c[j], v); return { curve: c, preset: 'curve' }; }); } })),
+      resetCurve: () => this.setState({ curve: [10, 30, 65, 100] })
+    };
+  }
+}
+</script>
+</body>
+</html>
