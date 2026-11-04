@@ -20,7 +20,8 @@ enum ShotPrefs {
     static var loupe: Bool { d.object(forKey: "shot.loupe") as? Bool ?? true }
     static var windowShadow: Bool { d.object(forKey: "shot.windowShadow") as? Bool ?? true }
     static var retina: Bool { d.object(forKey: "shot.retina") as? Bool ?? true }
-    static var autoBlur: Bool { d.object(forKey: "shot.autoBlur") as? Bool ?? true }
+    /// Opt-in (user feedback): the OCR pass holds Copy back for a moment, and copying must be instant.
+    static var autoBlur: Bool { d.object(forKey: "shot.autoBlur") as? Bool ?? false }
     static var retentionDays: Int { d.object(forKey: "shot.retention") as? Int ?? CaptureStore.defaultRetentionDays }
     static var studioBackground: Int { d.object(forKey: "shot.bg") as? Int ?? 5 }   // Senja
 }

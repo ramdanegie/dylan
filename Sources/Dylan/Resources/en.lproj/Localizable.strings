@@ -877,7 +877,7 @@
 "shot.beautifyHistory" = "Beautify & history";
 "shot.defaultBackground" = "Default background";
 "shot.autoBeautify" = "Beautify automatically when copying";
-"shot.autoBlur" = "Blur sensitive data automatically";
+"shot.autoBlur" = "Blur sensitive data automatically (Copy waits for the scan)";
 "shot.keepHistory" = "Keep history";
 "shot.days" = "%d days";
 "shot.forever" = "Forever";
@@ -976,3 +976,4 @@
 "fan.sheetWarning" = "Faster fans make the Mac louder and use more battery. Quiet can make the Mac limit performance when it is hot.";
 "fan.sheetRemoveLater" = "Remove the helper later in Settings";
 "fan.monitorOnly" = "Just monitor temperatures";
+"fan.notchInfo" = "Fan info in the notch (manual mode, back to Automatic)";

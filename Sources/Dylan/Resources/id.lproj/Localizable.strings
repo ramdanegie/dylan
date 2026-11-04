@@ -877,7 +877,7 @@
 "shot.beautifyHistory" = "Percantik & riwayat";
 "shot.defaultBackground" = "Latar default";
 "shot.autoBeautify" = "Percantik otomatis saat Salin";
-"shot.autoBlur" = "Blur data sensitif otomatis";
+"shot.autoBlur" = "Blur data sensitif otomatis (Salin menunggu pemindaian)";
 "shot.keepHistory" = "Simpan riwayat";
 "shot.days" = "%d hari";
 "shot.forever" = "Selamanya";
@@ -976,3 +976,4 @@
 "fan.sheetWarning" = "Kipas yang lebih kencang bikin Mac lebih bising dan baterai lebih boros. Mode Senyap bisa membuat Mac membatasi performa saat panas.";
 "fan.sheetRemoveLater" = "Hapus helper nanti di Settings";
 "fan.monitorOnly" = "Hanya pantau suhu";
+"fan.notchInfo" = "Info kipas di notch (mode manual, kembali ke Otomatis)";

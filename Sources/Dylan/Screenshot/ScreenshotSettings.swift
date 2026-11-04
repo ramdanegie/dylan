@@ -86,7 +86,7 @@ struct ScreenshotSettings: View {
                 ForEach(Array(Beautify.backgrounds.enumerated()), id: \.offset) { i, b in SwiftUI.Text(b.name).tag(i) }
             }
             Toggle(L("shot.autoBeautify"), isOn: bool("shot.autoBeautify", false))
-            Toggle(L("shot.autoBlur"), isOn: bool("shot.autoBlur", true))
+            Toggle(L("shot.autoBlur"), isOn: bool("shot.autoBlur", false))
             Picker(L("shot.keepHistory"), selection: Binding(get: { _ = refresh; return ShotPrefs.retentionDays },
                                                              set: { d.set($0, forKey: "shot.retention"); ScreenshotService.shared.pruneHistory(); refresh += 1 })) {
                 SwiftUI.Text(L("shot.days", 7)).tag(7); SwiftUI.Text(L("shot.days", 30)).tag(30); SwiftUI.Text(L("shot.days", 90)).tag(90)

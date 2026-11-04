@@ -63,6 +63,8 @@ struct ThermalSettings: View {
                 SwiftUI.Text(L("fan.warnOff")).tag(0)
                 ForEach([85, 90, 95, 100], id: \.self) { SwiftUI.Text("≥ \($0)°C").tag($0) }
             }
+            Toggle(L("fan.notchInfo"), isOn: Binding(get: { _ = refresh; return p.notchInfo },
+                                                     set: { d.set($0, forKey: "fan.notchInfo"); refresh += 1; FanProvider.shared.postManual() }))
             Toggle(L("fan.menuTemp"), isOn: bool("fan.menuTemp", false))
             Picker(L("fan.unit"), selection: bool("fan.fahrenheit", false)) {
                 SwiftUI.Text("°C").tag(false)

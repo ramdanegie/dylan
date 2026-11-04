@@ -51,7 +51,8 @@ Cukup Command Line Tools (tanpa Xcode), macOS 15+, Apple Silicon.
 - Mode Developer: Settings → Umum → Profil → Developer, lalu Settings → Agents → Pasang hook (diff ditampilkan, file lama di-backup).
 - Lacak perintah panjang: tambahkan `eval "$(dylan shell-init zsh)"` ke `~/.zshrc`.
 - `dylan doctor` mengecek app, socket, hook, dan shell integration. `dylan debug state` mencetak aktivitas yang sedang tampil.
-- Build memakai signature ad-hoc, jadi macOS bisa meminta izin (Kalender, Automation) lagi setelah build baru. Untuk pemakaian harian, pakai build yang sama.
+- Build memakai signature ad-hoc, jadi macOS bisa meminta izin (Kalender, Automation) lagi setelah build baru. Dengan `DYLAN_SIGN_IDENTITY="Apple Development: …"` build ditandatangani tim: izin bertahan antar-build dan kontrol kipas (helper) bisa dipakai.
+- Bagikan ke penguji: `DYLAN_SIGN_IDENTITY="Apple Development: …" ./scripts/dmg.sh` membuat `build/Dylan-<versi>.dmg` (seret ke Applications + petunjuk "Open Anyway"). Belum dinotarisasi, jadi Gatekeeper menahan pembukaan pertama; distribusi publik butuh Developer ID + notarization.
 - `build/Dylan.app/Contents/MacOS/Dylan --snapshot <folder> --lang id|en` merender state notch ke PNG tanpa izin Screen Recording.
 
 ## Prinsip

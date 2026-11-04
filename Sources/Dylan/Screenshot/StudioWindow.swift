@@ -22,6 +22,7 @@ final class StudioWindow: NSWindow {
         NSApp.activate()
         w.makeKeyAndOrderFront(nil)
         windows.append(w)
+        model.close = { [weak w] in DispatchQueue.main.async { w?.close() } }   // not inside the button action
         if ShotPrefs.autoBlur { model.autoBlurSensitive() }
     }
 
@@ -56,8 +57,16 @@ final class StudioModel {
     let original: CGImage
     let url: URL
     var annotating = false
-    var tool: Tool = .arrow
-    var ink: Color = Color(red: 1, green: 0.23, blue: 0.19)
+    /// Closes the window (set by StudioWindow.open); Copy hides the panel (user feedback).
+    @ObservationIgnored var close: (() -> Void)?
+    // Last tool, ink, export format and address bar are remembered like the studio settings below.
+    var tool: Tool = .arrow { didSet { AppModel.store.set(tool.rawValue, forKey: "studio.tool") } }
+    var ink: Color = Color(red: 1, green: 0.23, blue: 0.19) {
+        didSet {
+            guard let c = NSColor(ink).usingColorSpace(.sRGB) else { return }
+            AppModel.store.set([c.redComponent, c.greenComponent, c.blueComponent, c.alphaComponent], forKey: "studio.ink")
+        }
+    }
     var marks: [Mark] = [] { didSet { rebuildWorking() } }
     /// Blurs found by OCR: never undone or reset, so a secret cannot come back by accident.
     var autoBlurs: [Mark] = [] { didSet { rebuildWorking() } }
@@ -80,8 +89,8 @@ final class StudioModel {
     var zoom: Double { didSet { save() } }
     var count: Int { didSet { save() } }
     var grain: Bool { didSet { save() } }
-    var address = "dylan.app"
-    var format = ShotPrefs.format
+    var address = "dylan.app" { didSet { AppModel.store.set(address, forKey: "studio.address") } }
+    var format = ShotPrefs.format { didSet { AppModel.store.set(format, forKey: "shot.format") } }
 
     init(original: CGImage, url: URL) {
         self.original = original
@@ -98,6 +107,9 @@ final class StudioModel {
         zoom = d.object(forKey: "studio.zoom") as? Double ?? 100
         count = d.object(forKey: "studio.count") as? Int ?? 1
         grain = d.object(forKey: "studio.grain") as? Bool ?? true
+        tool = Tool(rawValue: d.string(forKey: "studio.tool") ?? "") ?? .arrow
+        if let c = d.array(forKey: "studio.ink") as? [Double], c.count == 4 { ink = Color(.sRGB, red: c[0], green: c[1], blue: c[2], opacity: c[3]) }
+        address = d.string(forKey: "studio.address") ?? "dylan.app"
     }
 
     private func save() {
@@ -216,6 +228,7 @@ final class StudioModel {
         guard let img = render() else { return }
         ScreenshotService.shared.copy(img)
         status = L("shot.copied")
+        close?()
     }
 
     @discardableResult
@@ -511,7 +524,10 @@ struct StudioView: View {
             }
             .frame(width: 80)
             Button(L("shot.save")) { model.saveFile() }.disabled(model.blurPending)
-            Button(L("shot.copy")) { model.copy() }.keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent).disabled(model.blurPending)
+            Button { model.copy() } label: {
+                HStack(spacing: 6) { Text(L("shot.copy")); Text("⌘C").opacity(0.75) }
+            }
+            .keyboardShortcut("c", modifiers: .command).buttonStyle(.borderedProminent).disabled(model.blurPending)
         }
         .padding(.horizontal, 12).frame(height: 46)
     }
@@ -623,6 +639,8 @@ struct StudioView: View {
     private func handleKey(_ key: String, _ flags: NSEvent.ModifierFlags) -> Bool {
         if flags.contains(.command) {
             if key == "z" { flags.contains(.shift) ? model.redo() : model.undo(); return true }
+            // ⌘C copies the edited picture (text fields keep their own ⌘C: KeyCatcher skips them).
+            if key == "c", !model.blurPending { model.copy(); return true }
             return false
         }
         guard model.annotating, let t = StudioModel.Tool.allCases.first(where: { $0.key == key }) else { return false }
