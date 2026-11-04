@@ -128,6 +128,9 @@ public struct FeatureSupport: Sendable, Identifiable, Equatable {
         .init("screenshotEditor", .utilities, [92], .v1_1, built: true),
         .init("screenshotStudio", .utilities, [93], .v1_1, built: true),
         .init("screenRecording", .utilities, [94], .v2_0),
+        .init("thermal", .devices, [95], .v1_1, built: true),
+        .init("fanPresets", .devices, [96, 98, 99], .v1_1, built: true, req: true),
+        .init("fanAlerts", .devices, [97], .v1_1, built: true),
         // Security
         .init("faceUnlock", .security, [50, 51, 52, 53, 54, 55], .v2_0, built: true, experimental: true, req: true),
         // Developer

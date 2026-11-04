@@ -19,13 +19,18 @@ let package = Package(
     products: [
         .executable(name: "Dylan", targets: ["Dylan"]),
         .executable(name: "dylan-cli", targets: ["DylanCLI"]),
+        .executable(name: "dylan-fan-helper", targets: ["DylanFanHelper"]),
     ],
     targets: [
         // Pure logic, no AppKit. Everything here has unit tests.
         .target(name: "DylanCore"),
+        // AppleSMC access, shared by the app (read) and the root fan helper (write). Kept tiny on purpose:
+        // the helper runs as root and links nothing else.
+        .target(name: "SMCKit", linkerSettings: [.linkedFramework("IOKit")]),
+        .executableTarget(name: "DylanFanHelper", dependencies: ["SMCKit"], swiftSettings: mainActorByDefault),
         .executableTarget(
             name: "Dylan",
-            dependencies: ["DylanCore"],
+            dependencies: ["DylanCore", "SMCKit"],
             exclude: ["Resources"],
             // AppKit app: main actor by default; background work opts out explicitly.
             swiftSettings: mainActorByDefault,
@@ -49,7 +54,7 @@ let package = Package(
         .executableTarget(name: "DylanCLI", dependencies: ["DylanCore"], swiftSettings: mainActorByDefault),
         .testTarget(
             name: "DylanCoreTests",
-            dependencies: ["DylanCore"],
+            dependencies: ["DylanCore", "SMCKit"],
             resources: [.copy("Fixtures")],
             swiftSettings: testSettings
         ),
