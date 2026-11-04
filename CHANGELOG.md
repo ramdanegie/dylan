@@ -2,6 +2,11 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Fixed
+- The app icon is back to "Island + ears" (design 4c); 0.1.6 had picked up another icon by mistake.
+
 ## [0.1.6] - 2026-11-04
 
 ### Added

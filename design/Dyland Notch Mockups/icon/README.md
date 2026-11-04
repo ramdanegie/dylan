@@ -1,7 +1,7 @@
-# Ikon app Dylan — 2c Sirkuit
+# Ikon app Dylan — 4c Pulau + telinga
 
-- `dylan-icon-1024.png`: master 1024 × 1024 (squircle 824 di kanvas transparan, grid macOS)
-- `dylan-icon-small-1024.png`: master versi kecil (dipakai untuk 16, 16@2x, 32)
+- `dylan-icon-1024.png`: master 1024 × 1024 (squircle 824 di kanvas transparan, grid macOS), dirender dari `#icon-4c` di `Dylan App Icon.dc.html` (Chrome headless, latar transparan)
+- Satu master untuk semua ukuran: desain 4c memakai glyph yang sama di 16–1024
 - `Dylan.iconset/`: semua ukuran untuk macOS
 
 File @2x disimpan dengan akhiran `-2x` (karakter `@` tidak bisa dipakai di sini). Ganti namanya dulu, lalu buat `.icns`:
