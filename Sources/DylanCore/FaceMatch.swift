@@ -74,6 +74,9 @@ public struct FaceVault: Codable, Equatable, Sendable {
     public var settings = FaceUnlockPolicy.Settings()
     public var log = FaceUnlockLog()
     public var consecutiveFailures = 0
+    /// Last unlock Dylan saw that was not by face (or a verified enrollment). Kept across Dylan restarts;
+    /// the policy only counts it when it is after the Mac's boot time. Optional, so older vaults still open.
+    public var lastPasswordUnlock: Date?
     public init() {}
 
     public func sealed(with key: SymmetricKey) throws -> Data {

@@ -161,6 +161,10 @@ struct FaceEnrollView: View {
                 row(L("faceUnlock.rowPresentation"), L("faceUnlock.presentationOff"))
             }
             .background(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.25)))
+            SwiftUI.Text(L("faceUnlock.tryHint")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if let issue = face.readinessIssue {
+                Label(L("faceUnlock.denial.\(issue.rawValue)"), systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
+            }
         }
         .padding(22)
     }

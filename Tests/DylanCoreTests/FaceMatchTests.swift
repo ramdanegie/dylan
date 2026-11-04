@@ -45,4 +45,17 @@ import Testing
         data[data.count / 2] ^= 0xFF
         #expect(throws: (any Error).self) { try FaceVault.open(data, with: key) }   // tampering is detected
     }
+
+    @Test func vaultFromBeforeLastPasswordUnlockStillOpens() throws {
+        // A vault sealed by an older build has no "lastPasswordUnlock" key.
+        let key = SymmetricKey(size: .bits256)
+        var old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(FaceVault())) as! [String: Any]
+        old.removeValue(forKey: "lastPasswordUnlock")
+        let sealed = try AES.GCM.seal(JSONSerialization.data(withJSONObject: old), using: key).combined!
+        let v = try FaceVault.open(sealed, with: key)
+        #expect(v.lastPasswordUnlock == nil)
+        var w = v
+        w.lastPasswordUnlock = Date(timeIntervalSince1970: 1_000)
+        #expect(try FaceVault.open(w.sealed(with: key), with: key).lastPasswordUnlock == w.lastPasswordUnlock)
+    }
 }

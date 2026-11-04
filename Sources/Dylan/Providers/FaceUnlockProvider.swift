@@ -21,7 +21,11 @@ final class FaceUnlockProvider {
     @ObservationIgnored private var lockManual = false
     @ObservationIgnored private var typedThisLock = false
     @ObservationIgnored private var deniedLoggedThisLock = false
-    @ObservationIgnored private var lastPasswordUnlock: Date?
+    /// Persisted in the vault: restarting Dylan must not force another password unlock (restarting the Mac still does).
+    private var lastPasswordUnlock: Date? {
+        get { vault.lastPasswordUnlock }
+        set { vault.lastPasswordUnlock = newValue }
+    }
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var camera: FaceCamera?
 
@@ -254,6 +258,7 @@ final class FaceUnlockProvider {
         Keychain.set(password, "faceunlock.password")
         vault.template = t
         vault.settings.enabled = true
+        lastPasswordUnlock = Date()   // the login password was just verified, in this boot
         save()
         status = L("faceUnlock.enrolled", enrollPrints.count)
         enrollPrints = []
@@ -261,12 +266,29 @@ final class FaceUnlockProvider {
         return nil
     }
 
-    /// "Coba kunci sekarang" (D19 step 4): the system lock, like ⌃⌘Q.
+    /// "Coba kunci sekarang" (D19 step 4): lock like ⌃⌘Q, then turn the display off. The camera only starts when the
+    /// screen wakes, so a lock screen that is already on would never try.
     static func lockNow() {
         guard let h = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_NOW),
               let sym = dlsym(h, "SACLockScreenImmediate") else { return }
         typealias Lock = @convention(c) () -> Int32
         _ = unsafeBitCast(sym, to: Lock.self)()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+            p.arguments = ["displaysleepnow"]
+            try? p.run()
+        }
+    }
+
+    /// Why the next wake would not try, ignoring the lock itself (Settings shows it). nil = ready.
+    var readinessIssue: FaceUnlockPolicy.Denial? {
+        guard enrolled else { return .notEnrolled }
+        let f = FaceUnlockPolicy.Facts(now: Date(), screenLocked: true, lockedAt: Date(), lockWasManual: false,
+                                       bootTime: Self.bootTime, lastPasswordUnlock: lastPasswordUnlock,
+                                       consecutiveFailures: vault.consecutiveFailures, passwordTypedThisLock: false, enrolled: true,
+                                       accessibilityTrusted: AXIsProcessTrusted(), presentationMode: AppModel.shared.presentationMode, network: nil)
+        return FaceUnlockPolicy(settings: vault.settings).denial(f)
     }
 
     /// Everything goes: password, template, settings, log, file and key.
