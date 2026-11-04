@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.1.6] - 2026-11-04
 
 ### Added
 - Screen recording: `⌥⇧5` or Screenshot ▸ Record Screen, then drag an area or click for the whole screen. Saved as MP4 next to your screenshots, with system audio and, if you turn it on, the microphone. The notch shows a red dot and the time; stop from the notch, the menu or `⌥⇧5`.
