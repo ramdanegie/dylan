@@ -23,7 +23,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, discord, devices, thermal, utilities, clipboard, screenshot, agents, terminal, features, about
+    case general, appearance, liveActivity, media, discord, devices, thermal, utilities, clipboard, screenshot, faceUnlock, agents, terminal, features, about
     var id: String { rawValue }
     var isDeveloper: Bool { self == .agents || self == .terminal }
     var symbol: String {
@@ -38,6 +38,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .utilities: return "wrench.and.screwdriver"
         case .clipboard: return "doc.on.clipboard"
         case .screenshot: return "camera.viewfinder"
+        case .faceUnlock: return "faceid"
         case .agents: return "sparkle"
         case .terminal: return "terminal"
         case .features: return "checklist"
@@ -96,6 +97,7 @@ struct SettingsView: View {
         case .discord: DiscordSettings()
         case .clipboard: ClipboardSettings()
         case .screenshot: ScreenshotSettings()
+        case .faceUnlock: FaceUnlockSettings()
         case .thermal: ThermalSettings()
         case .agents: AgentSettings()
         case .terminal: TerminalSettings()
@@ -377,8 +379,6 @@ struct UtilitySettings: View {
     private var model: AppModel { AppModel.shared }
     var body: some View {
         FeatureToggles(features: [.shelf, .colorPicker, .weather, .downloads, .scratchpad, .mirror])
-        // Face Unlock is for everyone (PRD §F15), not a Developer setting.
-        FaceUnlockSettings()
         Section(L("weather.title")) {
             TextField(L("weather.city"), text: Binding(get: { model.weatherCity }, set: { model.weatherCity = $0 }))
                 .onSubmit { WeatherProvider.shared.cityChanged() }
