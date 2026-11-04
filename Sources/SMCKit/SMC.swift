@@ -46,7 +46,10 @@ public final class SMC: @unchecked Sendable {
     @discardableResult public func setManual(_ i: Int, rpm: Double) -> Bool {
         guard let f = fan(i) else { return false }
         let target = Swift.min(Swift.max(rpm, f.min), f.max)
-        return write("F\(i)Md", 1) && write("F\(i)Tg", target)
+        guard write("F\(i)Md", 1) else { return false }
+        if write("F\(i)Tg", target) { return true }
+        setAuto(i)   // never leave a fan manual at a target nobody chose
+        return false
     }
 
     /// Back to macOS control. Root only.

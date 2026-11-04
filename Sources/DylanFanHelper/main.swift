@@ -20,15 +20,20 @@ enum Helper {
     static let smc = SMC()!
     static let ownedFile = "/var/run/\(FanHelperAPI.label).owned"
     static var owned: Set<Int> = [] {
-        didSet { try? owned.map(String.init).joined(separator: ",").write(toFile: ownedFile, atomically: true, encoding: .utf8) }
+        didSet {
+            guard owned != oldValue else { return }
+            try? owned.map(String.init).joined(separator: ",").write(toFile: ownedFile, atomically: true, encoding: .utf8)
+        }
     }
     static var controller: xpc_connection_t?
-    static var lastMessage = Date()
+    /// Monotonic and counting sleep: a clock change cannot postpone the watchdog.
+    static func now() -> UInt64 { clock_gettime_nsec_np(CLOCK_MONOTONIC) }
+    static var lastMessage = now()
 
     static func restore(_ fans: Set<Int>? = nil) {
-        let fans = fans ?? owned
-        for i in fans { smc.setAuto(i) }
-        owned.subtract(fans)
+        // Keep the ones the SMC refused: the watchdog tick retries them.
+        let done = (fans ?? owned).filter { smc.setAuto($0) }
+        owned.subtract(done)
     }
 
     /// A previous run that crashed while a fan was manual.
@@ -55,8 +60,10 @@ enum Helper {
         switch op {
         case "set":
             let rpm = xpc_dictionary_get_double(m, "rpm")
-            guard fan >= 0, fan < smc.fanCount, rpm.isFinite, smc.setManual(fan, rpm: rpm) else { return false }
+            guard fan >= 0, fan < smc.fanCount, rpm.isFinite else { return false }
+            // Owned before the write, so every restore path covers it even if the write half-succeeds.
             owned.insert(fan)
+            guard smc.setManual(fan, rpm: rpm) else { restore([fan]); return false }
             controller = peer
             return true
         case "auto":
@@ -88,7 +95,7 @@ enum Helper {
             return
         }
         guard xpc_get_type(m) == XPC_TYPE_DICTIONARY else { return }
-        lastMessage = Date()
+        lastMessage = now()
         let ok = handle(m, from: peer)
         if let reply = xpc_dictionary_create_reply(m) {
             xpc_dictionary_set_bool(reply, "ok", ok)
@@ -97,7 +104,7 @@ enum Helper {
     }
 
     static func tick() {
-        if !owned.isEmpty, Date().timeIntervalSince(lastMessage) > FanHelperAPI.watchdog { restore() }
+        if !owned.isEmpty, Double(now() - lastMessage) / 1e9 > FanHelperAPI.watchdog { restore() }
     }
 }
 

@@ -60,7 +60,7 @@ public enum FanMath {
     /// RPM for a fraction of the factory range, rounded to 10 rpm.
     public static func rpm(_ fraction: Double, min lo: Double, max hi: Double) -> Double {
         let f = Swift.min(1, Swift.max(0, fraction))
-        return ((lo + (hi - lo) * f) / 10).rounded() * 10
+        return Swift.min(hi, Swift.max(lo, ((lo + (hi - lo) * f) / 10).rounded() * 10))
     }
 
     public static func fahrenheit(_ c: Double) -> Double { c * 9 / 5 + 32 }
@@ -108,6 +108,9 @@ public struct HeatWatch: Sendable {
         lastFired = now
         return true
     }
+
+    /// A new manual preset starts its own cool-down window.
+    public mutating func resetCool() { coolSince = nil }
 
     /// true once the CPU has stayed cool long enough to hand the fans back to macOS.
     public mutating func cooledDown(_ t: Double, at now: Date) -> Bool {

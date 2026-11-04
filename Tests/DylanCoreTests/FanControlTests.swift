@@ -59,7 +59,7 @@ import Testing
 
     @Test func rpmAndUnits() {
         #expect(FanMath.rpm(0, min: 1200, max: 5779) == 1200)
-        #expect(FanMath.rpm(1, min: 1200, max: 5779) == 5780)
+        #expect(FanMath.rpm(1, min: 1200, max: 5779) == 5779)          // rounding never passes the factory max
         #expect(FanMath.rpm(0.5, min: 1200, max: 6200) == 3700)
         #expect(FanMath.rpm(2, min: 1200, max: 6200) == 6200)
         #expect(FanMath.fahrenheit(100) == 212)

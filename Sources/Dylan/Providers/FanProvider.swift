@@ -43,12 +43,21 @@ final class FanProvider {
     // MARK: Settings (D48), stored like the other features in UserDefaults
 
     private var d: UserDefaults { AppModel.store }
+    /// Indexed by SMC fan number; a fan whose read failed this tick leaves a gap, not a shift.
+    private var slots: Int { (fans.map(\.index).max() ?? -1) + 1 }
     var modes: [FanMode] {
-        get { (d.stringArray(forKey: "fan.modes") ?? []).compactMap(FanMode.init(rawValue:)).padded(to: fans.count, with: .curve) }
+        get { (d.stringArray(forKey: "fan.modes") ?? []).compactMap(FanMode.init(rawValue:)).padded(to: slots, with: .curve) }
         set { d.set(newValue.map(\.rawValue), forKey: "fan.modes"); apply() }
     }
     var fixed: [Double] {
-        get { (d.array(forKey: "fan.fixed") as? [Double] ?? []).padded(to: fans.count, with: 0).prefix(fans.count).enumerated().map { $1 > 0 ? $1 : fans[$0].min + (fans[$0].max - fans[$0].min) / 2 } }
+        get {
+            let stored = (d.array(forKey: "fan.fixed") as? [Double] ?? []).padded(to: slots, with: 0)
+            return (0..<slots).map { i in
+                if stored[i] > 0 { return stored[i] }
+                guard let f = fans.first(where: { $0.index == i }) else { return 0 }
+                return f.min + (f.max - f.min) / 2
+            }
+        }
         set { d.set(newValue, forKey: "fan.fixed"); apply() }
     }
     var curve: FanCurve {
@@ -95,6 +104,7 @@ final class FanProvider {
 
     func stop() {
         if preset != .auto { setPreset(.auto, announce: false) }
+        AppModel.shared.center.remove("fan-hot", now: Date())
         observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
         observers = []
         timer?.invalidate(); timer = nil; interval = 0
@@ -135,10 +145,11 @@ final class FanProvider {
 
     func setPreset(_ p: FanPreset, announce: Bool = true) {
         guard p != preset || p == .auto else { return }
-        if p != .auto, !ensureHelper() { return }
+        if p != .auto, !AppModel.shared.features.isEnabled(.thermal) || !ensureHelper() { return }
         let was = preset
         preset = p
         smoother = Smoother(window: 10)
+        heat.resetCool()
         if p == .auto {
             send("auto")
             AppModel.shared.center.remove("fan-manual", now: Date())
@@ -156,6 +167,8 @@ final class FanProvider {
         if m == .auto && preset != .curve { setPreset(.auto); return }
         var all = modes
         guard all.indices.contains(i) else { return }
+        // Coming from another preset, the fans the UI showed as Auto stay Auto.
+        if preset != .curve { all = all.map { _ in .auto } }
         all[i] = m
         modes = all
         if preset != .curve { setPreset(.curve) }
@@ -167,8 +180,9 @@ final class FanProvider {
     private func drive() {
         guard preset != .auto, !fans.isEmpty else { return }
         let now = Date()
-        let raw = temps[preset == .curve ? sensor : .cpu] ?? cpu ?? 60
-        let t = smooth ? smoother.add(raw, at: now) : raw
+        // No reading → temperature-driven fans go back to macOS rather than run blind.
+        let raw = temps[preset == .curve ? sensor : .cpu] ?? cpu
+        let t = raw.map { smooth ? smoother.add($0, at: now) : $0 }
         let modes = modes, fixed = fixed
         for f in fans {
             let target: Double?
@@ -178,9 +192,9 @@ final class FanProvider {
                 switch modes[f.index] {
                 case .auto: target = nil
                 case .fixed: target = fixed[f.index]
-                case .curve: target = FanMath.rpm(curve.percent(at: t) / 100, min: f.min, max: f.max)
+                case .curve: target = t.map { FanMath.rpm(curve.percent(at: $0) / 100, min: f.min, max: f.max) }
                 }
-            default: target = preset.fraction(cpu: t).map { FanMath.rpm($0, min: f.min, max: f.max) }
+            default: target = t.flatMap { preset.fraction(cpu: $0) }.map { FanMath.rpm($0, min: f.min, max: f.max) }
             }
             if let target { send("set", fan: f.index, rpm: target) } else { send("auto", fan: f.index) }
         }
@@ -228,7 +242,8 @@ final class FanProvider {
     func removeHelper() {
         setPreset(.auto, announce: false)
         conn.map(xpc_connection_cancel); conn = nil
-        Self.service.unregister { _ in Task { @MainActor in FanProvider.shared.helperStatus = FanProvider.service.status } }
+        // @Sendable: SMAppService calls back off the main thread (a main-actor closure would trap).
+        Self.service.unregister { @Sendable _ in Task { @MainActor in FanProvider.shared.helperStatus = FanProvider.service.status } }
     }
 
     private func send(_ op: String, fan: Int = -1, rpm: Double = 0) {
