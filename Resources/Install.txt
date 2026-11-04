@@ -1,0 +1,35 @@
+Dylan — instalasi untuk penguji
+===============================
+
+Butuh: Mac Apple Silicon (M1 atau lebih baru), macOS 15 atau lebih baru.
+
+1. Seret Dylan ke folder Applications.
+2. Buka Dylan dari Applications. macOS akan bilang tidak bisa memeriksa app ini,
+   karena build uji belum dinotarisasi Apple. Klik Done (jangan Move to Trash).
+3. Buka System Settings → Privacy & Security, gulir ke bawah, klik "Open Anyway"
+   di samping Dylan, lalu masukkan password.
+   (Atau di Terminal: xattr -dr com.apple.quarantine /Applications/Dylan.app)
+4. Dylan muncul sebagai ikon di menu bar dan di notch. Izin (Screen Recording,
+   Accessibility, dan lain-lain) diminta saat fitur yang memakainya pertama kali dipakai.
+
+Kontrol kipas: Settings → Suhu & Kipas → Pasang helper, lalu setujui di
+System Settings → General → Login Items & Extensions (password admin).
+Kipas selalu kembali ke Otomatis saat Dylan ditutup.
+
+Hapus: quit Dylan dari menu bar, hapus helper kipas di Settings bila dipasang,
+lalu buang Dylan.app ke Trash.
+
+-----
+
+Dylan — install for testers
+
+Needs an Apple Silicon Mac (M1 or later) on macOS 15 or later.
+
+1. Drag Dylan to Applications.
+2. Open it. macOS says it cannot check the app (test builds are not notarized). Click Done.
+3. System Settings → Privacy & Security → "Open Anyway" next to Dylan, then enter your password.
+   (Or in Terminal: xattr -dr com.apple.quarantine /Applications/Dylan.app)
+4. Dylan lives in the menu bar and the notch. Permissions are asked when a feature first needs them.
+
+Fan control: Settings → Temperature & Fans → Install helper, then approve it in
+System Settings → General → Login Items & Extensions. Fans always return to Automatic when Dylan quits.
