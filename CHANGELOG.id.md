@@ -2,7 +2,7 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
-## [Unreleased]
+## [0.1.6] - 2026-11-04
 
 ### Ditambahkan
 - Rekam layar: `⌥⇧5` atau Screenshot ▸ Rekam Layar, lalu seret area atau klik untuk seluruh layar. Disimpan sebagai MP4 di samping screenshot, dengan suara sistem dan, bila dinyalakan, mikrofon. Notch menampilkan titik merah dan waktunya; hentikan dari notch, menu, atau `⌥⇧5`.
