@@ -2,7 +2,7 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-05
 
 ### Ditambahkan
 - Waktu salat (Settings → Waktu salat): jadwal Kemenag untuk kotamu, dihitung di Mac. Hitung mundur di notch 30 menit sebelum salat, Peek saat waktunya, tab Salat dengan tanggal Hijriah, pengingat 5–30 menit sebelumnya, dan azan dari file audio pilihanmu dengan musik dijeda lalu dilanjutkan.
