@@ -61,7 +61,7 @@ final class Prefs {
     private init() {
         let d = AppModel.store
         style = IslandStyle(rawValue: d.string(forKey: "look.style") ?? "") ?? (d.bool(forKey: "glassPill") ? .glass : .black)
-        styleColor = d.string(forKey: "look.color") ?? "#0F3D3E"
+        styleColor = d.string(forKey: "look.color") ?? "#000000"
         floatGap = d.object(forKey: "look.floatGap") as? Double ?? 6
         floatWidth = d.object(forKey: "look.floatWidth") as? Double ?? 0
         dodgeMouse = d.bool(forKey: "look.dodge")

@@ -1,9 +1,11 @@
 import AppKit
 import AVFoundation
+import CoreLocation
 import DylanCore
 
-/// Prayer times (FR-105, FR-106, design D51). The city is picked once and geocoded (no location permission);
-/// times are computed on the Mac by the Kemenag method, so everything works offline. A countdown sits in Compact
+/// Prayer times (FR-105, FR-106, design D51). The place comes from the current location (opt-in, refreshed on
+/// wake and every 3 hours, so the schedule follows you) or a city typed once and geocoded; times are computed on
+/// the Mac by the Kemenag method, so everything works offline. A countdown sits in Compact
 /// 30 minutes before each prayer, Peek says when it is time, and the adhan (a file the user picks) plays with
 /// the music paused and resumed afterwards.
 @Observable
@@ -24,6 +26,11 @@ final class PrayerProvider {
     /// Minutes before a prayer for a reminder; 0 = off.
     var remindBefore: Int { didSet { d.set(remindBefore, forKey: "prayer.remind") } }
     var ihtiyat: Int { didSet { d.set(ihtiyat, forKey: "prayer.ihtiyat"); refresh() } }
+    /// Use the Mac's location instead of a typed city.
+    private(set) var useLocation: Bool { didSet { d.set(useLocation, forKey: "prayer.useLocation") } }
+    /// macOS refused Location Services for Dylan (Settings shows how to allow it).
+    private(set) var locationDenied = false
+    private(set) var locatedAt: Date?
 
     private(set) var today: PrayerTimes.Day?
     private(set) var next: (prayer: PrayerTimes.Prayer, at: Date)?
@@ -36,6 +43,7 @@ final class PrayerProvider {
     @ObservationIgnored private var resumeRadio = false
     @ObservationIgnored private var announced: [String: Date] = [:]
     @ObservationIgnored private let playerDelegate = AdhanDelegate()
+    @ObservationIgnored fileprivate lazy var locator = PrayerLocator()
 
     private init() {
         let d = AppModel.store
@@ -49,6 +57,7 @@ final class PrayerProvider {
         pauseMusic = d.object(forKey: "prayer.pauseMusic") as? Bool ?? true
         remindBefore = d.object(forKey: "prayer.remind") as? Int ?? 10
         ihtiyat = d.object(forKey: "prayer.ihtiyat") as? Int ?? 2
+        useLocation = d.bool(forKey: "prayer.useLocation")
     }
 
     var hasPlace: Bool { latitude != nil && longitude != nil }
@@ -56,7 +65,15 @@ final class PrayerProvider {
     func start() {
         guard timer == nil else { return }
         refresh()
-        let t = Timer(timeInterval: 15, repeats: true) { _ in MainActor.assumeIsolated { PrayerProvider.shared.refresh() } }
+        if useLocation { locator.locate() }
+        let t = Timer(timeInterval: 15, repeats: true) { _ in
+            MainActor.assumeIsolated {
+                let p = PrayerProvider.shared
+                p.refresh()
+                // Travelling: a new fix every 3 hours keeps the schedule for where the Mac is.
+                if p.useLocation, Date().timeIntervalSince(p.locatedAt ?? .distantPast) > 3 * 3600 { p.locator.locate() }
+            }
+        }
         t.tolerance = 3
         RunLoop.main.add(t, forMode: .common)
         timer = t
@@ -68,8 +85,40 @@ final class PrayerProvider {
         for id in ["prayer", "prayer-now", "prayer-soon"] { AppModel.shared.removeIfPresent(id, now: Date()) }
     }
 
+    /// Switches to the current location; asks for Location Services the first time.
+    func useCurrentLocation(_ on: Bool) {
+        useLocation = on
+        locationDenied = false
+        if on { locator.locate() }
+    }
+
+    /// After waking: the Mac may be somewhere else now.
+    func wake() { if useLocation, timer != nil { locator.locate() } }
+
+    fileprivate func located(_ c: CLLocationCoordinate2D, at date: Date) {
+        guard useLocation else { return }
+        locationDenied = false
+        locatedAt = date
+        // About 1 km is plenty for prayer times (a few seconds) and is all that is kept.
+        let lat = (c.latitude * 100).rounded() / 100, lon = (c.longitude * 100).rounded() / 100
+        if lat != latitude || lon != longitude { latitude = lat; longitude = lon; lookupFailed = false; refresh() }
+        CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: lat, longitude: lon), preferredLocale: L10n.locale) { @Sendable marks, _ in
+            let name = marks?.first.flatMap { $0.subAdministrativeArea ?? $0.locality ?? $0.administrativeArea }
+            Task { @MainActor in
+                let p = PrayerProvider.shared
+                if p.useLocation, let name, p.city != name { p.city = name }
+            }
+        }
+    }
+
+    fileprivate func locationRefused() {
+        guard useLocation else { return }
+        locationDenied = true
+    }
+
     /// Looks the city up (Open-Meteo, the same service as the weather), then recomputes.
     func setCity(_ name: String) {
+        useLocation = false
         city = name.trimmingCharacters(in: .whitespaces)
         latitude = nil; longitude = nil; lookupFailed = false
         refresh()
@@ -202,5 +251,44 @@ final class PrayerProvider {
 private final class AdhanDelegate: NSObject, AVAudioPlayerDelegate {
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in PrayerProvider.shared.finishedAdhan() }
+    }
+}
+
+/// One location fix at a time for prayer times. The manager lives on the main thread, so its delegate is
+/// called there.
+private final class PrayerLocator: NSObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyKilometer
+    }
+
+    func locate() {
+        switch manager.authorizationStatus {
+        case .notDetermined: manager.requestWhenInUseAuthorization()   // the answer comes back below
+        case .denied, .restricted: PrayerProvider.shared.locationRefused()
+        default: manager.requestLocation()
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let l = locations.last else { return }
+        let c = l.coordinate, t = l.timestamp
+        MainActor.assumeIsolated { PrayerProvider.shared.located(c, at: t) }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+        let denied = (error as? CLError)?.code == .denied
+        MainActor.assumeIsolated { if denied { PrayerProvider.shared.locationRefused() } }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let s = manager.authorizationStatus
+        MainActor.assumeIsolated {
+            guard PrayerProvider.shared.useLocation, s != .notDetermined else { return }
+            PrayerProvider.shared.locator.locate()
+        }
     }
 }

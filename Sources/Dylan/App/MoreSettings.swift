@@ -12,12 +12,28 @@ struct PrayerSettings: View {
     var body: some View {
         FeatureToggles(features: [.prayer])
         Section {
-            LabeledContent(L("prayer.city")) {
-                TextField("", text: $cityInput, prompt: SwiftUI.Text(L("prayer.cityPrompt")))
-                    .frame(minWidth: 200).multilineTextAlignment(.trailing)
-                    .onSubmit { p.setCity(cityInput) }
+            Toggle(isOn: Binding(get: { p.useLocation }, set: { p.useCurrentLocation($0); if !$0 { cityInput = p.city } })) {
+                SwiftUI.Text(L("prayer.useLocation"))
+                SwiftUI.Text(L("prayer.useLocationHint")).font(.caption).foregroundStyle(.secondary)
             }
-            SwiftUI.Text(status).font(.caption).foregroundStyle(p.lookupFailed ? .orange : .secondary)
+            if p.useLocation {
+                LabeledContent(L("prayer.city"), value: p.city.isEmpty ? L("prayer.locating") : p.city)
+                if p.locationDenied {
+                    SwiftUI.Text(L("prayer.locationDenied")).font(.caption).foregroundStyle(.orange)
+                    Button(L("prayer.openLocationSettings")) {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices")!)
+                    }
+                } else if let at = p.locatedAt {
+                    SwiftUI.Text(L("prayer.locatedAt", PrayerProvider.clock(at))).font(.caption).foregroundStyle(.secondary)
+                }
+            } else {
+                LabeledContent(L("prayer.city")) {
+                    TextField("", text: $cityInput, prompt: SwiftUI.Text(L("prayer.cityPrompt")))
+                        .frame(minWidth: 200).multilineTextAlignment(.trailing)
+                        .onSubmit { p.setCity(cityInput) }
+                }
+                SwiftUI.Text(status).font(.caption).foregroundStyle(p.lookupFailed ? .orange : .secondary)
+            }
             Toggle(L("prayer.countdownToggle"), isOn: Binding(get: { p.countdown }, set: { p.countdown = $0 }))
             Toggle(L("prayer.hijriToggle"), isOn: Binding(get: { p.showHijri }, set: { p.showHijri = $0 }))
         }

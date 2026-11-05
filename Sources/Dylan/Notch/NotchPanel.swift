@@ -148,6 +148,7 @@ final class NotchController {
                 CalendarProvider.shared.reload()
                 RemindersProvider.shared.reload()
                 WeatherProvider.shared.refresh()
+                PrayerProvider.shared.wake()
                 AppModel.shared.tick()
             }
         }
