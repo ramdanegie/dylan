@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-05
 
 ### Added
 - Prayer times (Settings → Prayer times): the Kemenag schedule for your city, computed on your Mac. A countdown in the notch 30 minutes before each prayer, a Peek when it is time, a Prayer tab with the Hijri date, reminders 5–30 minutes before, and the adhan from an audio file you pick, with the music paused and resumed.
