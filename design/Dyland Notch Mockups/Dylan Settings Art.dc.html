@@ -39,7 +39,7 @@ a{color:#00838A}a:hover{color:#006A70}
           <div style="display:flex; flex-direction:column; gap:1px; padding-top:{{ g.pt }}px">
             <sc-if value="{{ g.label }}" hint-placeholder-val="{{ false }}"><div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:10px; letter-spacing:.14em; color:{{ th.ink3 }}; padding:4px 10px 5px">{{ g.label }}</div></sc-if>
             <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
-              <div onClick="{{ it.pick }}" style="height:32px; padding:0 10px; border-radius:9px; display:flex; align-items:center; gap:11px; cursor:pointer; background:{{ it.bg }}; box-shadow:{{ it.sh }}; font-size:13.5px; font-weight:{{ it.fw }}; white-space:nowrap; overflow:hidden">
+              <div onClick="{{ it.pick }}" style="height:30px; padding:0 10px; border-radius:9px; display:flex; align-items:center; gap:11px; cursor:pointer; background:{{ it.bg }}; box-shadow:{{ it.sh }}; font-size:13.5px; font-weight:{{ it.fw }}; white-space:nowrap; overflow:hidden">
                 <span style="width:15px; height:15px; border-radius:8px; background:{{ it.orb }}; box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08); flex:none"></span>{{ it.name }}
               </div>
             </sc-for>
@@ -210,7 +210,7 @@ class Component extends DCLogic {
         [['Two activities at once', 'Split the island when two things are running.', 'tg', true], ['Priority', '', 'val', 'Agents · Commands · Media']],
         [['Hide in fullscreen', 'Only important alerts break through.', 'tg', true]]]],
       media: ['Media & time', 'NOTCH', 'Media &', 'time', 'Now Playing, lyrics, calendar and timers.', [S, R], '♪ 1:23', [
-        [['Now Playing', 'Spotify, Apple Music, browsers.', 'tg', true], ['Synced lyrics', '', 'tg', true], ['Audio output switcher', '', 'tg', true], ['Volume per app', 'macOS 14.2 and later.', 'tg', false]],
+        [['Now Playing', 'Spotify, Apple Music, browsers.', 'tg', true], ['Synced lyrics', '', 'tg', true], ['Romanize & translate lyrics', 'Into Bahasa Indonesia.', 'tg', true], ['Audio output switcher', '', 'tg', true], ['Volume per app', 'macOS 14.2 and later.', 'tg', false]],
         [['Next meeting', 'Countdown and a Join button.', 'tg', true], ['Timer presets', '', 'val', '5 · 25 · 50 min']]]],
       discord: ['Discord', 'NOTCH', 'Discord', 'voice', 'Who is speaking, plus mute and deafen from the notch.', [L, K], '3 in voice', [
         [['Voice activity', '', 'tg', true], ['DMs & mentions', '', 'tg', true], ['Hide names in Presentation Mode', '', 'tg', true]],
@@ -248,6 +248,26 @@ class Component extends DCLogic {
       integ: ['Integrations', 'DEVELOPER', 'Connected', 'services', 'GitHub, Docker, script widgets and the dylan CLI.', [L, S], 'CI ✓', [
         [['GitHub', '', 'st', 'Connected · @egie'], ['Docker', '', 'tg', false], ['Script widgets', '', 'val', '2 scripts']],
         [['dylan CLI', '', 'st', 'Installed']]]],
+      prayer: ['Prayer times', 'NOTCH', 'Prayer', 'times', 'Kemenag schedule for your city, a countdown to the next prayer, and the adhan when it is time.', [T, G], 'Asar −18m', [
+        [['City', 'Used for the Kemenag schedule. No location access needed.', 'val', 'Jakarta Selatan'], ['Countdown in the island', '', 'tg', true], ['Hijri date', '', 'tg', true]],
+        [['Play adhan', '', 'sg', ['Off', 'Subuh only', 'All'], 2], ['Adhan voice', '', 'val', 'Makkah'], ['Pause music during adhan', 'Resumes when the adhan ends.', 'tg', true]],
+        [['Remind me before', '', 'val', '10 min'], ['Adjust times (ihtiyat)', '', 'val', '+2 min']]]],
+      buddy: ['Buddy', 'NOTCH', 'Your', 'buddy', 'A small companion that hangs from the island and keeps you company.', [S, B], 'Mochi', [
+        [['Show buddy', '', 'tg', true], ['Companion', '', 'sg', ['Cat', 'Dog', 'Owl'], 0], ['Name', '', 'val', 'Mochi']],
+        [['Chat with buddy', 'Uses your AI provider.', 'tg', true], ['Gentle nudges', 'Water, stretch, eye breaks.', 'tg', true], ['Hide in Presentation Mode', '', 'tg', true]]]],
+      anim: ['Animations', '', 'Motion,', 'one by one', 'Turn each animation on or off. Reduce Motion turns them all off.', [L, R], '✦', [
+        [['Glow line on notifications', '', 'tg', true], ['Timer line along the island', '', 'tg', true], ['Stacked notifications', '', 'tg', true]],
+        [['Karaoke lyrics', '', 'tg', true], ['Celebrate finished tasks', '', 'tg', true], ['Follow Reduce Motion', '', 'st', 'On']]]],
+      ai: ['AI & Translate', 'TOOLS', 'Ask,', 'translate', 'Chat from the island with your own API key. Keys stay in your Keychain.', [L, T], 'Ask…', [
+        [['Provider', '', 'sg', ['Claude', 'OpenAI', 'Gemini', 'Ollama'], 0], ['API key', 'Stored in Keychain.', 'lnk', 'Change…'], ['Model', '', 'val', 'Claude Sonnet']],
+        [['Search the web', 'Adds sources to answers.', 'tg', false], ['Create reminders & events', 'Always asks before adding.', 'tg', true]],
+        [['Open AI chat', '', 'key', '⌃⌥A'], ['Translate selection', '', 'key', '⌃⌥T'], ['Translate into', '', 'val', 'Bahasa Indonesia']]]],
+      health: ['Wellbeing', 'SYSTEM', 'Body', 'matters too', 'Water, movement, breathing and 20‑20‑20 eye breaks, only while you are actually at your Mac.', [G, T], '5/8', [
+        [['Water reminder', 'Every 60 min · 8 glasses a day.', 'tg', true], ['Movement break', 'After 50 min of sitting.', 'tg', true], ['Eye break 20‑20‑20', '', 'tg', true]],
+        [['Breathing', '', 'sg', ['4‑4', '4‑7‑8'], 0], ['Pause during meetings & Focus', '', 'tg', true], ['Let Buddy remind me', '', 'tg', true]]]],
+      weather: ['Weather', 'SYSTEM', 'Weather', 'at a glance', 'Now, hourly and the next 7 days for your city.', [K, S], '33°', [
+        [['City', '', 'val', 'Jakarta Selatan'], ['Show in the right ear', 'When nothing else is running.', 'tg', false]],
+        [['Rain alert', '20 minutes before it starts.', 'tg', true], ['Severe weather alerts', '', 'tg', true], ['Units', '', 'sg', ['°C', '°F'], 0]]]],
       features: ['Features', '', 'What Dylan', 'can do', 'Everything that works on this Mac today, and what is coming.', [T, S], '54', [
         [['Available', '', 'st', '54 features'], ['Coming next', '', 'val', '31'], ['Experimental', '', 'val', '2']],
         [['See all features', '', 'lnk', 'Open…']]]],
@@ -255,7 +275,7 @@ class Component extends DCLogic {
         [['Version', '', 'val', '1.1.0 (412)'], ['Check for updates', '', 'lnk', 'Check now']],
         [['Privacy', 'Nothing leaves your Mac unless you connect a service.', 'lnk', 'Read…']]]]
     };
-    const SIDE = [['', ['general', 'appearance']], ['NOTCH', ['live', 'media', 'discord']], ['SYSTEM', ['devices', 'temp', 'storage', 'face']], ['TOOLS', ['util', 'clip', 'shot']], ['DEVELOPER', ['agents', 'term', 'integ']], ['', ['features', 'about']]];
+    const SIDE = [['', ['general', 'appearance', 'anim']], ['NOTCH', ['live', 'media', 'prayer', 'discord', 'buddy']], ['SYSTEM', ['devices', 'temp', 'weather', 'health', 'storage', 'face']], ['TOOLS', ['util', 'clip', 'shot', 'ai']], ['DEVELOPER', ['agents', 'term', 'integ']], ['', ['features', 'about']]];
     const th = dark ? {
       content: '#191B1E', side: '#1E2024', line: 'rgba(255,255,255,.07)', ink: '#F2F1EE', ink2: '#9C9EA3', ink3: '#76787D', card: '#222529', cardSh: 'rgba(0,0,0,.2)', ctrl: '#2E3135',
       bTop: '#1F2226', bLow: '#16181B', horizon: 'rgba(255,255,255,.07)', ring: 'rgba(255,255,255,.05)', orb: .45, accent: '#23A7A8', accentSoft: 'rgba(35,167,168,.2)',
@@ -279,7 +299,7 @@ class Component extends DCLogic {
       if (t === 'sg') { const cur = key in ov ? ov[key] : sel; row.opts = v.map((label, i) => ({ label, bg: i === cur ? th.segSel : 'transparent', sh: i === cur ? th.segSh : 'none', fg: i === cur ? th.ink : th.ink2, fw: i === cur ? 600 : 400, pick: () => this.setState(st => ({ ov: { ...st.ov, [key]: i } })) })); }
       return row;
     }));
-    const X = { general: [28, 74], appearance: [70, 26], live: [24, 78], media: [76, 30], discord: [30, 72], devices: [26, 76], temp: [72, 24], storage: [30, 70], face: [74, 28], util: [26, 72], clip: [70, 30], shot: [28, 74], agents: [72, 26], term: [26, 76], integ: [74, 30], features: [28, 72], about: [30, 70] }[s.page];
+    const X = { general: [28, 74], appearance: [70, 26], live: [24, 78], media: [76, 30], discord: [30, 72], devices: [26, 76], temp: [72, 24], storage: [30, 70], face: [74, 28], util: [26, 72], clip: [70, 30], shot: [28, 74], agents: [72, 26], term: [26, 76], integ: [74, 30], features: [28, 72], about: [30, 70], prayer: [30, 72], buddy: [70, 28], anim: [26, 74], ai: [72, 28], health: [28, 72], weather: [70, 30] }[s.page];
     return {
       th, side, grain: this.props.grain ?? true, noise: s.noise || 'none',
       pg: { n: p[0], eyebrow: 'DYLAN · SETTINGS' + (p[1] ? ' · ' + p[1] : ''), a: p[2], i: p[3], d: p[4], c1: p[5][0], c2: p[5][1], x1: X[0], x2: X[1], isl: p[6], groups },

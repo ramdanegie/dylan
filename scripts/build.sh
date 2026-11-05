@@ -37,12 +37,11 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp -R Sources/Dylan/Resources/*.lproj "$APP/Contents/Resources/"
 cp CHANGELOG.md CHANGELOG.id.md "$APP/Contents/Resources/"   # What's New after an update
 
-ICONSET="design/Dyland Notch Mockups/icon/Dylan.iconset"
-# Rebuilt whenever an iconset file is newer than the .icns, so a new icon never stays stale.
-if [[ -d "$ICONSET" ]] && { [[ ! -f Resources/Dylan.icns ]] || [[ -n "$(find "$ICONSET" -newer Resources/Dylan.icns -print -quit)" ]]; }; then
-  TMP="$(mktemp -d)/Dylan.iconset"; mkdir -p "$TMP"
-  for f in "$ICONSET"/*.png; do n="$(basename "$f")"; cp "$f" "$TMP/${n/-2x/@2x}"; done
-  iconutil -c icns "$TMP" -o Resources/Dylan.icns
+# The app icon (design 4c) lives in the repo. The design folder is synced from the design tool and may hold
+# other exports, so it is never read here; copy a new icon into Resources/AppIcon.iconset on purpose.
+ICONSET="Resources/AppIcon.iconset"
+if [[ ! -f Resources/Dylan.icns ]] || [[ -n "$(find "$ICONSET" -newer Resources/Dylan.icns -print -quit)" ]]; then
+  iconutil -c icns "$ICONSET" -o Resources/Dylan.icns
 fi
 [[ -f Resources/Dylan.icns ]] && cp Resources/Dylan.icns "$APP/Contents/Resources/Dylan.icns"
 

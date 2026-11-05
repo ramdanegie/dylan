@@ -24,8 +24,12 @@ public struct NotchGeometry: Equatable, Sendable {
     public let hasNotch: Bool
     /// Physical notch size (or the pill size when there is no notch).
     public let notch: CGSize
-    /// Horizontal centre of the notch in screen coordinates.
-    public let centerX: CGFloat
+    /// Horizontal centre of the notch in screen coordinates (screens without a notch: moved by the user, FR-113).
+    public var centerX: CGFloat
+    /// Gap between the pill and the top edge on screens without a notch (floating island: 0–12 pt).
+    public var pillGap: CGFloat = NotchGeometry.pillTop
+    /// Extra pill width for the floating island.
+    public var pillExtraWidth: CGFloat = 0
     /// Ear width per side; "small" Compact uses 72 pt (FR-78).
     public var ear: CGFloat = NotchGeometry.ear
 
@@ -49,9 +53,9 @@ public struct NotchGeometry: Equatable, Sendable {
     public func size(for state: NotchState, wide: Bool = false, expandedHeight: CGFloat? = nil) -> CGSize {
         switch state {
         case .closed:
-            return notch
+            return hasNotch ? notch : CGSize(width: notch.width + pillExtraWidth, height: notch.height)
         case .compact:
-            return CGSize(width: notch.width + 2 * ear, height: notch.height)
+            return CGSize(width: notch.width + 2 * ear + (hasNotch ? 0 : pillExtraWidth), height: notch.height)
         case .peek:
             let w = min(max(Self.peekWidth, notch.width + 2 * 80), Self.peekMaxWidth)
             return CGSize(width: w, height: notch.height + Self.peekExtra)
@@ -78,14 +82,14 @@ public struct NotchGeometry: Equatable, Sendable {
     /// The fixed panel frame: large enough for the biggest state, top edge on the screen edge.
     public var panelFrame: CGRect {
         let w = Self.expandedMax.width + 2 * Self.panelMargin
-        let h = Self.expandedMax.height + Self.panelMargin + (hasNotch ? 0 : Self.pillTop)
+        let h = Self.expandedMax.height + Self.panelMargin + (hasNotch ? 0 : max(pillGap, Self.pillTop))
         return CGRect(x: (centerX - w / 2).rounded(), y: screen.maxY - h, width: w, height: h)
     }
 
     /// Frame of the visible shape for a state, in screen coordinates (used for hit-testing).
     public func shapeFrame(for state: NotchState, wide: Bool = false, expandedHeight: CGFloat? = nil) -> CGRect {
         let s = size(for: state, wide: wide, expandedHeight: expandedHeight)
-        let top = screen.maxY - (hasNotch ? 0 : Self.pillTop)
+        let top = screen.maxY - (hasNotch ? 0 : pillGap)
         return CGRect(x: centerX - s.width / 2, y: top - s.height, width: s.width, height: s.height)
     }
 }

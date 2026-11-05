@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import DylanCore
 import SwiftUI
+import Translation
 
 /// Expanded panel with icon tabs around the notch (design "Tab bar Expanded"), D8, D9, D18, D23.
 struct ExpandedView: View {
@@ -14,9 +15,12 @@ struct ExpandedView: View {
         VStack(spacing: 0) {
             tabBar.frame(height: max(notchHeight, 30))
             Group {
+                if model.dropping { DropZonesView() } else {
                 switch model.selectedTab {
                 case .home: HomeTab()
                 case .media: MediaTab()
+                case .prayer: PrayerTab()
+                case .notifications: NotificationsTab()
                 case .clipboard: ClipboardTab()
                 case .shelf: ShelfTab()
                 case .discord: DiscordTab()
@@ -25,6 +29,7 @@ struct ExpandedView: View {
                 case .dev: DevTab()
                 case .terminal: TerminalTab()
                 case .agents: AgentsTab()
+                }
                 }
             }
             .padding(.horizontal, 18)
@@ -38,15 +43,22 @@ struct ExpandedView: View {
         let tabs = model.tabs
         // Design: Home · Media (· Discord · Shelf) left of the notch, Clipboard (· Stats) · Agents (· Dev) right.
         // Terminal goes left: the right side has no room for a fifth tab and its label.
-        let leftTabs: [Tab] = [.home, .media, .discord, .shelf, .terminal]
+        let leftTabs: [Tab] = [.home, .media, .prayer, .discord, .shelf, .terminal]
         let left = tabs.filter { leftTabs.contains($0) }
         let right = tabs.filter { !leftTabs.contains($0) }
+        // The active tab shows its name only when that still fits beside the notch (many tabs in Developer Mode).
+        let side = (([.media, .clipboard, .dev].contains(model.selectedTab) ? 720 : 640) - notchWidth) / 2 - 16
+        func fits(_ list: [Tab], extra: CGFloat) -> Bool {
+            guard list.contains(model.selectedTab) else { return true }
+            return CGFloat(list.count - 1) * 30 + CGFloat(model.selectedTab.title.count) * 7.2 + 40 + extra <= side
+        }
+        let leftTitle = fits(left, extra: 0), rightTitle = fits(right, extra: 30 + 20)
         return HStack(spacing: 0) {
-            HStack(spacing: 4) { ForEach(left) { tabButton($0) } }
+            HStack(spacing: 4) { ForEach(left) { tabButton($0, title: leftTitle) } }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 16)
             Color.clear.frame(width: notchWidth)
             HStack(spacing: 4) {
-                ForEach(right) { tabButton($0) }
+                ForEach(right) { tabButton($0, title: rightTitle) }
                 Button { SettingsWindow.show() } label: {
                     Image(systemName: "gearshape").font(.system(size: 12)).foregroundStyle(DY.fg2).frame(width: 26, height: 22)
                 }
@@ -57,17 +69,17 @@ struct ExpandedView: View {
         }
     }
 
-    private func tabButton(_ t: Tab) -> some View {
-        let active = model.selectedTab == t
+    private func tabButton(_ t: Tab, title: Bool) -> some View {
+        let active = model.selectedTab == t, named = active && title
         return Button {
             withAnimation(DY.spring) { model.selectedTab = t }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: t.symbol).font(.system(size: 11, weight: .semibold))
-                if active { SwiftUI.Text(t.title).font(DY.font(12, .semibold)).lineLimit(1).fixedSize() }
+                if named { SwiftUI.Text(t.title).font(DY.font(12, .semibold)).lineLimit(1).fixedSize() }
             }
             .foregroundStyle(active ? .white : DY.fg2)
-            .padding(.horizontal, active ? 10 : 0)
+            .padding(.horizontal, named ? 10 : 0)
             .frame(minWidth: 26, minHeight: 22)
             .background {
                 if active { Capsule().fill(Color.white.opacity(0.14)).matchedGeometryEffect(id: "tab.pill", in: tabNS) }
@@ -90,6 +102,7 @@ struct HomeTab: View {
             if model.mirrorOn { MirrorView().frame(maxHeight: .infinity) }
             else if model.scratchpadOpen, !model.presentationMode { ScratchpadView().frame(maxHeight: .infinity) }
             else { columns }
+            if !Prefs.shared.modules.isEmpty, !model.mirrorOn, !model.scratchpadOpen { ModulesRow() }
             if model.features.isEnabled(.reminders) { QuickAddField() }
             if model.isDeveloper { RunningChips() }
             HStack(spacing: 6) {
@@ -110,7 +123,7 @@ struct HomeTab: View {
                     WeatherMini()
                     TimerCard()
                 }
-                .frame(width: 150)
+                .frame(width: 168)
             }
             .frame(maxHeight: .infinity, alignment: .top)
     }
@@ -214,7 +227,8 @@ struct AgendaCard: View {
             } else {
                 SwiftUI.Text(L("home.noMeetings")).font(DY.font(12, .regular)).foregroundStyle(DY.fg2)
             }
-            if model.features.isEnabled(.reminders) { RemindersList() }
+            // The Tasks module shows the same list; not twice.
+            if model.features.isEnabled(.reminders), !Prefs.shared.modules.contains(.tasks) { RemindersList() }
         }
     }
 
@@ -313,50 +327,6 @@ struct QuickAddField: View {
     }
 }
 
-struct TimerCard: View {
-    @StateBox private var input = ""
-    private var model: AppModel { AppModel.shared }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            if let t = model.timer {
-                TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                    ZStack {
-                        TimerRing(progress: t.progress(now: ctx.date), size: 84)
-                        VStack(spacing: 0) {
-                            ValueText(text: DurationFormat.running(t.remaining(now: ctx.date))).font(.system(size: 18, weight: .semibold))
-                            SwiftUI.Text(t.phase == .timer ? L("timer.timer") : (t.phase == .focus ? L("timer.focus") : L("timer.break")))
-                                .font(DY.font(10.5, .regular)).foregroundStyle(DY.fg2)
-                        }
-                    }
-                }
-                if t.phase != .timer {
-                    SwiftUI.Text(L("timer.cycle", t.focusCount + (t.phase == .focus ? 1 : 0))).font(DY.font(10.5, .regular)).foregroundStyle(DY.fg2)
-                }
-                HStack(spacing: 6) {
-                    NotchButton(title: t.isPaused ? L("button.resume") : L("button.pause")) { model.toggleTimerPause() }
-                    NotchButton(title: L("button.reset"), kind: .quiet) { model.stopTimer() }
-                }
-            } else {
-                SwiftUI.Text(L("timer.title")).font(DY.font(11, .semibold)).foregroundStyle(DY.fg2).frame(maxWidth: .infinity, alignment: .leading)
-                HStack(spacing: 6) {
-                    ForEach([5, 10, 25], id: \.self) { m in
-                        NotchButton(title: "\(m)m") { model.startTimer(.quick(TimeInterval(m * 60), now: Date())) }
-                    }
-                }
-                NotchButton(title: L("timer.pomodoro"), kind: .primaryNeutral) { model.startTimer(.pomodoro(now: Date())) }
-                TextField(L("timer.custom"), text: $input)
-                    .textFieldStyle(.plain).font(DY.font(12, .regular)).foregroundStyle(.white)
-                    .padding(.horizontal, 10).frame(height: 24)
-                    .background(Capsule().fill(DY.control))
-                    .onSubmit {
-                        if let d = DurationParser.parse(input) { model.startTimer(.quick(d, now: Date())); input = "" }
-                    }
-            }
-        }
-    }
-}
-
 struct RunningChips: View {
     private var model: AppModel { AppModel.shared }
     var body: some View {
@@ -394,6 +364,10 @@ struct UtilityButtons: View {
             if model.features.isEnabled(.scratchpad) {
                 NotchButton(title: model.scratchpadOpen ? L("button.done") : L("scratchpad.button")) { model.scratchpadOpen.toggle() }
             }
+            Button { SettingsWindow.show(section: .utilities) } label: {
+                Image(systemName: "square.grid.2x2").font(.system(size: 11)).foregroundStyle(DY.fg2).frame(width: 22, height: 22)
+            }
+            .buttonStyle(PressScale()).help(L("module.edit")).accessibilityLabel(L("module.edit"))
             if model.features.isEnabled(.keepAwake) {
                 if let k = model.keepAwake {
                     TimelineView(.periodic(from: .now, by: 30)) { ctx in
@@ -522,18 +496,39 @@ struct MediaTab: View {
     }
 }
 
-/// Three lyric lines, active one in the middle (design D23/M10). Hidden when nothing was found.
+/// Lyric lines, active one in the middle (design D23/M10), with karaoke, romanization and translation (D53).
+/// Hidden when nothing was found.
 struct LyricsBlock: View {
     var lyrics: Lyrics
     var media: MediaState
     private var model: AppModel { AppModel.shared }
+    private var lp: LyricsProvider { LyricsProvider.shared }
+    private var prefs: Prefs { Prefs.shared }
+    @StateBox private var translation: TranslationSession.Configuration?
+
     var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            lines
+            chips
+        }
+        .translationTask(translation) { session in
+            await Self.translate(session, lyrics: lyrics)
+        }
+        .onAppear { requestTranslation() }
+        .onChange(of: prefs.translate) { requestTranslation() }
+        .onChange(of: lyrics) { requestTranslation() }
+    }
+
+    private var lines: some View {
         TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
-            let i = lyrics.index(at: media.livePosition(ctx.date))
+            let pos = media.livePosition(ctx.date)
+            let i = lyrics.index(at: pos)
             VStack(alignment: .leading, spacing: 3) {
                 if lyrics.synced {
                     line(i.flatMap { $0 > 0 ? lyrics.lines[$0 - 1].text : nil }, active: false)
-                    line(i.map { lyrics.lines[$0].text } ?? "♪", active: true)
+                    if let i { activeLine(lyrics.lines[i], pos) } else { line("♪", active: true) }
+                    if prefs.romanize, let i, let r = lp.romanized[i] { extra(r) }
+                    if prefs.translate, let i, let t = lp.translated[i] { extra(t, italic: true) }
                     line(lyrics.lines[safe: (i ?? -1) + 1]?.text, active: false)
                 } else {
                     ForEach(Array(lyrics.lines.prefix(3).enumerated()), id: \.offset) { _, l in line(l.text, active: false) }
@@ -543,11 +538,74 @@ struct LyricsBlock: View {
         }
         .accessibilityElement(children: .combine)
     }
+
+    /// Karaoke: words light up one by one when the source has word times; otherwise the whole line at once.
+    @ViewBuilder private func activeLine(_ l: Lyrics.Line, _ pos: TimeInterval) -> some View {
+        if prefs.karaoke, Prefs.motionAllowed, let words = l.words {
+            let lit = Lyrics.litWords(l, at: pos)
+            words.enumerated().reduce(SwiftUI.Text("")) { acc, w in
+                acc + SwiftUI.Text(w.element.text)
+                    .foregroundColor(w.offset < lit ? model.mediaAccent : Color.white.opacity(0.45))
+            }
+            .font(DY.font(13.5, .semibold)).lineLimit(1)
+        } else {
+            line(l.text, active: true)
+        }
+    }
+
     private func line(_ s: String?, active: Bool) -> some View {
         SwiftUI.Text(s ?? " ").font(active ? DY.font(13.5, .semibold) : DY.font(11.5, .regular))
             .foregroundStyle(active ? model.mediaAccent : Color.white.opacity(0.4)).lineLimit(1)
     }
+
+    private func extra(_ s: String, italic: Bool = false) -> some View {
+        SwiftUI.Text(s).font(DY.font(11, .regular)).italic(italic).foregroundStyle(DY.fg2).lineLimit(1)
+    }
+
+    private var chips: some View {
+        HStack(spacing: 4) {
+            if lyrics.lines.contains(where: { $0.words != nil }) { chip(L("lyrics.karaoke"), prefs.karaoke) { prefs.karaoke.toggle() } }
+            if !lp.romanized.isEmpty { chip(L("lyrics.romanize"), prefs.romanize) { prefs.romanize.toggle() } }
+            chip(L("lyrics.translate"), prefs.translate) { prefs.translate.toggle() }
+        }
+    }
+
+    private func chip(_ t: String, _ on: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SwiftUI.Text(t).font(DY.font(9.5, .semibold)).foregroundStyle(on ? .black : DY.fg2)
+                .padding(.horizontal, 7).frame(height: 16)
+                .background(Capsule().fill(on ? Color.white : Color.white.opacity(0.1)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(on ? L("a11y.on") : L("a11y.off"))
+    }
+
+    /// Apple Translation, on the Mac once the language is downloaded; results are kept per song.
+    private func requestTranslation() {
+        guard prefs.translate, lp.translated.isEmpty, lyrics.lines.count > 0 else { return }
+        let target = Locale.Language(identifier: L10n.language)
+        if translation == nil { translation = .init(source: nil, target: target) } else { translation?.invalidate() }
+    }
+
+    private static func translate(_ session: TranslationSession, lyrics: Lyrics) async {
+        guard let key = LyricsProvider.shared.songKey else { return }
+        let lines = lyrics.lines.prefix(150).enumerated().filter { !$0.element.text.trimmingCharacters(in: .whitespaces).isEmpty }
+            .map { ($0.offset, $0.element.text) }
+        let out = await Self.run(SessionBox(session: session), lines)
+        LyricsProvider.shared.storeTranslations(out.filter { lyrics.lines[$0.key].text != $0.value }, for: key)
+    }
+
+    /// The session is only used here, for this one batch (it is not Sendable, hence the box).
+    private nonisolated static func run(_ box: SessionBox, _ lines: [(Int, String)]) async -> [Int: String] {
+        let requests = lines.map { TranslationSession.Request(sourceText: $0.1, clientIdentifier: String($0.0)) }
+        guard let responses = try? await box.session.translations(from: requests) else { return [:] }
+        var out: [Int: String] = [:]
+        for r in responses { if let id = r.clientIdentifier.flatMap(Int.init) { out[id] = r.targetText } }
+        return out
+    }
 }
+
+private nonisolated struct SessionBox: @unchecked Sendable { let session: TranslationSession }
 
 extension Array {
     subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }

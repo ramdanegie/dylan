@@ -19,7 +19,7 @@ struct NotchRootView: View {
         return m.center.slots(fullscreen: m.fullscreen).isEmpty && !dotsVisible(m) ? .closed : .compact
     }
 
-    static func dotsVisible(_ m: AppModel) -> Bool { m.cameraOn || m.micOn || m.presentationMode }
+    static func dotsVisible(_ m: AppModel) -> Bool { m.cameraOn || m.micOn || m.presentationMode || QuickToggles.shared.micMuted }
 
     /// Closed but with a privacy dot / presentation indicator: tiny ears only.
     static func dotsOnly(_ m: AppModel) -> Bool {
@@ -27,9 +27,12 @@ struct NotchRootView: View {
     }
 
     static func expandedHeight(_ m: AppModel) -> CGFloat {
+        if m.dropping { return 236 }
         switch m.selectedTab {
-        case .home: return m.isDeveloper && !m.agents.active.isEmpty ? 330 : 300
-        case .media: return 300
+        case .home: return (m.isDeveloper && !m.agents.active.isEmpty ? 330 : 300) + (Prefs.shared.modules.isEmpty ? 0 : 82)
+        case .media: return LyricsProvider.shared.lyrics == nil ? 300 : 336
+        case .prayer: return 268
+        case .notifications: return 330
         case .clipboard: return 380
         case .shelf: return 236
         case .discord: return 300
@@ -49,8 +52,8 @@ struct NotchRootView: View {
 
     static func islandFrame(_ m: AppModel, _ g: NotchGeometry) -> CGRect {
         let s = islandSize(m, g)
-        let top = g.screen.maxY - (g.hasNotch ? 0 : NotchGeometry.pillTop)
-        return CGRect(x: g.centerX - s.width / 2, y: top - s.height, width: s.width, height: s.height)
+        let top = g.screen.maxY - (g.hasNotch ? 0 : g.pillGap)
+        return CGRect(x: g.centerX - s.width / 2 + NotchController.shared.layout.dodge, y: top - s.height, width: s.width, height: s.height)
     }
 
     // MARK: Body
@@ -64,13 +67,19 @@ struct NotchRootView: View {
 
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
-                island(radius: radius, hasNotch: g.hasNotch)
+                if state == .peek, Prefs.shared.stacked, let n = stackedCount(), n > 0 {
+                    StackLayer(count: n, width: size.width).offset(y: size.height - 10).transition(.opacity)
+                }
+                island(radius: radius, hasNotch: g.hasNotch, state: state)
                     .frame(width: size.width + (g.hasNotch ? 2 * DY.shoulder : 0), height: size.height)
                     .overlay(PulseRing(token: model.pulse, radius: radius, hasNotch: g.hasNotch))
+                    .overlay(GlowRing(token: model.glowToken, color: model.glowColor, radius: radius, hasNotch: g.hasNotch))
+                    .overlay { if state == .compact, Prefs.shared.timeLine, Prefs.motionAllowed { TimeLine(radius: radius) } }
                     .matchedGeometryEffect(id: "island", in: ns)
                 content(state: state, g: g)
                     .frame(width: size.width, height: size.height, alignment: .top)
                     .clipShape(Rectangle())
+                Confetti(token: model.celebrateToken).offset(y: size.height)
             }
             .contentShape(shape(radius: radius, hasNotch: g.hasNotch))
             .onTapGesture { if state != .expanded { withAnimation(anim) { model.notchState = .expanded } } }
@@ -80,22 +89,46 @@ struct NotchRootView: View {
                 ShelfDrop.accept(providers); return true
             }
             .accessibilityElement(children: .contain)
-            .padding(.top, g.hasNotch ? 0 : NotchGeometry.pillTop)
+            .gesture(PillDrag.gesture(enabled: !g.hasNotch && state != .expanded))
+            .offset(x: layout.dodge)
+            .padding(.top, g.hasNotch ? 0 : g.pillGap)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(anim, value: state)
         .animation(anim, value: size)
+        .animation(anim, value: layout.dodge)
         .environment(\.locale, L10n.locale)
     }
 
-    /// Black always on a real notch; the pill may use Liquid Glass on macOS 26+ (FR-78, design D15).
-    @ViewBuilder private func island(radius: CGFloat, hasNotch: Bool) -> some View {
-        if !hasNotch, model.glassPill, #available(macOS 26, *) {
-            Color.clear.glassEffect(.regular.tint(.black.opacity(0.35)), in: PillShape(radius: radius))
-        } else {
-            shape(radius: radius, hasNotch: hasNotch).fill(DY.shape)
+    /// Island styles (FR-112, D59). Over a real notch the closed and compact island stays black (it covers the
+    /// camera housing); the style applies to Peek and Expanded there, and everywhere on screens without a notch.
+    @ViewBuilder private func island(radius: CGFloat, hasNotch: Bool, state: NotchState) -> some View {
+        let shape = shape(radius: radius, hasNotch: hasNotch)
+        let style = hasNotch && (state == .closed || state == .compact) ? .black : Prefs.shared.style
+        switch style {
+        case .black, .floating:
+            shape.fill(DY.shape)
+        case .color:
+            shape.fill(Color(nsColor: NSColor(hex: Prefs.shared.styleColor) ?? .black))
+                .overlay(shape.fill(Color.black.opacity(0.25)))
+        case .glass, .frosted:
+            if #available(macOS 26, *) {
+                Color.clear.glassEffect(.regular.tint(.black.opacity(style == .glass ? 0.35 : 0.6)), in: shape)
+            } else {
+                ZStack {
+                    VisualEffect(material: style == .glass ? .hudWindow : .fullScreenUI).clipShape(shape)
+                    shape.fill(Color.black.opacity(style == .glass ? 0.45 : 0.62))
+                }
+            }
         }
+    }
+
+    /// How many more notifications wait behind the one in Peek (D54).
+    private func stackedCount() -> Int? {
+        let notes = model.center.ordered.filter { $0.kind == .notify }
+        guard let first = model.center.slots(fullscreen: model.fullscreen).first, first.kind == .notify else { return nil }
+        return (Int(first.value) ?? 1) - 1 + notes.count - 1
     }
 
     private func shape(radius: CGFloat, hasNotch: Bool) -> AnyShape {
@@ -110,7 +143,7 @@ struct NotchRootView: View {
             Color.clear
         case .compact:
             if let h = model.hud {
-                HUDEars(symbol: h.symbol, value: h.value, notchWidth: g.notch.width, height: g.notch.height).transition(.dyContent)
+                HUDEars(symbol: h.symbol, value: h.value, text: h.text, notchWidth: g.notch.width, height: g.notch.height).transition(.dyContent)
             } else {
                 CompactEars(slots: slots, notchWidth: g.notch.width, height: g.notch.height, dotsOnly: Self.dotsOnly(model))
                     .transition(.dyContent)
@@ -130,19 +163,27 @@ struct NotchRootView: View {
 struct HUDEars: View {
     var symbol: String
     var value: Double
+    /// On/off HUDs (mic, airplane mode, D60) say what happened instead of showing a bar.
+    var text: String?
     var notchWidth: CGFloat
     var height: CGFloat
     var body: some View {
         HStack(spacing: 0) {
-            Image(systemName: symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+            Image(systemName: symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(symbol == "mic.slash.fill" ? DY.fail : .white)
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 14)
             Color.clear.frame(width: notchWidth)
-            ProgressBar(progress: (value * 16).rounded() / 16, color: .white).frame(width: 64, height: 4)
-                .animation(.easeOut(duration: 0.12), value: value)
-                .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 14)
+            Group {
+                if let text {
+                    SwiftUI.Text(text).font(DY.font(12)).foregroundStyle(DY.fg).lineLimit(1)
+                } else {
+                    ProgressBar(progress: (value * 16).rounded() / 16, color: .white).frame(width: 64, height: 4)
+                        .animation(.easeOut(duration: 0.12), value: value)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 14)
         }
         .frame(height: height)
-        .accessibilityElement().accessibilityLabel(L("hud.volume", Int(value * 100)))
+        .accessibilityElement().accessibilityLabel(text ?? L("hud.volume", Int(value * 100)))
     }
 }
 
@@ -212,6 +253,8 @@ struct RightEar: View {
             Equalizer(playing: model.media?.isPlaying ?? false, color: model.mediaAccent)
         case .discord where activity.id == "discord-voice":
             DiscordAvatars(size: 18)
+        case .timer where activity.id == "stopwatch":
+            Elapsed(since: activity.startedAt)
         case .timer:
             HStack(spacing: 5) {
                 TimerRing(progress: activity.progress ?? 0, size: 14)
@@ -274,7 +317,8 @@ struct EarSummary: View {
     @ViewBuilder private var value: some View {
         switch activity.kind {
         case .agent where activity.state == .running, .command where activity.state == .running,
-             .script where activity.state == .running && activity.progress == nil, .capture where activity.id == "recording":
+             .script where activity.state == .running && activity.progress == nil, .capture where activity.id == "recording",
+             .timer where activity.id == "stopwatch":
             Elapsed(since: activity.startedAt)
         case .media:
             EmptyView()
@@ -317,6 +361,10 @@ struct StatusDots: View {
             }
             if model.cameraOn { Circle().fill(DY.camDot).frame(width: 7, height: 7).accessibilityLabel(L("privacy.camera")) }
             if model.micOn { Circle().fill(DY.micDot).frame(width: 7, height: 7).accessibilityLabel(L("privacy.mic")) }
+            if QuickToggles.shared.micMuted {
+                Image(systemName: "mic.slash.fill").font(.system(size: 9, weight: .bold)).foregroundStyle(DY.fail)
+                    .accessibilityLabel(L("quick.micOff"))
+            }
         }
     }
 }

@@ -6,12 +6,14 @@ import Observation
 import SwiftUI
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home, media, discord, shelf, clipboard, stats, thermal, agents, dev, terminal
+    case home, media, prayer, notifications, discord, shelf, clipboard, stats, thermal, agents, dev, terminal
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .home: return "house"
         case .media: return "music.note"
+        case .prayer: return "moon.stars"
+        case .notifications: return "bell"
         case .clipboard: return "doc.on.clipboard"
         case .shelf: return "tray.and.arrow.down"
         case .discord: return "headphones"
@@ -108,6 +110,10 @@ enum NotchAction: Equatable {
     case openStorage
     /// Stop on the screen recording (FR-94).
     case stopRecording
+    /// "Stop adhan" on the prayer-time Peek (D51).
+    case stopAdhan
+    /// "Skip" on a Pomodoro break, "Start focus" when the next focus waits (D58).
+    case skipBreak, startFocus, startBreak
 }
 
 @Observable
@@ -193,9 +199,17 @@ final class AppModel {
     var keepAwake: KeepAwake?
     var mirrorOn = false
     /// Overlay HUD (design D29): replaces the ear contents for 1.5 s, does not take a Duo slot.
-    var hud: (symbol: String, value: Double, until: Date)?
+    var hud: (symbol: String, value: Double, text: String?, until: Date)?
+    /// Stopwatch with laps (D58); runs on the wall clock.
+    var stopwatch: Stopwatch?
+    /// Bumped to run the notification glow (D54) in `glowColor`.
+    var glowToken = 0
+    var glowColor: Color = DY.fg
+    /// Bumped for the "all tasks done" confetti (D54).
+    var celebrateToken = 0
+    /// A file is being dragged near the island: Expanded shows the drop zones (D56).
+    var dropping = false
     var accentFromArtwork: Bool { didSet { defaults.set(accentFromArtwork, forKey: "accentFromArtwork"); mediaAccent = accentFromArtwork ? DY.accent(media?.artwork) : DY.fg } }
-    var glassPill: Bool { didSet { defaults.set(glassPill, forKey: "glassPill") } }
     var smallCompact: Bool { didSet { defaults.set(smallCompact, forKey: "smallCompact") } }
     /// Bundle IDs that hide the notch while in front (games, Keynote…).
     var hideForApps: [String] { didSet { defaults.set(hideForApps, forKey: "hideForApps") } }
@@ -238,7 +252,6 @@ final class AppModel {
         discordDeafKey = d.string(forKey: "discordDeafKey") ?? "⌃⇧D"
         recentRepos = d.stringArray(forKey: "recentRepos") ?? []
         accentFromArtwork = d.object(forKey: "accentFromArtwork") as? Bool ?? true
-        glassPill = d.bool(forKey: "glassPill")
         smallCompact = d.bool(forKey: "smallCompact")
         hideForApps = d.stringArray(forKey: "hideForApps") ?? []
         notificationApps = d.stringArray(forKey: "notificationApps") ?? NotificationRules.defaultApps
@@ -257,6 +270,8 @@ final class AppModel {
 
     var tabs: [Tab] {
         var t: [Tab] = [.home, .media]
+        if features.isEnabled(.prayer) { t.append(.prayer) }
+        if features.isEnabled(.notifications) { t.append(.notifications) }
         // Discord tab only appears when connected (design D26), or to finish setting up.
         if features.isEnabled(.discord) && (DiscordProvider.shared.connected || !discordClientID.isEmpty) { t.append(.discord) }
         if features.isEnabled(.shelf) { t.append(.shelf) }
@@ -322,8 +337,24 @@ final class AppModel {
 
     func clipboardChanged() { clipboardRevision &+= 1 }
 
-    func showHUD(symbol: String, value: Double) {
-        hud = (symbol, min(1, max(0, value)), Date().addingTimeInterval(1.5))
+    /// The glow line takes the colour of the app's icon (D54).
+    func glow(app: String) {
+        let icon = NotificationLog.bundleID(app).flatMap { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) }
+            .map { NSWorkspace.shared.icon(forFile: $0.path) }
+        glowColor = DY.accent(icon)
+        glowToken += 1
+    }
+
+    /// Every reminder of the day is ticked: confetti, once per day (D54).
+    func celebrateIfDone() {
+        let day = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+        guard RemindersProvider.shared.items.isEmpty, defaults.double(forKey: "celebratedDay") != day else { return }
+        defaults.set(day, forKey: "celebratedDay")
+        celebrateToken += 1
+    }
+
+    func showHUD(symbol: String, value: Double, text: String? = nil) {
+        hud = (symbol, min(1, max(0, value)), text, Date().addingTimeInterval(1.5))
         let t = Timer(timeInterval: 1.6, repeats: false) { _ in
             MainActor.assumeIsolated { if let h = AppModel.shared.hud, h.until <= Date() { AppModel.shared.hud = nil } }
         }
@@ -739,6 +770,10 @@ final class AppModel {
         case .showUpdate: UpdateWindow.show()
         case .openStorage: StorageWindow.show()
         case .stopRecording: ScreenRecorder.shared.stop()
+        case .stopAdhan: PrayerProvider.shared.stopAdhan(); center.remove("prayer-now", now: Date(), toHistory: true)
+        case .skipBreak: skipBreak()
+        case .startFocus: if timer?.isPaused == true { toggleTimerPause() }; removeIfPresent("timer-focus-wait", now: Date())
+        case .startBreak: if timer?.isPaused == true { toggleTimerPause() }; removeIfPresent("timer-break-wait", now: Date())
         case .openDiscord(let u): if u.scheme == "discord" { NSWorkspace.shared.open(u) }
         }
     }
@@ -773,6 +808,14 @@ final class AppModel {
                     (L("shot.pin"), .quiet, .capture("pin", path)), (L("shot.text"), .quiet, .capture("text", path))]
         case .capture where a.id == "recording":
             return [(L("rec.stop"), .destructive, .stopRecording)]
+        case .prayer where a.id == "prayer-now" && PrayerProvider.shared.adhanPlaying:
+            return [(L("prayer.stopAdhan"), .normal, .stopAdhan)]
+        case .timer where a.id == "timer-break":
+            return [(L("focus.skip"), .normal, .skipBreak)]
+        case .timer where a.id == "timer-focus-wait":
+            return [(L("focus.start"), .primaryNeutral, .startFocus)]
+        case .timer where a.id == "timer-break-wait":
+            return [(L("focus.skip"), .quiet, .skipBreak), (L("focus.startBreak"), .primaryNeutral, .startBreak)]
         case .capture where a.url?.hasPrefix("saved:") == true:
             return [(L("shot.finder"), .normal, .revealFile(String(a.url!.dropFirst(6))))]
         case .capture where a.url?.hasPrefix("qr:") == true:
@@ -913,6 +956,7 @@ final class AppModel {
 
     func startTimer(_ t: CountdownTimer) {
         timer = t
+        removeIfPresent("timer-break", now: Date()); removeIfPresent("timer-focus-wait", now: Date())
         refreshTimerActivity(now: Date())
         scheduleTick()
     }
@@ -920,6 +964,22 @@ final class AppModel {
     func stopTimer() {
         timer = nil
         center.remove("timer", now: Date())
+        removeIfPresent("timer-break", now: Date()); removeIfPresent("timer-focus-wait", now: Date())
+    }
+
+    /// Ends a Pomodoro break early (D58): straight to the next focus, which waits or starts per Settings.
+    func skipBreak() {
+        let now = Date()
+        removeIfPresent("timer-break", now: now); removeIfPresent("timer-break-wait", now: now)
+        guard let t = timer, t.isBreak else { return }
+        timer = t.next(now: now, config: Prefs.shared.pomodoro)
+        if let n = timer, n.isPaused { focusWaits(now: now) }
+        refreshTimerActivity(now: now)
+    }
+
+    private func focusWaits(now: Date) {
+        center.post(Activity(id: "timer-focus-wait", kind: .timer, priority: .p1, state: .info, symbol: "timer",
+                             label: L("timer.focus"), detail: L("focus.waiting"), startedAt: now), now: now)
     }
 
     func toggleTimerPause() {
@@ -943,10 +1003,21 @@ final class AppModel {
         guard let t = timer else { return }
         removeIfPresent("timer", now: now)
         let msg = t.phase == .focus ? L("timer.focusDone") : (t.phase == .timer ? L("timer.done") : L("timer.breakDone"))
-        center.post(Activity(id: "timer-done-\(now.timeIntervalSince1970)", kind: .timer, priority: .p1, state: .success,
-                             symbol: "timer", label: L("timer.timer"), detail: msg, startedAt: now), now: now)
+        timer = t.next(now: now, config: Prefs.shared.pomodoro)
+        if let n = timer, n.isBreak, !n.isPaused {
+            // D58: the break starts with a short suggestion and a Skip button.
+            center.post(Activity(id: "timer-break", kind: .timer, priority: .p1, state: .success, symbol: "cup.and.saucer",
+                                 label: L("timer.break"), detail: L("focus.breakTip", Int(n.duration / 60)), startedAt: now), now: now)
+        } else if let n = timer, n.isBreak, n.isPaused {
+            center.post(Activity(id: "timer-break-wait", kind: .timer, priority: .p1, state: .success, symbol: "cup.and.saucer",
+                                 label: L("timer.break"), detail: L("focus.breakWaiting"), startedAt: now), now: now)
+        } else if let n = timer, n.phase == .focus, n.isPaused {
+            focusWaits(now: now)
+        } else {
+            center.post(Activity(id: "timer-done-\(now.timeIntervalSince1970)", kind: .timer, priority: .p1, state: .success,
+                                 symbol: "timer", label: L("timer.timer"), detail: msg, startedAt: now), now: now)
+        }
         NSSound(named: "Glass")?.play()
-        timer = t.next(now: now)
         if timer != nil { refreshTimerActivity(now: now) }
     }
 

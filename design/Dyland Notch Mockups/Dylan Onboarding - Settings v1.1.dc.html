@@ -123,6 +123,8 @@ class Component extends DCLogic {
         ['Player lain', 'YouTube di browser, Podcasts, VLC.', 'Bergantung macOS', A],
         ['Kontrol lengkap', 'Acak, ulang, volume, favorit, putar cepat playlist.', '', A],
         ['Lirik tersinkron', 'Baris lirik berjalan di notch.', 'Internet', A],
+        ['Lirik karaoke', 'Kata menyala satu per satu mengikuti lagu.', '', P],
+        ['Romanisasi & terjemahan lirik', 'Hangul, Kana, Pinyin ke huruf latin; terjemahan ke Bahasa Indonesia.', 'macOS 15+', P],
         ['Pilih output audio', 'Ganti ke AirPods, speaker, atau HDMI sekali klik.', '', A],
         ['Volume per app', 'Atur volume Spotify, browser, Discord, Zoom sendiri-sendiri.', 'macOS 14.2+', A],
         ['HUD volume & kecerahan', 'Menggantikan HUD bawaan macOS.', 'Accessibility', A],
@@ -131,9 +133,10 @@ class Component extends DCLogic {
       ['Kalender & waktu', [
         ['Meeting berikutnya', 'Hitung mundur dan tombol Join Zoom/Meet/Teams.', 'Kalender', A],
         ['Timer & Pomodoro', 'Preset atau waktu bebas; tetap akurat setelah sleep.', '', A],
+        ['Stopwatch & istirahat otomatis', 'Stopwatch dengan lap; istirahat Pomodoro mulai sendiri.', '', P],
         ['Reminder hari ini', 'Centang selesai langsung dari notch.', 'Reminders', N],
         ['Tambah cepat', 'Ketik "Rapat tim besok 10.00" jadi acara.', '', N],
-        ['Cuaca', 'Suhu sekarang dan prakiraan per jam.', 'Internet', N],
+        ['Cuaca', 'Sekarang, per jam, dan 7 hari; peringatan hujan.', 'Internet', N],
         ['Waktunya berangkat', 'Pengingat berangkat berdasar waktu tempuh.', 'Lokasi', P]]],
       ['Perangkat & sistem', [
         ['Baterai & charging', 'Animasi saat dicolok, perkiraan penuh, peringatan lemah.', '', A],
@@ -141,12 +144,14 @@ class Component extends DCLogic {
         ['Indikator kamera & mikrofon', 'Titik hijau/oranye saat sedang dipakai.', '', A],
         ['Tetap menyala', 'Tahan Mac agar tidak sleep 15 m, 1 j, atau terus.', '', A],
         ['Focus', 'Pemberitahuan singkat saat Focus menyala atau mati.', '', A],
+        ['HUD mik, lampu keyboard, mode pesawat', 'Mute mik semua app; Wi‑Fi & Bluetooth mati sekaligus.', '', P],
         ['Stats', 'CPU, GPU, memori, jaringan, disk, baterai.', '', A],
         ['Progres download', 'Download browser tampil sampai selesai.', '', N]]],
       ['Komunikasi', [
         ['Discord voice', 'Siapa yang bicara, mute, deafen, keluar.', 'App Discord', A],
         ['Discord DM & mention', 'Pesan baru dengan cuplikan.', 'App Discord', A],
         ['Notifikasi app', 'WhatsApp, Telegram, Slack, Mail di notch.', 'Accessibility', N],
+        ['Riwayat notifikasi & Focus', 'Riwayat hari ini; ditahan saat Jangan Ganggu.', 'Accessibility', P],
         ['Balas pesan', 'Balas iMessage langsung dari notch.', '', N],
         ['Panggilan masuk', 'Terima atau tolak FaceTime dan iPhone.', '', N],
         ['Kontrol meeting', 'Mute, kamera, share Zoom/Teams/Meet.', '', N]]],
@@ -164,6 +169,7 @@ class Component extends DCLogic {
         ['Riwayat clipboard', 'Teks, gambar, file. Cari dan sematkan.', '', A],
         ['Proteksi rahasia', 'Password dan token tidak pernah disimpan.', '', A],
         ['Shelf', 'Tarik file ke notch, ambil lagi di mana saja.', '', A],
+        ['Drop actions', 'Seret file ke island: Shelf, kompres, AirDrop, iCloud Drive, bagikan.', '', P],
         ['Screenshot ke shelf', 'Screenshot baru otomatis masuk.', '', A],
         ['Ubah file di shelf', 'Resize gambar, kompres video, gabung PDF.', '', P],
         ['Hapus background', 'Gambar jadi PNG transparan, diproses di Mac.', 'macOS 14+', P],
@@ -177,9 +183,29 @@ class Component extends DCLogic {
         ['Peringatan panas', 'Peek saat ≥ 95°C dengan proses terberat dan tombol kipas maks.', '', N],
         ['Aman secara default', 'Kembali ke Otomatis saat keluar, crash, sleep, atau suhu turun.', '', N],
         ['Profil per app', 'Mis. Performa otomatis saat Xcode build atau game.', '', P]]],
+      ['Sehat', [
+        ['Pengingat minum', 'Target gelas per hari, dicatat dari island.', '', P],
+        ['Istirahat gerak', 'Setelah 50 menit duduk aktif.', '', P],
+        ['Latihan napas', '1 menit 4‑4 atau 4‑7‑8 dengan lingkaran pemandu.', '', P],
+        ['Jeda mata 20‑20‑20', 'Tiap 20 menit lihat jauh selama 20 detik.', '', P]]],
+      ['Waktu salat', [
+        ['Jadwal salat Kemenag', 'Per kota, hitung mundur ke salat berikutnya, tanggal Hijriah.', '', P],
+        ['Azan', 'Diputar saat waktu salat; musik dijeda lalu dilanjutkan.', '', P]]],
+      ['AI & terjemahan', [
+        ['AI chat di island', 'Claude, OpenAI, Gemini, atau Ollama lokal dengan API key sendiri.', 'API key', P],
+        ['Pengingat lewat chat', '"Ingatkan aku jam 3" jadi Reminder, selalu dikonfirmasi.', '', P],
+        ['Cari web', 'Jawaban disertai sumber.', 'Internet', P],
+        ['Terjemahkan teks terpilih', 'Dari app mana saja. ⌃⌥T', '', P]]],
+      ['Buddy & tampilan', [
+        ['Buddy', 'Kucing, anjing, atau burung hantu yang bergelantung di island dan bisa diajak ngobrol.', '', P],
+        ['Animasi per item', 'Garis cahaya notifikasi, garis waktu, notifikasi bertumpuk, perayaan.', '', P],
+        ['Gaya island', 'Hitam, warna, kaca, kaca buram, pulau melayang.', '', P],
+        ['Posisi & menyingkir dari mouse', 'Geser pill di tepi atas; minggir saat kursor lewat.', 'Layar tanpa notch', P]]],
       ['Utilitas', [
         ['Color picker', 'Ambil warna dari layar, salin hex/RGB/HSL. ⌃⌥C', '', A],
         ['Scratchpad', 'Catatan cepat dalam satu hover.', '', P],
+        ['Flashcard', 'Kartu belajar dengan pengulangan berjarak; impor CSV/Anki.', '', P],
+        ['Radio internet', 'Stasiun favorit langsung dari island.', 'Internet', P],
         ['Kamera cermin', 'Cek penampilan sebelum meeting.', 'Kamera', P],
         ['Widget lock screen', 'Jam, musik, baterai, cuaca di layar kunci.', 'Mati default', E]]],
       ['Keamanan', [

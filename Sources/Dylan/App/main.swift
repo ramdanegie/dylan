@@ -5,6 +5,8 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
+    private struct IconLook: Equatable { var state: MenuBarState; var dot: Bool }
+    private var iconLook: IconLook?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -18,9 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SocketServer.shared.start()
         Hotkeys.registerDefaults()
         ScreenshotService.shared.pruneHistory()   // retention also applies when nothing new is captured
+        QuickToggles.shared.recoverAtLaunch()
         installMenuBar()
         refreshProviders()
         observeProviders()
+        observeStatusIcon()
         UpdateService.shared.launched()   // What's New after an update; daily check only if turned on
 
         let dnc = DistributedNotificationCenter.default()
@@ -59,6 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         AppModel.shared.stopKeepAwake()
+        QuickToggles.shared.restore()
+        PrayerProvider.shared.stopAdhan()
         if AppModel.shared.clearClipboardOnQuit { ClipboardProvider.shared.clearAll() }
         for id in AppModel.shared.pending.keys { AppModel.shared.resolvePermission(id, .passthrough) }
         SocketServer.shared.stop()
@@ -94,6 +100,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         f.isEnabled(.thermal) ? FanProvider.shared.start() : FanProvider.shared.stop()
         Hotkeys.setFanKeys(f.isEnabled(.thermal) && FanProvider.shared.hasFans)
         f.isEnabled(.storage) ? StorageProvider.shared.start() : StorageProvider.shared.stop()
+        f.isEnabled(.prayer) ? PrayerProvider.shared.start() : PrayerProvider.shared.stop()
+        Hotkeys.setQuickKeys(f.isEnabled(.quickToggles))
+        if !f.isEnabled(.quickToggles) { QuickToggles.shared.restore() }
         refreshStatusItem()
         f.isEnabled(.lockScreen) ? LockScreenProvider.shared.start() : LockScreenProvider.shared.stop()
         FaceUnlockProvider.shared.start()
@@ -106,6 +115,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppModel.shared.center.remove("agents", now: Date())
         }
         statusItem?.menu = makeMenu()
+    }
+
+    /// The menu bar icon follows the notch: idle, running, needs you, Presentation Mode.
+    private func observeStatusIcon() {
+        withObservationTracking { _ = Self.menuBarState() } onChange: {
+            Task { @MainActor in
+                (NSApp.delegate as? AppDelegate)?.refreshStatusItem()
+                (NSApp.delegate as? AppDelegate)?.observeStatusIcon()
+            }
+        }
     }
 
     private func observeProviders() {
@@ -121,7 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installMenuBar() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = Self.menuBarIcon()
+        item.button?.image = Self.menuBarIcon(Self.menuBarState())
         item.button?.setAccessibilityLabel("Dylan")
         item.menu = makeMenu()
         statusItem = item
@@ -241,7 +260,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func refreshStatusItem() {
         guard let button = statusItem?.button else { return }
         let p = FanProvider.shared, on = AppModel.shared.features.isEnabled(.thermal)
-        button.image = Self.menuBarIcon(dot: on && p.preset != .auto)
+        let look = IconLook(state: Self.menuBarState(), dot: on && p.preset != .auto)
+        if look != iconLook { iconLook = look; button.image = Self.menuBarIcon(look.state, dot: look.dot) }
         let title = on && p.menuTemp ? p.format(p.cpu) : ""
         if button.title != title {
             button.title = title
@@ -268,14 +288,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func disableFaceUnlock() { FaceUnlockProvider.shared.disable(); statusItem?.menu = makeMenu() }
     @objc private func openSettings() { SettingsWindow.show() }
 
-    /// Template icon: black capsule = island, knocked-out dot = status (design §3).
-    static func menuBarIcon(dot: Bool = false) -> NSImage {
-        let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { r in
-            let capsule = NSBezierPath(roundedRect: NSRect(x: 2, y: 6, width: 14, height: 6.5), xRadius: 3.25, yRadius: 3.25)
-            capsule.append(NSBezierPath(ovalIn: NSRect(x: 11, y: 7.75, width: 3, height: 3)).reversed)
-            NSColor.black.setFill()
-            capsule.fill()
-            if dot { NSBezierPath(ovalIn: NSRect(x: 14, y: 13.5, width: 4, height: 4)).fill() }
+    enum MenuBarState { case idle, active, needsAction, presentation }
+
+    /// The status the menu bar icon shows (design "Ikon menu bar", from icon 4c).
+    static func menuBarState() -> MenuBarState {
+        let m = AppModel.shared
+        if m.presentationMode { return .presentation }
+        if !m.center.urgentIDs.isEmpty || m.center.activities.values.contains(where: { $0.state == .needsAction }) { return .needsAction }
+        return m.center.activities.isEmpty ? .idle : .active
+    }
+
+    /// Template icon from glyph 4c at 18 × 18 pt: the island (5.5 × 10) between two ears (3.5 × 6.5) fading from
+    /// 62 % to 28 %. Ears turn solid while a Live Activity runs, a knocked-out dot means something needs you, and
+    /// Presentation Mode draws the island as an outline with a slash. `dot`: Dylan drives the fans (D46).
+    static func menuBarIcon(_ state: MenuBarState = .idle, dot: Bool = false) -> NSImage {
+        let img = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
+            let island = NSRect(x: 6.25, y: 4, width: 5.5, height: 10)
+            NSColor.black.set()
+            if state == .presentation {
+                let outline = NSBezierPath(roundedRect: island.insetBy(dx: 0.625, dy: 0.625), xRadius: 2.125, yRadius: 2.125)
+                outline.lineWidth = 1.25
+                outline.stroke()
+                let slash = NSBezierPath(roundedRect: NSRect(x: -6.8, y: -0.6, width: 13.6, height: 1.2), xRadius: 0.6, yRadius: 0.6)
+                var t = AffineTransform(translationByX: 9, byY: 9)
+                t.rotate(byDegrees: -38)
+                slash.transform(using: t)
+                slash.fill()
+            } else {
+                for (x, inner) in [(1.25, CGFloat(4.75)), (13.25, CGFloat(13.25))] {
+                    let ear = NSBezierPath(roundedRect: NSRect(x: x, y: 5.75, width: 3.5, height: 6.5), xRadius: 1.75, yRadius: 1.75)
+                    if state == .active {
+                        ear.fill()
+                    } else {
+                        // Brighter next to the island, fainter outside.
+                        let g = NSGradient(starting: NSColor.black.withAlphaComponent(0.62), ending: NSColor.black.withAlphaComponent(0.28))
+                        g?.draw(in: ear, angle: inner > 9 ? 0 : 180)
+                    }
+                }
+                let body = NSBezierPath(roundedRect: island, xRadius: 2.75, yRadius: 2.75)
+                if state == .needsAction {
+                    body.append(NSBezierPath(ovalIn: NSRect(x: 9 - 1.4, y: 9 - 1.4, width: 2.8, height: 2.8)).reversed)
+                }
+                body.fill()
+            }
+            if dot { NSBezierPath(ovalIn: NSRect(x: 14, y: 0.5, width: 4, height: 4)).fill() }
             return true
         }
         img.isTemplate = true

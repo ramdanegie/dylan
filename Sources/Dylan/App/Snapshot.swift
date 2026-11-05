@@ -34,6 +34,8 @@ enum Snapshot {
             m.presentationMode = false
             m.cameraOn = false; m.micOn = false
             m.selectedTab = .home
+            m.stopwatch = nil; m.dropping = false; m.hud = nil
+            Prefs.shared.modules = []; Prefs.shared.style = .black
         }
 
         func agentWorking() {
@@ -163,6 +165,59 @@ enum Snapshot {
                                          label: L("rec.recording"), detail: L("rec.stopHint"), startedAt: now.addingTimeInterval(-83)))
                 m.notchState = .peek
             }),
+            ("v15-prayer-compact", {
+                m.center.upsert(Activity(id: "prayer", kind: .prayer, priority: .p3, state: .ambient, symbol: "moon.stars",
+                                         label: L("prayer.asr"), value: "−18m", detail: "", progress: 0.4, startedAt: now))
+                m.notchState = .compact
+            }),
+            ("v15-prayer-peek", {
+                m.center.post(Activity(id: "prayer-now", kind: .prayer, priority: .p1, state: .info, symbol: "moon.stars.fill",
+                                       label: L("prayer.asr"), value: "14.57", detail: L("prayer.now", L("prayer.asr")) + " · " + L("prayer.musicPaused"),
+                                       startedAt: now), now: now)
+                m.notchState = .peek
+            }),
+            ("v15-prayer-tab", {
+                m.features.toggles[.prayer] = true
+                let p = PrayerProvider.shared
+                p.city = "Jakarta Selatan"; p.latitude = -6.26; p.longitude = 106.81
+                p.refresh()
+                m.selectedTab = .prayer; m.notchState = .expanded
+            }),
+            ("v15-stopwatch", {
+                var sw = Stopwatch.started(now: now.addingTimeInterval(-83.4)); sw.lap(now: now.addingTimeInterval(-40)); sw.lap(now: now.addingTimeInterval(-12))
+                m.stopwatch = sw
+                m.notchState = .expanded
+            }),
+            ("v15-break-peek", {
+                m.center.post(Activity(id: "timer-break", kind: .timer, priority: .p1, state: .success, symbol: "cup.and.saucer",
+                                       label: L("timer.break"), detail: L("focus.breakTip", 5), startedAt: now), now: now)
+                m.notchState = .peek
+            }),
+            ("v15-notifications", {
+                m.features.toggles[.notifications] = true
+                NotificationLog.shared.clear()
+                for (app, who, msg, ago) in [("WhatsApp", "Ibu", "Nanti pulang jam berapa?", 19000.0), ("Mail", "BPJS Kesehatan", "Klaim November: 12 berkas diterima", 12000),
+                                              ("Slack", "#klinik-ops", "Jadwal jaga minggu depan sudah diupdate", 2400), ("WhatsApp", "Dr. Rani", "Ok, saya cek dulu", 600),
+                                              ("WhatsApp", "Dr. Rani", "Hasil lab pasien Bed 4 sudah keluar, tolong dicek ya", 60)] {
+                    NotificationLog.shared.record(.init(app: app, title: who, body: msg, at: now.addingTimeInterval(-ago)))
+                }
+                m.selectedTab = .notifications; m.notchState = .expanded
+            }),
+            ("v15-stacked", {
+                m.center.post(Activity(id: "notif-WhatsApp", kind: .notify, priority: .p1, state: .info, symbol: "bubble.left.fill", label: "WhatsApp",
+                                       value: "3", detail: "Rani: Hasil lab sudah keluar", startedAt: now), now: now)
+                m.notchState = .peek
+            }),
+            ("v15-drop", { m.dropping = true; m.notchState = .expanded }),
+            ("v15-modules", {
+                Prefs.shared.modules = [.tasks, .flashcards, .radio]
+                m.notchState = .expanded
+            }),
+            ("v15-mic-hud", { m.showHUD(symbol: "mic.slash.fill", value: 0, text: L("quick.micOff")) }),
+            ("v15-style-color", {
+                Prefs.shared.style = .color
+                music(); m.notchState = .peek
+            }),
         ]
 
         for (name, setup) in cases {
@@ -222,6 +277,31 @@ enum Snapshot {
             try? png.write(to: dir.appendingPathComponent("\(name)-\(lang).png"))
             print("✓ \(name)-\(lang).png")
         }
+        // Menu bar icon states, large, on a light and a dark bar.
+        let states: [AppDelegate.MenuBarState] = [.idle, .active, .needsAction, .presentation]
+        let sheet = NSImage(size: NSSize(width: 18 * 4 + 30, height: 46), flipped: false) { r in
+            for (row, dark) in [false, true].enumerated() {
+                (dark ? NSColor(white: 0.12, alpha: 1) : NSColor(white: 0.93, alpha: 1)).setFill()
+                NSRect(x: 0, y: CGFloat(1 - row) * 23, width: r.width, height: 23).fill()
+                for (i, st) in states.enumerated() {
+                    let icon = AppDelegate.menuBarIcon(st, dot: false)
+                    let tinted = NSImage(size: icon.size, flipped: false) { b in
+                        icon.draw(in: b); (dark ? NSColor.white : NSColor.black).set(); b.fill(using: .sourceAtop); return true
+                    }
+                    tinted.draw(in: NSRect(x: 6 + CGFloat(i) * 24, y: CGFloat(1 - row) * 23 + 2.5, width: 18, height: 18))
+                }
+            }
+            return true
+        }
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(sheet.size.width * 8), pixelsHigh: Int(sheet.size.height * 8), bitsPerSample: 8,
+                                   samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        rep.size = sheet.size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        sheet.draw(in: NSRect(origin: .zero, size: sheet.size))
+        NSGraphicsContext.restoreGraphicsState()
+        try? rep.representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent("menubar-icons.png"))
+        print("✓ menubar-icons.png")
     }
 
     /// `Dylan --settings-snapshot <dir> [--dark] [--lang id|en]`: every Settings page (D50) to PNG, from throwaway

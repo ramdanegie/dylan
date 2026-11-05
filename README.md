@@ -30,13 +30,14 @@ Developers get a **Developer Mode** on top: watch AI coding agents, long-running
 
 ## Highlights
 
-- 🎵 **Music that feels native.** Spotify, Apple Music, browser tabs (YouTube, SoundCloud…) and VLC. Synced lyrics, audio output picker, per-app volume, and an equalizer that follows the actual audio.
+- 🎵 **Music that feels native.** Spotify, Apple Music, browser tabs (YouTube, SoundCloud…) and VLC. Synced lyrics with karaoke, romanization, and translation, audio output picker, per-app volume, and an equalizer that follows the actual audio.
 - 📸 **Screenshots without the clutter.** Area, window, full screen, scrolling capture, and text (OCR) with `⌥⇧1`–`⌥⇧4` and `⌥⇧T`, plus screen recording to MP4 with `⌥⇧5`. The screen freezes first, a pixel loupe shows coordinates and colors, and the editor opens right away: arrows, boxes, text, highlight, blur, numbered steps, crop. `⌘C` copies and closes. A Studio mode adds frames, gradients, shadows, social ratios, and 3D layouts.
 - 🌡️ **Temperatures & fans.** CPU, GPU, SSD, and battery temperatures without root. Fan presets from Quiet to Max, a custom curve, `⌃⌥⇧0`–`4`, and a heat warning that names the busiest process. Fans always go back to automatic when Dylan quits, sleeps, or crashes.
-- 🔔 **Notifications & calls.** App notifications in the notch, reply from the banner, accept or decline calls, and mic/camera/share controls for Zoom, Teams, and Meet.
+- 🔔 **Notifications & calls.** App notifications in the notch with today's history and a quiet mode during Focus, reply from the banner, accept or decline calls, and mic/camera/share controls for Zoom, Teams, and Meet.
 - 🎧 **Discord.** Who is talking in voice, mute, deafen, and leave from the notch.
-- 🔋 **Devices.** Volume and brightness HUD, charging animation, AirPods battery, camera and microphone indicators, Focus status.
-- 🗓️ **Everyday helpers.** Meeting countdown with a Join button, "time to leave" for in-person meetings, reminders, timer, a file shelf with AirDrop, clipboard history, color picker, keep awake, weather, download progress.
+- 🔋 **Devices.** Volume and brightness HUD, mic mute for every app (`⌃⌥M`) and airplane mode (`⌃⌥⇧A`), charging animation, AirPods battery, camera and microphone indicators, Focus status.
+- 🕌 **Prayer times.** The Kemenag schedule for your city, computed on your Mac: a countdown in the notch, the Hijri date, and the adhan (your own audio file) with the music paused.
+- 🗓️ **Everyday helpers.** Meeting countdown with a Join button, "time to leave" for in-person meetings, reminders, Pomodoro with automatic breaks, a stopwatch, flashcards, internet radio, a file shelf with drop actions (compress, AirDrop, iCloud Drive, share), clipboard history, color picker, keep awake, weather, download progress.
 - 🧹 **Optimize Storage.** Scan caches, logs, old downloads, large files, and iPhone backups (plus Xcode data and old `node_modules` in Developer Mode), then check what to remove. Each item shows its size, location, and what happens if you remove it. Things that rebuild themselves are deleted; your own files go to the Trash. The notch warns you when the disk is almost full.
 - 🙈 **Presentation Mode.** Hides sensitive content while you share your screen, and can turn on by itself when sharing starts.
 - 🌏 **English and Bahasa Indonesia**, following your system language or your choice.

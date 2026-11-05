@@ -2,6 +2,22 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Added
+- Prayer times (Settings → Prayer times): the Kemenag schedule for your city, computed on your Mac. A countdown in the notch 30 minutes before each prayer, a Peek when it is time, a Prayer tab with the Hijri date, reminders 5–30 minutes before, and the adhan from an audio file you pick, with the music paused and resumed.
+- Focus: set the Pomodoro lengths, breaks start by themselves with a Skip button, and a stopwatch with laps.
+- Lyrics: karaoke when the lyrics have word timing, romanized lines for Korean, Japanese, Chinese, Thai and Arabic, and a translation into your language (Apple Translation).
+- Notifications: a Notifications tab with today's history (or 7 days), grouped per conversation, and an option to keep the island quiet during a Focus (messages are counted in the ear instead).
+- Drop actions: drag files to the top edge and drop them on Shelf, Compress, AirDrop, iCloud Drive (and other synced cloud folders) or Share; images also get Remove background and Resize.
+- Island styles: black, colour, glass, frosted, or a floating island. On screens without a notch the pill can be dragged along the top edge and can step aside when the cursor only passes by.
+- Home modules (Edit modules): today's tasks, flashcards with spaced repetition (CSV or Anki import), and internet radio.
+- Mic mute for every app (`⌃⌥M`) and airplane mode (`⌃⌥⇧A`, Wi‑Fi off and back), in Settings → Devices.
+- Animations, one by one (Settings → Animations): a glow around the island for notifications, a timer line, stacked notifications, and confetti when the day's tasks are done.
+
+### Changed
+- New menu bar icon from the app icon: the island with two ears, solid while something runs, a dot when something needs you, crossed out in Presentation Mode.
+
 ## [0.1.7] - 2026-11-04
 
 ### Fixed

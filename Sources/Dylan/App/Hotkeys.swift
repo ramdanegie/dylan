@@ -58,6 +58,14 @@ enum Hotkeys {
         }
     }
 
+    /// Mic mute ⌃⌥M and airplane mode ⌃⌥⇧A (D60), only while the feature is on.
+    static func setQuickKeys(_ on: Bool) {
+        unregister(id: 40); unregister(id: 41)
+        guard on else { return }
+        register(id: 40, keyCode: kVK_ANSI_M, modifiers: controlKey | optionKey) { QuickToggles.shared.toggleMic() }
+        register(id: 41, keyCode: kVK_ANSI_A, modifiers: controlKey | optionKey | shiftKey) { QuickToggles.shared.toggleAirplane() }
+    }
+
     static func unregister(id: UInt32) {
         if let ref = refs.removeValue(forKey: id) { UnregisterEventHotKey(ref) }
         handlers[id] = nil

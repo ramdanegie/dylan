@@ -2,6 +2,22 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Ditambahkan
+- Waktu salat (Settings → Waktu salat): jadwal Kemenag untuk kotamu, dihitung di Mac. Hitung mundur di notch 30 menit sebelum salat, Peek saat waktunya, tab Salat dengan tanggal Hijriah, pengingat 5–30 menit sebelumnya, dan azan dari file audio pilihanmu dengan musik dijeda lalu dilanjutkan.
+- Fokus: durasi Pomodoro bisa diatur, istirahat mulai sendiri dengan tombol Lewati, dan stopwatch dengan lap.
+- Lirik: karaoke bila liriknya punya timing per kata, romanisasi untuk Korea, Jepang, Mandarin, Thai, dan Arab, serta terjemahan ke bahasamu (Apple Translation).
+- Notifikasi: tab Notifikasi berisi riwayat hari ini (atau 7 hari) per percakapan, plus opsi island tenang saat Focus (pesan hanya dihitung di telinga).
+- Drop actions: seret file ke tepi atas lalu lepas di Shelf, Kompres, AirDrop, iCloud Drive (dan folder cloud lain yang tersinkron), atau Bagikan; gambar juga bisa Hapus background dan Ubah ukuran.
+- Gaya island: hitam, warna, kaca, kaca buram, atau pulau melayang. Di layar tanpa notch, pill bisa digeser di tepi atas dan bisa menyingkir saat kursor hanya lewat.
+- Modul Home (Edit modul): tugas hari ini, flashcard dengan pengulangan berjarak (impor CSV atau Anki), dan radio internet.
+- Mik mati untuk semua app (`⌃⌥M`) dan mode pesawat (`⌃⌥⇧A`, Wi‑Fi mati lalu nyala lagi), di Settings → Perangkat.
+- Animasi satu per satu (Settings → Animasi): garis cahaya di island untuk notifikasi, garis waktu, notifikasi bertumpuk, dan konfeti saat tugas hari itu selesai.
+
+### Diubah
+- Ikon menu bar baru dari ikon app: pulau dengan dua telinga, solid saat ada yang berjalan, titik saat ada yang butuh tindakanmu, dicoret saat Mode Presentasi.
+
 ## [0.1.7] - 2026-11-04
 
 ### Diperbaiki

@@ -15,7 +15,19 @@ final class NotchPanel: NSPanel {
 @Observable
 final class NotchLayout {
     var geometry: NotchGeometry
+    /// Sideways shift while the pill steps out of the cursor's way (D59).
+    var dodge: CGFloat = 0
     init(_ g: NotchGeometry) { geometry = g }
+}
+
+/// Dragging the pill along the top edge on screens without a notch (FR-113); remembered per screen.
+enum PillDrag {
+    static func gesture(enabled: Bool) -> some Gesture {
+        // The panel moves with the pill, so the drag is measured on the screen, not in the window.
+        DragGesture(minimumDistance: 6)
+            .onChanged { _ in if enabled { NotchController.shared.dragPill(done: false) } }
+            .onEnded { _ in if enabled { NotchController.shared.dragPill(done: true) } }
+    }
 }
 
 final class NotchController {
@@ -29,6 +41,10 @@ final class NotchController {
     private var dragStartCount = 0
     private var inside = false
     private var lastState: NotchState = .closed
+    /// For the dodge: where and when the cursor was last seen.
+    private var lastMouse: (point: CGPoint, at: TimeInterval)?
+    private var dodgeWork: DispatchWorkItem?
+    private var dragStart: (mouse: CGFloat, offset: CGFloat)?
 
     static func targetScreen() -> NSScreen? {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
@@ -41,6 +57,12 @@ final class NotchController {
         var g = NotchGeometry(screen: s.frame, safeAreaTop: s.safeAreaInsets.top,
                               leftAuxWidth: s.auxiliaryTopLeftArea?.width, rightAuxWidth: s.auxiliaryTopRightArea?.width)
         if AppModel.shared.smallCompact { g.ear = 72 }
+        if !g.hasNotch {
+            let p = Prefs.shared
+            if p.style == .floating { g.pillGap = p.floatGap; g.pillExtraWidth = p.floatWidth }
+            let half = NotchGeometry.expandedMax.width / 2 + NotchGeometry.panelMargin
+            g.centerX = min(max(s.frame.midX + pillOffset(s), s.frame.minX + half), s.frame.maxX - half)
+        }
         return g
     }
 
@@ -84,7 +106,16 @@ final class NotchController {
             }
         } as Any)
         monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
-            MainActor.assumeIsolated { FloatingBasket.shared.dragEnded() }
+            MainActor.assumeIsolated {
+                FloatingBasket.shared.dragEnded()
+                // Dropped outside every zone: give the island back (a zone's drop clears this itself).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    MainActor.assumeIsolated {
+                        let m = AppModel.shared
+                        if m.dropping { m.dropping = false; NotchController.shared.collapse() }
+                    }
+                }
+            }
         } as Any)
         monitors.append(NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { e in
             if e.keyCode == 53 {   // Esc
@@ -121,6 +152,20 @@ final class NotchController {
             }
         }
         observeModel()
+    }
+
+    private static func pillKey(_ s: NSScreen) -> String { "pill.offset." + s.localizedName }
+    private static func pillOffset(_ s: NSScreen) -> CGFloat { CGFloat(AppModel.store.double(forKey: pillKey(s))) }
+
+    func dragPill(done: Bool) {
+        guard let s = Self.targetScreen(), !layout.geometry.hasNotch else { return }
+        let x = NSEvent.mouseLocation.x
+        let start = dragStart ?? (x, Self.pillOffset(s))
+        dragStart = done ? nil : start
+        // Kept within the screen, so a pill dragged off the edge is not lost.
+        let half = s.frame.width / 2 - NotchGeometry.expandedMax.width / 2 - NotchGeometry.panelMargin
+        AppModel.store.set(Double(min(max(start.offset + x - start.mouse, -half), half)), forKey: Self.pillKey(s))
+        relayout()
     }
 
     func relayout() {
@@ -172,6 +217,7 @@ final class NotchController {
     private func mouseMoved() {
         guard let panel else { return }
         let m = AppModel.shared
+        dodgeIfPassing()
         let now = hitFrame().contains(NSEvent.mouseLocation) && panel.alphaValue > 0
         panel.ignoresMouseEvents = !now
         guard now != inside else { return }
@@ -204,7 +250,7 @@ final class NotchController {
               let types = pb.types, types.contains(.fileURL) else { return }
         let zone = NotchRootView.islandFrame(m, layout.geometry).insetBy(dx: -80, dy: -60)
         guard zone.contains(NSEvent.mouseLocation) else { FloatingBasket.shared.dragMoved(at: NSEvent.mouseLocation); return }
-        m.selectedTab = .shelf
+        m.dropping = true
         m.notchState = .expanded
     }
 
@@ -212,8 +258,41 @@ final class NotchController {
         if AppModel.shared.notchState == .expanded && !hitFrame().contains(NSEvent.mouseLocation) { collapse() }
     }
 
+    /// Share… from the drop zones (D56), anchored under the island.
+    func share(_ urls: [URL]) {
+        guard let view = panel?.contentView else { return }
+        let f = NotchRootView.islandFrame(AppModel.shared, layout.geometry)
+        let local = view.convert(panel!.convertFromScreen(f), from: nil)
+        NSSharingServicePicker(items: urls).show(relativeTo: local, of: view, preferredEdge: .minY)
+    }
+
+    /// D59: on screens without a notch the pill steps 180 pt aside when the cursor only passes by (faster than
+    /// it would move to stop on it), and comes back once the cursor has gone.
+    private func dodgeIfPassing() {
+        let p = NSEvent.mouseLocation, now = ProcessInfo.processInfo.systemUptime
+        defer { lastMouse = (p, now) }
+        let m = AppModel.shared
+        guard Prefs.shared.dodgeMouse, !layout.geometry.hasNotch, m.notchState == .closed || m.notchState == .compact else { return }
+        var home = NotchRootView.islandFrame(m, layout.geometry)
+        home.origin.x -= layout.dodge
+        if layout.dodge != 0 {
+            guard !home.insetBy(dx: -30, dy: -20).contains(p), dodgeWork == nil else { return }
+            let w = DispatchWorkItem { MainActor.assumeIsolated { NotchController.shared.layout.dodge = 0; NotchController.shared.dodgeWork = nil } }
+            dodgeWork = w
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: w)
+            return
+        }
+        guard home.contains(p), let last = lastMouse, now > last.at else { return }
+        let speed = hypot(p.x - last.point.x, p.y - last.point.y) / (now - last.at)
+        // ~150 ms to cross: a cursor at this speed is on its way somewhere else.
+        guard speed > home.width / 0.15 * 0.5 else { return }
+        dodgeWork?.cancel(); dodgeWork = nil
+        layout.dodge = p.x < home.midX ? 180 : -180
+    }
+
     func collapse() {
         let m = AppModel.shared
+        m.dropping = false
         if m.autoPeekUntil != nil && m.notchState == .peek { return }   // P0 auto-peek stays 4 s
         m.notchState = m.center.slots().isEmpty ? .closed : .compact
     }
