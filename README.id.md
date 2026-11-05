@@ -30,13 +30,14 @@ Developer mendapat **Mode Developer**: pantau agent AI, perintah yang lama, CI, 
 
 ## Sorotan
 
-- 🎵 **Musik yang terasa native.** Spotify, Apple Music, tab browser (YouTube, SoundCloud…) dan VLC. Lirik tersinkron, pilihan output audio, volume per app, dan equalizer yang mengikuti audio sungguhan.
+- 🎵 **Musik yang terasa native.** Spotify, Apple Music, tab browser (YouTube, SoundCloud…) dan VLC. Lirik tersinkron dengan karaoke, romanisasi, dan terjemahan, pilihan output audio, volume per app, dan equalizer yang mengikuti audio sungguhan.
 - 📸 **Screenshot tanpa ribet.** Area, jendela, layar penuh, scrolling capture, dan teks (OCR) dengan `⌥⇧1`–`⌥⇧4` dan `⌥⇧T`, plus rekam layar ke MP4 dengan `⌥⇧5`. Layar dibekukan dulu, loupe piksel menampilkan koordinat dan warna, lalu editor langsung terbuka: panah, kotak, teks, sorot, blur, nomor urut, crop. `⌘C` menyalin lalu menutup editor. Mode Studio menambahkan bingkai, gradien, bayangan, rasio media sosial, dan tata letak 3D.
 - 🌡️ **Suhu & kipas.** Suhu CPU, GPU, SSD, dan baterai tanpa root. Preset kipas dari Senyap sampai Maksimal, kurva sendiri, `⌃⌥⇧0`–`4`, dan peringatan panas yang menyebut proses terberat. Kipas selalu kembali ke otomatis saat Dylan ditutup, sleep, atau crash.
-- 🔔 **Notifikasi & panggilan.** Notifikasi app di notch, balas dari banner, terima atau tolak panggilan, dan kontrol mic/kamera/share untuk Zoom, Teams, dan Meet.
+- 🔔 **Notifikasi & panggilan.** Notifikasi app di notch dengan riwayat hari ini dan mode tenang saat Focus, balas dari banner, terima atau tolak panggilan, dan kontrol mic/kamera/share untuk Zoom, Teams, dan Meet.
 - 🎧 **Discord.** Siapa yang sedang bicara di voice, mute, deafen, dan keluar dari notch.
-- 🔋 **Perangkat.** HUD volume dan brightness, animasi charging, baterai AirPods, indikator kamera dan mikrofon, status Focus.
-- 🗓️ **Bantuan sehari-hari.** Countdown meeting dengan tombol Join, "waktunya berangkat" untuk meeting di lokasi fisik, reminder, timer, shelf file dengan AirDrop, riwayat clipboard, color picker, keep awake, cuaca, progres download.
+- 🔋 **Perangkat.** HUD volume dan brightness, mik mati untuk semua app (`⌃⌥M`) dan mode pesawat (`⌃⌥⇧A`), animasi charging, baterai AirPods, indikator kamera dan mikrofon, status Focus.
+- 🕌 **Waktu salat.** Jadwal Kemenag untuk kotamu, dihitung di Mac: hitung mundur di notch, tanggal Hijriah, dan azan (file audiomu sendiri) dengan musik dijeda.
+- 🗓️ **Bantuan sehari-hari.** Countdown meeting dengan tombol Join, "waktunya berangkat" untuk meeting di lokasi fisik, reminder, Pomodoro dengan istirahat otomatis, stopwatch, flashcard, radio internet, shelf file dengan drop actions (kompres, AirDrop, iCloud Drive, bagikan), riwayat clipboard, color picker, keep awake, cuaca, progres download.
 - 🧹 **Optimasi Penyimpanan.** Pindai cache, log, Downloads lama, file besar, dan cadangan iPhone (plus data Xcode dan `node_modules` lama di Mode Developer), lalu centang yang mau dihapus. Tiap item menampilkan ukuran, lokasi, dan dampaknya. Yang dibuat ulang otomatis dihapus; file milikmu dipindah ke Trash. Notch memberi tahu saat disk hampir penuh.
 - 🙈 **Mode Presentasi.** Menyembunyikan isi sensitif saat share layar, dan bisa menyala sendiri ketika share dimulai.
 - 🌏 **Bahasa Indonesia dan English**, mengikuti bahasa sistem atau pilihanmu.

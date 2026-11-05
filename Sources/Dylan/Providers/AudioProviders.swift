@@ -6,7 +6,13 @@ import DylanCore
 @Observable
 final class LyricsProvider {
     static let shared = LyricsProvider()
-    var lyrics: Lyrics?
+    var lyrics: Lyrics? { didSet { if lyrics != oldValue { lyricsChanged() } } }
+    /// Latin transcription per line (D53), made once per song.
+    private(set) var romanized: [Int: String] = [:]
+    /// Translation per line into the app language (D53), cached per song.
+    var translated: [Int: String] = [:]
+    @ObservationIgnored private var translations: [String: [Int: String]] = [:]
+    var songKey: String? { key }
     @ObservationIgnored private var key: String?
     @ObservationIgnored private var cache: [String: Lyrics?] = [:]
     @ObservationIgnored private var task: URLSessionDataTask?
@@ -34,6 +40,23 @@ final class LyricsProvider {
             }
         }
         task?.resume()
+    }
+
+    private func lyricsChanged() {
+        romanized = [:]
+        translated = key.flatMap { translations[$0] } ?? [:]
+        guard let lines = lyrics?.lines, lines.contains(where: { Lyrics.needsRomanization($0.text) }) else { return }
+        let k = key
+        Task.detached {
+            var out: [Int: String] = [:]
+            for (i, l) in lines.enumerated() { if let r = Lyrics.romanized(l.text) { out[i] = r } }
+            await MainActor.run { if LyricsProvider.shared.key == k { LyricsProvider.shared.romanized = out } }
+        }
+    }
+
+    func storeTranslations(_ t: [Int: String], for k: String) {
+        translations[k] = t
+        if key == k { translated = t }
     }
 }
 

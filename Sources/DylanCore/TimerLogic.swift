@@ -20,8 +20,8 @@ public struct CountdownTimer: Equatable, Sendable {
         CountdownTimer(phase: .timer, duration: duration, endsAt: now.addingTimeInterval(duration), pausedRemaining: nil, focusCount: 0)
     }
 
-    public static func pomodoro(now: Date) -> CountdownTimer {
-        CountdownTimer(phase: .focus, duration: focus, endsAt: now.addingTimeInterval(focus), pausedRemaining: nil, focusCount: 0)
+    public static func pomodoro(now: Date, config: PomodoroConfig = PomodoroConfig()) -> CountdownTimer {
+        CountdownTimer(phase: .focus, duration: config.focus, endsAt: now.addingTimeInterval(config.focus), pausedRemaining: nil, focusCount: 0)
     }
 
     public func remaining(now: Date) -> TimeInterval {
@@ -51,20 +51,65 @@ public struct CountdownTimer: Equatable, Sendable {
     public func isFinished(now: Date) -> Bool { !isPaused && remaining(now: now) <= 0 }
 
     /// Next Pomodoro phase after the current one ends: every 4th break is long. Quick timers return nil.
-    public func next(now: Date) -> CountdownTimer? {
+    /// A phase that does not start by itself (D58) comes back paused at its full length.
+    public func next(now: Date, config: PomodoroConfig = PomodoroConfig()) -> CountdownTimer? {
+        var n: CountdownTimer
         switch phase {
         case .timer:
             return nil
         case .focus:
             let count = focusCount + 1
-            let long = count % 4 == 0
-            let d = long ? Self.longBreak : Self.shortBreak
-            return CountdownTimer(phase: long ? .longBreak : .shortBreak, duration: d,
-                                  endsAt: now.addingTimeInterval(d), pausedRemaining: nil, focusCount: count)
+            let long = count % config.sessionsBeforeLong == 0
+            let d = long ? config.longBreak : config.shortBreak
+            n = CountdownTimer(phase: long ? .longBreak : .shortBreak, duration: d,
+                               endsAt: now.addingTimeInterval(d), pausedRemaining: nil, focusCount: count)
+            if !config.autoBreak { n.pause(now: now) }
         case .shortBreak, .longBreak:
-            return CountdownTimer(phase: .focus, duration: Self.focus, endsAt: now.addingTimeInterval(Self.focus),
-                                  pausedRemaining: nil, focusCount: focusCount % 4)
+            n = CountdownTimer(phase: .focus, duration: config.focus, endsAt: now.addingTimeInterval(config.focus),
+                               pausedRemaining: nil, focusCount: focusCount % config.sessionsBeforeLong)
+            if !config.autoFocus { n.pause(now: now) }
         }
+        return n
+    }
+
+    public var isBreak: Bool { phase == .shortBreak || phase == .longBreak }
+}
+
+/// Pomodoro lengths and what starts by itself (D58): breaks start automatically, the next focus does not.
+public struct PomodoroConfig: Equatable, Sendable {
+    public var focus: TimeInterval = CountdownTimer.focus
+    public var shortBreak: TimeInterval = CountdownTimer.shortBreak
+    public var longBreak: TimeInterval = CountdownTimer.longBreak
+    public var sessionsBeforeLong = 4
+    public var autoBreak = true
+    public var autoFocus = false
+    public init() {}
+}
+
+/// Stopwatch with laps (D58), on the wall clock so it keeps running while the Mac sleeps.
+public struct Stopwatch: Equatable, Sendable {
+    public var startedAt: Date?
+    /// Time banked before the last pause.
+    public var banked: TimeInterval = 0
+    /// Lap end times as elapsed totals, oldest first.
+    public var laps: [TimeInterval] = []
+
+    public init() {}
+    public static func started(now: Date) -> Stopwatch { var s = Stopwatch(); s.startedAt = now; return s }
+
+    public var isRunning: Bool { startedAt != nil }
+    public func elapsed(now: Date) -> TimeInterval { banked + (startedAt.map { max(0, now.timeIntervalSince($0)) } ?? 0) }
+
+    public mutating func pause(now: Date) {
+        guard let s = startedAt else { return }
+        banked += max(0, now.timeIntervalSince(s)); startedAt = nil
+    }
+    public mutating func resume(now: Date) { if startedAt == nil { startedAt = now } }
+    public mutating func lap(now: Date) { laps.append(elapsed(now: now)) }
+
+    /// Each lap's own length, newest first (the list the notch shows).
+    public var lapDurations: [TimeInterval] {
+        zip(laps, [0] + laps).map { $0 - $1 }.reversed()
     }
 }
 

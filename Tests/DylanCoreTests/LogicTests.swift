@@ -150,7 +150,8 @@ private let t0 = Date(timeIntervalSince1970: 3_000_000)
     @Test func pomodoroCycle() {
         var t = CountdownTimer.pomodoro(now: t0)
         var phases: [CountdownTimer.Phase] = [t.phase]
-        for _ in 0..<8 { t = t.next(now: t0)!; phases.append(t.phase) }
+        var cfg = PomodoroConfig(); cfg.autoFocus = true
+        for _ in 0..<8 { t = t.next(now: t0, config: cfg)!; phases.append(t.phase) }
         #expect(phases == [.focus, .shortBreak, .focus, .shortBreak, .focus, .shortBreak, .focus, .longBreak, .focus])
         #expect(CountdownTimer.quick(5, now: t0).next(now: t0) == nil)
     }

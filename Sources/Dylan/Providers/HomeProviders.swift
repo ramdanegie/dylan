@@ -87,6 +87,7 @@ final class RemindersProvider {
         r.isCompleted = true
         try? store.save(r, commit: true)
         items.removeAll { $0.id == item.id }
+        AppModel.shared.celebrateIfDone()
     }
 
     /// Saves a quick-add result; returns a short confirmation or an error message.

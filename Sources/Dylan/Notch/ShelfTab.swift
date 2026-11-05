@@ -135,6 +135,7 @@ enum ShelfDrop {
             _ = p.loadObject(ofClass: URL.self) { @Sendable url, _ in
                 guard let url else { return }
                 Task { @MainActor in
+                    AppModel.shared.dropping = false
                     ShelfProvider.shared.add([url])
                     AppModel.shared.selectedTab = .shelf
                     AppModel.shared.notchState = .expanded

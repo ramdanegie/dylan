@@ -93,7 +93,11 @@ final class NotificationProvider {
         for b in current where banners[b.banner.id] == nil {
             banners[b.banner.id] = b
             guard NotificationRules.allowed(b.banner, apps: m.notificationApps) else { continue }
-            b.banner.isCall ? postCall(b.banner, now: now) : postMessage(b.banner, now: now)
+            if b.banner.isCall { postCall(b.banner, now: now); continue }
+            // D57: during a Focus the message is kept and counted, not shown (calls still come through).
+            let hold = Prefs.shared.holdDuringFocus && FocusProvider.shared.mode != nil
+            NotificationLog.shared.add(b.banner, now: now, held: hold)
+            if !hold { postMessage(b.banner, now: now) }
         }
         m.scheduleTick()
     }
@@ -108,6 +112,7 @@ final class NotificationProvider {
             label: TextRules.truncateTail(b.app, max: 10), value: count > 1 ? "\(count)" : "",
             detail: count > 1 ? L("notifications.group", b.app, count) + " · " + NotificationRules.detail(b) : NotificationRules.detail(b),
             genericDetail: L("notifications.generic", b.app), url: "notif:\(b.id)", startedAt: now), now: now)
+        m.glow(app: b.app)
     }
 
     private func postCall(_ b: NotificationBanner, now: Date) {
@@ -162,5 +167,56 @@ final class NotificationProvider {
     private static func children(_ el: AXUIElement) -> [AXUIElement] {
         var v: CFTypeRef?
         return AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &v) == .success ? (v as? [AXUIElement] ?? []) : []
+    }
+}
+
+/// Notifications that reached the island (FR-110, design D57). Kept in memory only, like the banners themselves,
+/// for 24 hours (or 7 days); gone when Dylan quits.
+@Observable
+final class NotificationLog {
+    static let shared = NotificationLog()
+    private(set) var history = NotificationHistory()
+    /// The Focus holding notifications back, if any.
+    var focusName: String? { FocusProvider.shared.mode.map { $0.name ?? L("focus.on") } }
+
+    func add(_ b: NotificationBanner, now: Date, held: Bool) {
+        history.prune(now: now, keep: TimeInterval(Prefs.shared.historyDays) * 86400)
+        history.add(.init(id: b.id, app: b.app, bundleID: Self.bundleID(b.app), title: b.title,
+                          body: [b.subtitle, b.body].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "), at: now, held: held))
+        if held { refreshHeld(now: now) }
+    }
+
+    func record(_ e: NotificationHistory.Entry) { history.add(e) }
+
+    /// Also when the tab opens, so old entries go even on a quiet day.
+    func prune(now: Date = Date()) { history.prune(now: now, keep: TimeInterval(Prefs.shared.historyDays) * 86400) }
+
+    func clear() { history = NotificationHistory(); AppModel.shared.removeIfPresent("focus-held", now: Date()) }
+
+    /// Compact while a Focus holds messages: "Kerja 4" (D57).
+    func refreshHeld(now: Date = Date()) {
+        let m = AppModel.shared
+        guard let name = focusName, history.heldCount > 0 else { m.removeIfPresent("focus-held", now: now); return }
+        m.center.upsert(Activity(id: "focus-held", kind: .focus, priority: .p3, state: .ambient, symbol: FocusProvider.shared.mode?.symbol ?? "moon.fill",
+                                 label: name, value: "\(history.heldCount)", detail: L("notifications.held", history.heldCount, name),
+                                 genericDetail: L("notifications.held", history.heldCount, name), startedAt: now))
+        m.scheduleTick()
+    }
+
+    /// The Focus ended: held messages become ordinary history.
+    func focusEnded() {
+        history.releaseHeld()
+        AppModel.shared.removeIfPresent("focus-held", now: Date())
+    }
+
+    func open(_ e: NotificationHistory.Entry) {
+        if let id = e.bundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
+    /// Banners carry the app's name only; the running app with that name gives the icon and what to open.
+    static func bundleID(_ app: String) -> String? {
+        NSWorkspace.shared.runningApplications.first { $0.localizedName == app }?.bundleIdentifier
     }
 }

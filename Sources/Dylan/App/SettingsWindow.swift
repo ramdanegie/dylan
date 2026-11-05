@@ -27,7 +27,7 @@ enum SettingsWindow {
 }
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, appearance, liveActivity, media, discord, devices, thermal, storage, faceUnlock, utilities, clipboard, screenshot, agents, terminal, features, about
+    case general, appearance, animations, liveActivity, media, prayer, discord, devices, thermal, storage, faceUnlock, utilities, clipboard, screenshot, agents, terminal, features, about
     var id: String { rawValue }
     /// Sidebar groups by purpose (FR-104).
     enum Group: CaseIterable { case basics, notch, system, tools, developer, info
@@ -45,8 +45,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var group: Group {
         switch self {
-        case .general, .appearance: return .basics
-        case .liveActivity, .media, .discord: return .notch
+        case .general, .appearance, .animations: return .basics
+        case .liveActivity, .media, .prayer, .discord: return .notch
         case .devices, .thermal, .storage, .faceUnlock: return .system
         case .utilities, .clipboard, .screenshot: return .tools
         case .agents, .terminal: return .developer
@@ -59,6 +59,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .appearance: return "paintbrush"
+        case .animations: return "sparkles"
+        case .prayer: return "moon.stars"
         case .liveActivity: return "bell.badge"
         case .media: return "music.note"
         case .discord: return "headphones"
@@ -84,6 +86,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general, .features, .about: return (O.teal, O.sand)
         case .appearance: return (O.lilac, O.teal)
+        case .animations: return (O.lilac, O.rose)
+        case .prayer: return (O.teal, O.green)
         case .liveActivity, .agents: return (O.teal, O.sky)
         case .media: return (O.sand, O.rose)
         case .discord: return (O.lilac, O.sky)
@@ -103,6 +107,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return (0.28, 0.74)
         case .appearance: return (0.70, 0.26)
+        case .animations: return (0.26, 0.74)
+        case .prayer: return (0.30, 0.72)
         case .liveActivity: return (0.24, 0.78)
         case .media: return (0.76, 0.30)
         case .discord: return (0.30, 0.72)
@@ -128,6 +134,11 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "Dylan"
         case .appearance: return "Aa"
+        case .animations: return "✦"
+        case .prayer:
+            let p = PrayerProvider.shared
+            guard let n = p.next else { return L("prayer.short") }
+            return p.name(n.prayer, on: n.at) + " " + PrayerProvider.clock(n.at)
         case .liveActivity: return Date().formatted(date: .omitted, time: .shortened)
         case .media: return m.presentationMode ? "♪" : m.media.map { "♪ " + $0.title } ?? "♪"
         case .discord: return DiscordProvider.shared.connected ? L("discord.connected") : "Discord"
@@ -243,15 +254,19 @@ struct SettingsView: View {
         switch selection {
         case .general: GeneralSettings()
         case .appearance: AppearanceSettings()
-        case .liveActivity: LiveActivitySettings()
+        case .animations: AnimationSettings()
+        case .prayer: PrayerSettings()
+        case .liveActivity: LiveActivitySettings(); NotificationHistorySettings()
         case .media:
             FeatureToggles(features: [.media, .otherPlayers, .lyrics, .visualizer, .appVolume, .meeting, .timeToLeave, .reminders, .timer])
             if model.features.isEnabled(.otherPlayers) {
                 Section { Button(L("otherPlayers.allow")) { OtherPlayersProvider.shared.requestAccess() } }
             }
+            LyricsFocusSettings()
             QuickPlaySettings()
         case .devices:
-            FeatureToggles(features: [.battery, .bluetooth, .privacy, .focus, .keepAwake, .hud])
+            FeatureToggles(features: [.battery, .bluetooth, .privacy, .focus, .keepAwake, .hud, .quickToggles])
+            QuickToggleSettings()
             if model.features.isEnabled(.focus), FocusProvider.shared.blocked {
                 Section {
                     SwiftUI.Text(L("focus.blocked")).font(.caption).foregroundStyle(.orange)
@@ -261,7 +276,7 @@ struct SettingsView: View {
                 }
             }
             KeepAwakeSettings()
-        case .utilities: UtilitySettings()
+        case .utilities: UtilitySettings(); ModuleSettings()
         case .discord: DiscordSettings()
         case .clipboard: ClipboardSettings()
         case .screenshot: ScreenshotSettings()
@@ -320,13 +335,8 @@ struct AppearanceSettings: View {
         Section(L("theme.title")) {
             Toggle(L("theme.accent"), isOn: Binding(get: { model.accentFromArtwork }, set: { model.accentFromArtwork = $0 }))
             Toggle(L("theme.small"), isOn: Binding(get: { model.smallCompact }, set: { model.smallCompact = $0; NotchController.shared.relayout() }))
-            if #available(macOS 26, *) {
-                Toggle(L("theme.glass"), isOn: Binding(get: { model.glassPill }, set: { model.glassPill = $0 }))
-            } else {
-                LabeledContent(L("theme.glass"), value: L("support.status.unsupported"))
-            }
-            SwiftUI.Text(L("theme.blackNotch")).font(.caption).foregroundStyle(.secondary)
         }
+        IslandStyleSettings()
         Section(L("theme.hideFor")) {
             ForEach(model.hideForApps, id: \.self) { id in
                 HStack { SwiftUI.Text(id); Spacer(); Button(L("shelf.remove")) { model.hideForApps.removeAll { $0 == id } } }

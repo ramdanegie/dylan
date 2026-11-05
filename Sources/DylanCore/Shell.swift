@@ -6,10 +6,12 @@ public enum Shell {
     /// so output larger than the pipe buffer (~64 KB) cannot stall it.
     // shortcut: blocks the calling thread (a cooperative-pool thread under Task.detached) up to `timeout`;
     // move to an async Process wrapper if many long commands run at once.
-    public static func run(_ path: String, _ args: [String], timeout: TimeInterval = 5) -> String? {
+    /// `cwd` sets the working directory; `requireSuccess` also returns nil on a non-zero exit status.
+    public static func run(_ path: String, _ args: [String], timeout: TimeInterval = 5, cwd: String? = nil, requireSuccess: Bool = false) -> String? {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: path)
         p.arguments = args
+        if let cwd { p.currentDirectoryURL = URL(fileURLWithPath: cwd) }
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
@@ -20,6 +22,7 @@ public enum Shell {
         DispatchQueue.global(qos: .utility).async { box.data = reader.readDataToEndOfFile(); done.signal() }
         guard done.wait(timeout: .now() + timeout) == .success else { p.terminate(); return nil }
         p.waitUntilExit()
+        if requireSuccess && p.terminationStatus != 0 { return nil }
         return String(data: box.data, encoding: .utf8)
     }
 

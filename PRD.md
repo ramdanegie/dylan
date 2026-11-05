@@ -253,6 +253,17 @@ Fitur bertanda **[Dev]** hanya aktif bila Mode Developer dinyalakan (FR-17). Sis
 | FR-102 | Bersihkan dengan konfirmasi: yang bisa dibuat ulang (cache, log, build) dihapus permanen; file milik user dipindah ke Trash; default hanya item berdampak rendah yang dicentang; cache app yang sedang berjalan tidak dicentang | Should |
 | FR-103 | Peringatan di notch saat ruang kosong tinggal sedikit (default < 10 GB atau < 10 %), dicek tiap 30 menit, dengan tombol Bersihkan | Should |
 | FR-104 | Settings dikelompokkan per kegunaan di sidebar (Notch, Sistem, Alat, Developer) | Should |
+| FR-105 | **Waktu salat (D51):** jadwal metode Kemenag RI dihitung di Mac per kota (dipilih sekali, tanpa izin lokasi), hitung mundur P3 30 menit sebelum salat, Peek P1 saat waktunya, tab Salat (enam waktu + tanggal Hijriah), pengingat 5–30 menit sebelumnya, koreksi ihtiyati; Zuhur hari Jumat tampil sebagai Jumat | Should |
+| FR-106 | Azan dari file audio pilihan user (Mati / Subuh saja / Semua), musik dijeda lalu dilanjutkan, tombol Hentikan azan | Should |
+| FR-107 | Lirik (D53): karaoke per kata bila sumber punya timing per kata, romanisasi Hangul/Kana/Pinyin/Thai/Arab di Mac (ICU), terjemahan ke bahasa app dengan Apple Translation, disimpan per lagu | Could |
+| FR-108 | Animasi per item (D54): garis cahaya notifikasi, garis waktu di tepi island, notifikasi bertumpuk, konfeti saat semua tugas hari itu selesai; toggle masing-masing, Reduce Motion mematikan semuanya | Could |
+| FR-109 | Drop actions (D56): file yang diseret ke tepi atas membuka zona Shelf, Kompres (ZIP), AirDrop, iCloud Drive dan folder sinkron cloud yang terpasang, Bagikan; gambar juga Hapus background dan Ubah ukuran | Should |
+| FR-110 | Riwayat notifikasi (D57): tab Notifikasi per percakapan, 24 jam atau 7 hari, hanya di memori; opsional, saat Focus aktif pesan yang lolos Focus juga hanya dihitung di telinga (panggilan tetap masuk; app yang tidak diizinkan sudah ditahan macOS) | Should |
+| FR-111 | Fokus (D58): durasi Pomodoro bisa diatur, istirahat mulai otomatis dengan Peek + Lewati, fokus berikutnya otomatis opsional; Stopwatch dengan lap yang tetap berjalan saat sleep | Should |
+| FR-112 | Gaya island (D59): Hitam, Warna, Kaca, Kaca buram, Pulau melayang (jarak 0–12 pt, lebar bisa diatur); di Mac ber-notch bagian di atas kamera tetap hitam | Could |
+| FR-113 | Di layar tanpa notch pill bisa digeser di tepi atas (diingat per layar) dan opsional menyingkir saat kursor hanya lewat | Could |
+| FR-114 | Modul Home lewat "Edit modul": Tugas hari ini (Reminders), Flashcard (pengulangan berjarak, impor CSV/Anki), Radio internet (stasiun favorit) | Could |
+| FR-115 | HUD tambahan (D60): mik mati untuk semua app ⌃⌥M dengan indikator merah, mode pesawat ⌃⌥⇧A (Wi‑Fi mati lalu dikembalikan); Bluetooth dan lampu keyboard tidak (API privat) | Could |
 | FR-46 | Scratchpad: catatan cepat dalam satu hover | Could |
 | FR-79 | Kamera cermin: preview kamera depan di Expanded untuk cek penampilan sebelum meeting; kamera hanya aktif selama panel terbuka | Could |
 | FR-81 | "Waktunya berangkat": untuk event dengan lokasi fisik, hitung waktu tempuh (MapKit) dan beri P1 saat harus berangkat | Could |
@@ -859,6 +870,12 @@ Protokol dan perintah ada di §2.6.
 - **Dampak:** Rendah = dibuat ulang otomatis (cache, log, build); Sedang = perlu unduh/build ulang atau tidak bisa dipulihkan tapi bukan karya user (Trash, Archives); Tinggi = data milik user (Downloads, file besar, cadangan iPhone).
 - **Hapus:** item berdampak Rendah dihapus permanen supaya ruangnya benar-benar kembali; item Sedang/Tinggi dipindah ke Trash (bisa dikembalikan), kecuali "Kosongkan Trash" itu sendiri. Path dicek ulang tepat sebelum dihapus (masih di dalam folder rumah, bukan symlink, bukan folder rumah itu sendiri).
 - **Default:** hanya item Rendah yang dicentang, kecuali cache app yang sedang berjalan.
+
+### F26 — Fitur v1.5 (FR-105 s/d FR-115, design D51–D60)
+- **Waktu salat** dihitung lokal (Subuh 20°, Isya 18°, Asar Syafi'i, ihtiyat default +2 menit, dibulatkan ke atas; Terbit dikurangi ihtiyat). Kota di-geocode sekali lewat layanan yang sama dengan cuaca; setelah itu offline. Tanggal Hijriah Umm al-Qura (bisa beda sehari dari isbat).
+- **Azan** tidak dibundel: user memilih file audio sendiri (tanpa masalah lisensi); tanpa file, bunyi singkat.
+- **Riwayat notifikasi** hanya di memori, seperti banner itu sendiri; tidak ditulis ke disk.
+- **Tidak dibuat:** AI chat & terjemahan teks terpilih (D52) dan Buddy (D55) menyusul; Bluetooth dan lampu keyboard di mode pesawat/HUD butuh API privat.
 
 ### F24 — Suhu & Kipas (FR-95 s/d FR-99, design D45–D49)
 - **Baca** tanpa root: suhu dari sensor IOHID (`PMU tdie*` CPU, `PMU TP*g` GPU, `NAND` SSD, `gas gauge battery`), kipas dari SMC (`FNum`, `F<n>Ac/Mn/Mx/Md/Tg`). Polling 2 dtk saat tab Suhu terbuka, 10 dtk di latar hanya bila mode bukan Otomatis atau peringatan panas aktif. Spike M1 Pro (macOS 27.2): `F<n>Md` ui8, `F<n>Tg` flt, tanpa key `Ftst`.

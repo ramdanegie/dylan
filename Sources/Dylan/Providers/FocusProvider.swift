@@ -3,10 +3,13 @@ import DylanCore
 
 /// Focus on/off (FR-72, design D32): a short P3 activity when Focus changes. Watches the DoNotDisturb
 /// store directory; no polling. If macOS blocks reading it, the feature stays silent (hint in Settings).
+@Observable
 final class FocusProvider {
     static let shared = FocusProvider()
     private var source: DispatchSourceFileSystemObject?
     private var current: String?
+    /// The Focus that is on now, nil when none.
+    private(set) var mode: FocusMode.Mode?
     private var pending: DispatchWorkItem?
     /// macOS refused the DoNotDisturb folder (it needs Full Disk Access on macOS 27); Settings says so.
     private(set) var blocked = false
@@ -22,11 +25,13 @@ final class FocusProvider {
         s.setCancelHandler { close(fd) }
         s.resume()
         source = s
-        current = Self.read()?.id   // the state at launch is not news
+        mode = Self.read()
+        current = mode?.id   // the state at launch is not news
     }
 
     func stop() {
         source?.cancel(); source = nil
+        if mode != nil { mode = nil; current = nil; NotificationLog.shared.focusEnded() }
         pending?.cancel(); pending = nil
     }
 
@@ -42,6 +47,8 @@ final class FocusProvider {
         let mode = Self.read()
         guard mode?.id != current else { return }
         current = mode?.id
+        self.mode = mode
+        if mode == nil { NotificationLog.shared.focusEnded() } else { NotificationLog.shared.refreshHeld() }
         let m = AppModel.shared
         guard m.features.isEnabled(.focus) else { return }
         let now = Date()

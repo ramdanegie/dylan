@@ -5,6 +5,14 @@ public struct Lyrics: Equatable, Sendable {
     public struct Line: Equatable, Sendable {
         public var time: TimeInterval
         public var text: String
+        /// Per-word start times from enhanced LRC (`<mm:ss.xx>word`), for karaoke (D53); nil when the source has none.
+        public var words: [Word]?
+        public init(time: TimeInterval, text: String, words: [Word]? = nil) { self.time = time; self.text = text; self.words = words }
+    }
+
+    public struct Word: Equatable, Sendable {
+        public var time: TimeInterval
+        public var text: String
     }
 
     public var lines: [Line]
@@ -26,15 +34,59 @@ public struct Lyrics: Equatable, Sendable {
             let ns = raw as NSString
             let matches = tag.matches(in: raw, range: NSRange(location: 0, length: ns.length))
             guard let last = matches.last else { continue }
-            let text = ns.substring(from: last.range.upperBound).trimmingCharacters(in: .whitespaces)
+            let body = ns.substring(from: last.range.upperBound)
+            let (text, words) = wordTimes(body, offset: offset)
             for m in matches {
                 let min = Double(ns.substring(with: m.range(at: 1))) ?? 0
                 let sec = Double(ns.substring(with: m.range(at: 2)).replacingOccurrences(of: ":", with: ".")) ?? 0
                 // A positive offset makes lyrics appear earlier (LRC convention).
-                out.append(Line(time: max(0, min * 60 + sec - offset), text: text))
+                out.append(Line(time: max(0, min * 60 + sec - offset), text: text, words: words))
             }
         }
         return Lyrics(lines: out.sorted { $0.time < $1.time }, synced: true)
+    }
+
+    /// Splits enhanced LRC word tags off a line: "<00:12.30>Hello <00:12.90>world" → ("Hello world", two words).
+    static func wordTimes(_ body: String, offset: TimeInterval) -> (String, [Word]?) {
+        let tag = try! NSRegularExpression(pattern: #"<(\d{1,3}):(\d{1,2}(?:[.:]\d{1,3})?)>"#)
+        let ns = body as NSString
+        let matches = tag.matches(in: body, range: NSRange(location: 0, length: ns.length))
+        guard !matches.isEmpty else { return (body.trimmingCharacters(in: .whitespaces), nil) }
+        var words: [Word] = []
+        for (i, m) in matches.enumerated() {
+            let end = i + 1 < matches.count ? matches[i + 1].range.location : ns.length
+            // Kept as written: CJK lines tag every character with no spaces between them.
+            let w = ns.substring(with: NSRange(location: m.range.upperBound, length: end - m.range.upperBound))
+            guard !w.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+            let min = Double(ns.substring(with: m.range(at: 1))) ?? 0
+            let sec = Double(ns.substring(with: m.range(at: 2)).replacingOccurrences(of: ":", with: ".")) ?? 0
+            words.append(Word(time: max(0, min * 60 + sec - offset), text: w))
+        }
+        let text = tag.stringByReplacingMatches(in: body, range: NSRange(location: 0, length: ns.length), withTemplate: "")
+        return (text.trimmingCharacters(in: .whitespaces), words.isEmpty ? nil : words)
+    }
+
+    /// How many words of `line` are lit at `position` (D53). Without word times the whole line is lit at once.
+    public static func litWords(_ line: Line, at position: TimeInterval) -> Int {
+        guard let w = line.words else { return Int.max }
+        return w.filter { $0.time <= position }.count
+    }
+
+    /// Latin transcription for lyrics not written in Latin script (Hangul, Kana/Kanji, Pinyin, Thai, Arabic…),
+    /// done on the Mac with ICU; nil when the line is already Latin.
+    public static func romanized(_ text: String) -> String? {
+        guard needsRomanization(text), let latin = text.applyingTransform(.toLatin, reverse: false) else { return nil }
+        let plain = latin.applyingTransform(.stripCombiningMarks, reverse: false) ?? latin
+        return plain == text ? nil : plain
+    }
+
+    /// True when most letters are outside the Latin script.
+    public static func needsRomanization(_ text: String) -> Bool {
+        var latin = 0, other = 0
+        for u in text.unicodeScalars where u.properties.isAlphabetic {
+            if u.value < 0x250 || (0x1E00...0x1EFF).contains(u.value) { latin += 1 } else { other += 1 }
+        }
+        return other > latin
     }
 
     public static func plain(_ text: String) -> Lyrics {
