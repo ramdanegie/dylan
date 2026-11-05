@@ -1245,7 +1245,7 @@
 "prayer.musicPaused" = "musik dijeda";
 "prayer.stopAdhan" = "Hentikan azan";
 "prayer.source" = "Metode Kemenag · %@";
-"prayer.pickCity" = "Pilih kotamu sekali di Settings. Tanpa izin lokasi.";
+"prayer.pickCity" = "Pakai lokasimu atau pilih kota sekali di Settings.";
 "prayer.openSettings" = "Pilih kota";
 "prayer.city" = "Kota";
 "prayer.cityPrompt" = "mis. Jakarta Selatan";
@@ -1439,3 +1439,10 @@
 "focus.startBreak" = "Mulai istirahat";
 "focus.breakWaiting" = "Fokus selesai. Mulai istirahat kalau sudah siap.";
 "flash.hidden" = "Disembunyikan saat Mode Presentasi";
+"prayer.useLocation" = "Pakai lokasi saat ini";
+"prayer.useLocationHint" = "Waktu salat mengikuti posisi Mac, juga saat bepergian. Lokasi dibulatkan sekitar 1 km, dicek saat Mac bangun dan tiap 3 jam, dan hanya disimpan di Mac ini; Apple mengubahnya jadi nama kota.";
+"prayer.useLocationShort" = "Pakai lokasiku";
+"prayer.locating" = "Mencari lokasimu…";
+"prayer.locatedAt" = "Lokasi diperbarui pukul %@";
+"prayer.locationDenied" = "Dylan belum diizinkan memakai lokasi. Izinkan di System Settings → Privacy & Security → Location Services, atau ketik kota.";
+"prayer.openLocationSettings" = "Buka Location Services";

@@ -3,7 +3,7 @@
 "NSBluetoothAlwaysUsageDescription" = "Dylan shows AirPods and other Bluetooth devices when they connect.";
 "NSRemindersFullAccessUsageDescription" = "Dylan shows today's reminders and lets you check them off from the notch.";
 "NSCameraUsageDescription" = "Dylan shows a camera mirror before meetings and, if you enroll, uses the built-in camera for Face Unlock. No images are stored.";
-"NSLocationUsageDescription" = "Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).";
-"NSLocationWhenInUseUsageDescription" = "Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).";
+"NSLocationUsageDescription" = "Dylan uses your location for prayer times and to tell you when to leave for meetings at a physical place (both off by default).";
+"NSLocationWhenInUseUsageDescription" = "Dylan uses your location for prayer times and to tell you when to leave for meetings at a physical place (both off by default).";
 "NSAudioCaptureUsageDescription" = "Dylan reads the sound of your music app for a live equalizer, and of the apps you turn down for volume per app. Nothing is recorded.";
 "NSMicrophoneUsageDescription" = "Dylan records your voice with a screen recording, only when you turn on the microphone for it.";

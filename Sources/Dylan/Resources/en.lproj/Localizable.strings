@@ -1245,7 +1245,7 @@
 "prayer.musicPaused" = "music paused";
 "prayer.stopAdhan" = "Stop adhan";
 "prayer.source" = "Kemenag method · %@";
-"prayer.pickCity" = "Pick your city once in Settings. No location access needed.";
+"prayer.pickCity" = "Use your location or pick a city once in Settings.";
 "prayer.openSettings" = "Choose city";
 "prayer.city" = "City";
 "prayer.cityPrompt" = "e.g. Jakarta Selatan";
@@ -1439,3 +1439,10 @@
 "focus.startBreak" = "Start break";
 "focus.breakWaiting" = "Focus done. Start the break when you are ready.";
 "flash.hidden" = "Hidden in Presentation Mode";
+"prayer.useLocation" = "Use current location";
+"prayer.useLocationHint" = "Prayer times follow where your Mac is, also when you travel. The location is rounded to about 1 km, checked on wake and every 3 hours, and only kept on this Mac; Apple turns it into the city name.";
+"prayer.useLocationShort" = "Use my location";
+"prayer.locating" = "Finding your location…";
+"prayer.locatedAt" = "Location updated at %@";
+"prayer.locationDenied" = "Dylan is not allowed to use your location. Allow it in System Settings → Privacy & Security → Location Services, or type a city.";
+"prayer.openLocationSettings" = "Open Location Services";

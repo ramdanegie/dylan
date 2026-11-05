@@ -44,8 +44,12 @@ struct PrayerTab: View {
             }
         } else {
             VStack(spacing: 10) {
-                EmptyCard(symbol: "moon.stars", text: p.lookupFailed ? L("prayer.cityNotFound", p.city) : L("prayer.pickCity"))
-                NotchButton(title: L("prayer.openSettings")) { SettingsWindow.show(section: .prayer) }
+                EmptyCard(symbol: "moon.stars", text: p.locationDenied ? L("prayer.locationDenied")
+                          : p.useLocation ? L("prayer.locating") : p.lookupFailed ? L("prayer.cityNotFound", p.city) : L("prayer.pickCity"))
+                HStack(spacing: 8) {
+                    if !p.useLocation { NotchButton(title: L("prayer.useLocationShort"), kind: .primaryNeutral) { p.useCurrentLocation(true) } }
+                    NotchButton(title: L("prayer.openSettings")) { SettingsWindow.show(section: .prayer) }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

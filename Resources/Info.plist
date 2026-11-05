@@ -20,8 +20,8 @@
 	<key>NSAppleEventsUsageDescription</key><string>Dylan controls Spotify and Apple Music from the notch.</string>
 	<key>NSRemindersFullAccessUsageDescription</key><string>Dylan shows today's reminders and lets you check them off from the notch.</string>
 	<key>NSCameraUsageDescription</key><string>Dylan shows a camera mirror before meetings and, if you enroll, uses the built-in camera for Face Unlock. No images are stored.</string>
-	<key>NSLocationUsageDescription</key><string>Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).</string>
-	<key>NSLocationWhenInUseUsageDescription</key><string>Dylan tells you when to leave for meetings at a physical place (Time to leave, off by default).</string>
+	<key>NSLocationUsageDescription</key><string>Dylan uses your location for prayer times and to tell you when to leave for meetings at a physical place (both off by default).</string>
+	<key>NSLocationWhenInUseUsageDescription</key><string>Dylan uses your location for prayer times and to tell you when to leave for meetings at a physical place (both off by default).</string>
 	<key>NSMicrophoneUsageDescription</key><string>Dylan records your voice with a screen recording, only when you turn on the microphone for it.</string>
 	<key>NSAudioCaptureUsageDescription</key><string>Dylan reads the sound of your music app for a live equalizer, and of the apps you turn down for volume per app. Nothing is recorded.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key><string>Dylan shows AirPods and other Bluetooth devices when they connect.</string>
