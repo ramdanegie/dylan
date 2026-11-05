@@ -2,10 +2,13 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
-## [Unreleased]
+## [0.2.1] - 2026-11-05
 
 ### Ditambahkan
 - Waktu salat bisa mengikuti lokasi saat ini (Settings → Waktu salat → Pakai lokasi saat ini): tidak perlu mengetik kota, dan jadwal ikut berubah saat bepergian. Lokasi dibulatkan sekitar 1 km dan tetap di Mac-mu.
+
+### Diubah
+- Gaya island Warna dimulai dari hitam.
 
 ## [0.2.0] - 2026-11-05
 
