@@ -2,10 +2,13 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.2.1] - 2026-11-05
 
 ### Added
 - Prayer times can follow your current location (Settings → Prayer times → Use current location): no city to type, and the schedule updates when you travel. The location is rounded to about 1 km and stays on your Mac.
+
+### Changed
+- The Colour island style starts from black.
 
 ## [0.2.0] - 2026-11-05
 
