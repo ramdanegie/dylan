@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.3.0] - 2026-11-07
 
 ### Added
 - Face Unlock, after Glance:
