@@ -2,7 +2,7 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
-## [Unreleased]
+## [0.3.1] - 2026-11-07
 
 ### Diperbaiki
 - Face Unlock membaca gerak kepala dengan presisi. Sebelumnya kiri dan kanan melompat per 45° dan atas atau bawah tidak pernah terbaca, jadi pendaftaran lama dan "lihat ke atas" tidak pernah bisa lolos. Arah kiri dan atas kini dipelajari dari gerakanmu sendiri saat mendaftar atau menambah identitas.

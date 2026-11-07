@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.3.1] - 2026-11-07
 
 ### Fixed
 - Face Unlock reads head turns precisely. Before, left and right jumped in 45° steps and up or down never registered, so enrolling dragged on and "look up" could never pass. Which way is left and up is now learned from your own turns while you enroll or add an identity.
