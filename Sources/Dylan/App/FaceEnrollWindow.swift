@@ -251,20 +251,18 @@ private struct DotLabel: LabelStyle {
 }
 
 /// One arc per head direction around the preview, green once that direction has its frames (D19, after Glance's
-/// nine directions). Mirrored like the preview: "left" is the user's left, drawn on the left.
+/// guided directions). Mirrored like the preview: "left" is the user's left, drawn on the left.
 private struct PoseRing: View {
     var coverage: PoseCoverage
     /// Screen angle of each direction (0° = right, clockwise, as SwiftUI draws).
-    private static let angles: [PoseCoverage.Pose: Double] = [
-        .right: 0, .downRight: 45, .down: 90, .downLeft: 135, .left: 180, .upLeft: 225, .up: 270, .upRight: 315,
-    ]
+    private static let angles: [PoseCoverage.Pose: Double] = [.right: 0, .down: 90, .left: 180, .up: 270]
     var body: some View {
         ZStack {
             ForEach(PoseCoverage.Pose.allCases.filter { $0 != .center }, id: \.self) { p in
                 Circle()
-                    .trim(from: 0, to: 38.0 / 360)
+                    .trim(from: 0, to: 70.0 / 360)
                     .stroke(coverage.isFull(p) ? Color.green : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .rotationEffect(.degrees(Self.angles[p]! - 19))
+                    .rotationEffect(.degrees(Self.angles[p]! - 35))
             }
             Circle().stroke(coverage.isFull(.center) ? Color.green : Color.clear, lineWidth: 2).padding(14)
         }

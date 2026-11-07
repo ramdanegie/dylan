@@ -66,40 +66,53 @@ public struct FaceIdentity: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
-/// Guided enrollment: frames are sorted by head direction and each of the nine directions needs `perPose`
-/// of them, so the template covers the angles the challenge later asks for.
+/// Which way Vision's yaw and pitch point for this Mac's camera: +1 when Vision's value grows as the user turns to
+/// their left (yaw) or looks up (pitch). Learned during enrollment (`PoseCoverage.classify`), kept in the vault.
+public struct PoseSigns: Codable, Equatable, Sendable {
+    public var yaw: Double?
+    public var pitch: Double?
+    public init(yaw: Double? = nil, pitch: Double? = nil) { self.yaw = yaw; self.pitch = pitch }
+
+    /// Before an enrollment has taught them: Vision's right-handed axes on a mirrored image (+yaw = the user's
+    /// right, +pitch = down), hence −1 for both.
+    public func apply(yaw: Double, pitch: Double) -> (yaw: Double, pitch: Double) { (yaw * (self.yaw ?? -1), pitch * (self.pitch ?? -1)) }
+}
+
+/// Guided enrollment: frames are sorted by head direction and each of the five directions needs `perPose` of
+/// them, so the template covers the angles the challenge later asks for. Glance asks for nine; the diagonals were
+/// tiring to hit and add little, so Dylan asks for straight ahead, left, right, up and down.
 public struct PoseCoverage: Equatable, Sendable {
     public enum Pose: Int, CaseIterable, Sendable {
-        case center, left, right, up, down, upLeft, upRight, downLeft, downRight
+        case center, left, right, up, down
     }
 
-    public static let perPose = 2
+    public static let perPose = 3
     public static var total: Int { Pose.allCases.count * perPose }
-    /// Degrees away from straight ahead that count as a direction. Looking down is harder to hold.
-    public static let side = 12.0
-    public static let down = 8.0
+    /// Degrees away from where the head started (the camera's first frame) that count as a direction.
+    public static let side = 10.0
     /// Farther than this the face print gets poor: the wizard says "come back a little".
-    public static let tooFar = 35.0
+    public static let tooFar = 32.0
 
     public private(set) var counts: [Pose: Int] = [:]
     public init() {}
 
-    /// nil when the head is turned too far. Yaw + = the user's left, pitch + = up (as `LivenessChallenge`).
-    public static func pose(yaw: Double, pitch: Double) -> Pose? {
-        guard abs(yaw) <= tooFar, abs(pitch) <= tooFar else { return nil }
-        let h = yaw >= side ? -1 : yaw <= -side ? 1 : 0
-        let v = pitch >= side ? 1 : pitch <= -down ? -1 : 0
-        switch (h, v) {
-        case (0, 0): return .center
-        case (-1, 0): return .left
-        case (1, 0): return .right
-        case (0, 1): return .up
-        case (0, -1): return .down
-        case (-1, 1): return .upLeft
-        case (1, 1): return .upRight
-        case (-1, -1): return .downLeft
-        default: return .downRight
+    public enum Reading: Equatable, Sendable { case pose(Pose), tooFar, unknown }
+
+    /// A frame's head movement (degrees from where the head started, Vision's own signs) as a direction. Apple does
+    /// not document which way Vision's yaw and pitch point, so the signs are learned from the user: the first clear
+    /// turn while the wizard asks for "left" (or "up") sets that axis. Until then a turn on that axis is `unknown`.
+    /// A diagonal counts for its larger axis.
+    public static func classify(yaw: Double, pitch: Double, signs: inout PoseSigns, asking: Pose?) -> Reading {
+        if abs(yaw) > tooFar || abs(pitch) > tooFar { return .tooFar }
+        if max(abs(yaw), abs(pitch)) < side { return .pose(.center) }
+        if abs(yaw) >= abs(pitch) {
+            if signs.yaw == nil, asking == .left || asking == .right { signs.yaw = (yaw > 0) == (asking == .left) ? 1 : -1 }
+            guard let s = signs.yaw else { return .unknown }
+            return .pose(yaw * s > 0 ? .left : .right)
         }
+        if signs.pitch == nil, asking == .up || asking == .down { signs.pitch = (pitch > 0) == (asking == .up) ? 1 : -1 }
+        guard let s = signs.pitch else { return .unknown }
+        return .pose(pitch * s > 0 ? .up : .down)
     }
 
     /// Keeps the frame only when its direction still needs one.
@@ -126,12 +139,14 @@ public enum FaceGeometry {
     }
 
     /// A phone or tablet held up to the camera (Glance's "device bezel" cue): a rectangle that frames the face
-    /// snugly. A door or monitor behind you is far larger than your face, so only close frames count.
+    /// snugly and around its middle, as a screen showing a face does. A door, window or monitor behind you is larger
+    /// and off-centre (a real face fired the first, looser version), so only snug, centred frames count.
     public static func framedByDevice(face: CGRect, rects: [CGRect]) -> Bool {
         let area = face.width * face.height
         guard area > 0 else { return false }
         return rects.contains { r in
-            r.insetBy(dx: -face.width * 0.05, dy: -face.height * 0.05).contains(face) && (1.3...6).contains(r.width * r.height / area)
+            r.insetBy(dx: -face.width * 0.05, dy: -face.height * 0.05).contains(face) && (1.3...4).contains(r.width * r.height / area)
+                && abs(r.midX - face.midX) <= r.width * 0.2 && abs(r.midY - face.midY) <= r.height * 0.25
         }
     }
 
@@ -165,12 +180,13 @@ public struct FaceVault: Codable, Equatable, Sendable {
     /// Last unlock Dylan saw that was not by face (or a verified enrollment). Kept across Dylan restarts;
     /// the policy only counts it when it is after the Mac's boot time.
     public var lastPasswordUnlock: Date?
+    public var poseSigns = PoseSigns()
     public init() {}
 
     /// At least one identity is switched on.
     public var canMatch: Bool { identities.contains(where: \.enabled) }
 
-    private enum CodingKeys: String, CodingKey { case identities, template, settings, log, consecutiveFailures, lastPasswordUnlock }
+    private enum CodingKeys: String, CodingKey { case identities, template, settings, log, consecutiveFailures, lastPasswordUnlock, poseSigns }
 
     /// Every key is optional, so a vault sealed by an older Dylan still opens: losing it would silently drop the
     /// enrollment. Up to 0.2.x the vault held a single `template`.
@@ -184,6 +200,7 @@ public struct FaceVault: Codable, Equatable, Sendable {
         log = try c.decodeIfPresent(FaceUnlockLog.self, forKey: .log) ?? .init()
         consecutiveFailures = try c.decodeIfPresent(Int.self, forKey: .consecutiveFailures) ?? 0
         lastPasswordUnlock = try c.decodeIfPresent(Date.self, forKey: .lastPasswordUnlock)
+        poseSigns = try c.decodeIfPresent(PoseSigns.self, forKey: .poseSigns) ?? .init()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -195,6 +212,7 @@ public struct FaceVault: Codable, Equatable, Sendable {
         try c.encode(log, forKey: .log)
         try c.encode(consecutiveFailures, forKey: .consecutiveFailures)
         try c.encodeIfPresent(lastPasswordUnlock, forKey: .lastPasswordUnlock)
+        try c.encode(poseSigns, forKey: .poseSigns)
     }
 
     public func sealed(with key: SymmetricKey) throws -> Data {

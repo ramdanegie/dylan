@@ -1131,7 +1131,8 @@ struct FaceUnlockSettings: View {
             .onReceive(NotificationCenter.default.publisher(for: FaceUnlockSettings.passwordRequest)) { _ in newPassword = ""; passwordError = nil }
         }
         if !face.vault.log.events.isEmpty {
-            Section(L("faceUnlock.log")) {
+            Section {
+                Button(L("faceUnlock.copyLog")) { face.copyLog() }
                 ForEach(Array(face.vault.log.events.prefix(10).enumerated()), id: \.offset) { _, e in
                     HStack {
                         SwiftUI.Text(e.at.formatted(date: .abbreviated, time: .shortened))
@@ -1141,8 +1142,11 @@ struct FaceUnlockSettings: View {
                         if let i = e.identity { SwiftUI.Text(String(format: "%.2f", i)).monospacedDigit().foregroundStyle(.secondary) }
                     }
                     .font(.caption)
+                    if let t = e.trace {
+                        SwiftUI.Text(FaceUnlockProvider.traceText(t)).font(.caption2).monospacedDigit().foregroundStyle(.secondary).textSelection(.enabled)
+                    }
                 }
-            }
+            } header: { SwiftUI.Text(L("faceUnlock.log")) }
         }
     }
 }
@@ -1222,6 +1226,18 @@ extension FaceUnlockSettings {
                 } else {
                     // The live score helps tune a photo or a mask too, so it is behind Touch ID like the rest.
                     Button(L("faceUnlock.labStart")) { face.authorize { FaceUnlockProvider.shared.startLab() } }
+                    Button(L("faceUnlock.practice")) { face.authorize { FaceUnlockProvider.shared.startPractice() } }
+                        .disabled(face.practice?.step != nil || !face.vault.canMatch)
+                }
+            }
+            if let p = face.practice {
+                if let step = p.step {
+                    Label(L("faceUnlock.scan.step", p.index, p.count) + ": " + step, systemImage: "faceid").font(.callout.bold())
+                } else if let ok = p.passed {
+                    Label(ok ? L("faceUnlock.practicePassed") : L("faceUnlock.practiceFailed", FaceUnlockProvider.reasonText(p.reason)),
+                          systemImage: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(ok ? .green : .red)
+                    if let t = p.trace { SwiftUI.Text(FaceUnlockProvider.traceText(t)).font(.caption).monospacedDigit().foregroundStyle(.secondary).textSelection(.enabled) }
                 }
             }
             if let r = face.lab {
@@ -1236,6 +1252,9 @@ extension FaceUnlockSettings {
                 LabeledContent(L("faceUnlock.labFaces"), value: "\(r.faces)")
                 LabeledContent(L("faceUnlock.labHead"), value: "\(Int(r.yaw.rounded()))° · \(Int(r.pitch.rounded()))°")
                 LabeledContent(L("faceUnlock.labEyes"), value: fmt(r.eyesOpen))
+                LabeledContent(L("faceUnlock.labPeaks")) {
+                    SwiftUI.Text(FaceUnlockProvider.traceText(r.peaks)).monospacedDigit()
+                }
                 if r.device { Label(L("faceUnlock.labDevice"), systemImage: "iphone.gen3").font(.caption).foregroundStyle(.orange) }
             }
         } header: { SwiftUI.Text(L("faceUnlock.lab")) }

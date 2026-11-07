@@ -2,6 +2,22 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Fixed
+- Face Unlock reads head turns precisely. Before, left and right jumped in 45° steps and up or down never registered, so enrolling dragged on and "look up" could never pass. Which way is left and up is now learned from your own turns while you enroll or add an identity.
+- Typing the password at the lock screen: the scan island closes first, the password goes in one character at a time, and Return comes after a short pause. In testing, challenges that passed still left the Mac locked.
+- Unlocking by hand after a failed attempt is no longer logged as unlocked by face.
+- The phone or tablet check no longer fires on a real face in front of a door or a monitor.
+
+### Changed
+- Enrollment asks for five directions (straight, left, right, up, down) instead of nine. A small turn of about 10° from where your head starts is enough, and the head dot glides.
+- The challenge says "close your eyes for a moment" instead of "blink": a quick blink can fall between camera frames.
+
+### Added
+- Practice the challenge (Settings → Face Unlock → Test your face): the real challenge while the Mac is unlocked, with the result and what the camera saw. Nothing is typed or counted.
+- Copy history. Each attempt also shows how far you turned, how far your eyes closed, and the scores.
+
 ## [0.3.0] - 2026-11-07
 
 ### Added

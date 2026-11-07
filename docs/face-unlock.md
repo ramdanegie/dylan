@@ -41,7 +41,7 @@ Peta lengkap di [replica/recon.md](../replica/recon.md) dan [replica/features.cs
 | Dari Glance | Di Dylan |
 |---|---|
 | Identities + toggle | Hingga 5 identitas di vault (`FaceIdentity`); identitas lama jadi "Wajah utama". Skor = maksimum dari identitas yang menyala. Semua mati → `allIdentitiesOff` |
-| Enrollment 9 arah, indikator kepala, "terlalu jauh" | `PoseCoverage`: 2 frame per arah (18), titik kepala live, > 35° = terlalu jauh. Ambang = celah terbesar antara satu arah dan arah terdekat lain × 1,1 (lebih ketat dari kiri↔kanan) |
+| Enrollment 9 arah, indikator kepala, "terlalu jauh" | `PoseCoverage`: 5 arah (diagonal dibuang: melelahkan) × 3 frame (15), ≥ 10° dari posisi awal, titik kepala live (dihaluskan), > 32° = terlalu jauh. Pose dari `VNDetectFaceRectanglesRequest` revisi 3 (kontinu; landmarks saja memberi yaw per 45° dan pitch 0), relatif ke frame pertama. Apple tidak mendokumentasikan tandanya, jadi tanda tiap sumbu dipelajari dari belokan pertama saat wizard meminta "kiri"/"atas" (`PoseCoverage.classify`, disimpan sebagai `PoseSigns` di vault; sebelum itu −1/−1). Menebak dari geometri hidung dicoba dan tidak andal (dongak terbaca −27° dan +21° di dua sesi). Ambang = celah terbesar antara satu arah dan arah terdekat lain × 1,1 (lebih ketat dari kiri↔kanan) |
 | Toleransi 2 s non-match (1.2.0) | 1,5 s **total** per tantangan (tiap frame minimal 0,1 s, tidak reset oleh frame cocok); langkah, termasuk kedua sisi kedipan, tidak pernah dihitung di frame yang tidak cocok; track wajah tetap wajib sama |
 | Cue bezel perangkat | `VNDetectRectanglesRequest`: persegi yang membingkai wajah rapat (1,3–6× luas wajah) di 3 frame → `spoof` |
 | Island scan di notch | Panel SkyLight yang sama dengan widget lock screen (FR-80); gagal → suara |
@@ -50,6 +50,8 @@ Peta lengkap di [replica/recon.md](../replica/recon.md) dan [replica/features.cs
 | Ganti password (1.2.0) | Diverifikasi OpenDirectory seperti saat daftar |
 | Face Lab | "Uji wajah" di Settings (di balik Touch ID: skor live juga membantu menyetel foto/masker): kamera 10 s, skor per identitas, arah kepala, mata, cue bezel |
 | Haptic | `NSHapticFeedbackManager` saat berhasil/gagal |
+| (Dylan) Latihan & jejak | "Latihan tantangan" menjalankan tantangan asli saat tidak terkunci (tanpa mengetik, tanpa hitungan gagal). Tiap percobaan mencatat `Trace`: rentang yaw/pitch, mata minimum, skor terbaik, skor saat mata tertutup, frame cocok. "Salin riwayat" ke clipboard (tanpa foto/password) |
+| (Dylan) Pengetikan | Uji nyata: 4 tantangan lolos, password diketik, Mac tetap terkunci. Kini island (space SkyLight) ditutup dulu, jeda 0,3 s, ⌘→ ⌘⌫, satu karakter per event (12 ms), Return setelah 150 ms, cek 5 s. **Belum diverifikasi ulang** |
 
 Tidak diadopsi: model ArcFace (bobot umumnya lisensi non-komersial), liveness Off/Light (lebih lemah), kamera eksternal/Continuity (bisa memutar video), sesi Touch ID 30 hari (aturan 48 jam Dylan lebih ketat).
 
