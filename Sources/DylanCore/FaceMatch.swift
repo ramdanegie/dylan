@@ -23,13 +23,22 @@ public enum FaceMatcher {
     }
 
     /// Threshold = the largest distance between enrolled frames × 1.1: anything farther than the user ever is
-    /// from themselves is not them.
-    public static func enroll(_ prints: [[Float]], now: Date) -> FaceTemplate? {
+    /// from themselves is not them. With guided enrollment (`poses`, one per print) the reach is the widest gap
+    /// between one head direction and its nearest other direction instead: the gap between your left and right
+    /// profile is large enough to let in someone else looking straight ahead.
+    public static func enroll(_ prints: [[Float]], poses: [Int]? = nil, now: Date) -> FaceTemplate? {
         guard prints.count >= minimumFrames, Set(prints.map(\.count)).count == 1 else { return nil }
         var spread: Float = 0
         for i in 0..<prints.count { for j in (i + 1)..<prints.count { spread = max(spread, distance(prints[i], prints[j])) } }
         guard spread > 0, spread.isFinite else { return nil }
-        return FaceTemplate(prints: prints, threshold: spread * 1.1, createdAt: now)
+        var reach = spread
+        if let poses, poses.count == prints.count, Set(poses).count > 1 {
+            reach = prints.indices.map { i in
+                prints.indices.filter { poses[$0] != poses[i] }.map { distance(prints[i], prints[$0]) }.min() ?? spread
+            }.max() ?? spread
+            guard reach > 0 else { return nil }
+        }
+        return FaceTemplate(prints: prints, threshold: reach * 1.1, createdAt: now)
     }
 
     /// 0…1; ≥ 0.66 (LivenessChallenge's bar) exactly when the nearest enrolled frame is within the threshold.
@@ -37,6 +46,74 @@ public enum FaceMatcher {
         let nearest = t.prints.map { distance(p, $0) }.min() ?? .infinity
         return Double(max(0, min(1, 1 - 0.34 * nearest / t.threshold)))
     }
+
+    /// Best score over the identities that are switched on.
+    public static func identity(_ p: [Float], _ ids: [FaceIdentity]) -> Double {
+        ids.filter(\.enabled).map { identity(p, $0.template) }.max() ?? 0
+    }
+}
+
+/// One enrolled look (after Glance's "identities"): plain, with glasses, a mask, in dim light, or another person
+/// you trust. Each can be switched off without being deleted; only the ones switched on are matched.
+public struct FaceIdentity: Codable, Equatable, Sendable, Identifiable {
+    public var id: UUID
+    /// Empty for the first enrollment and for vaults from before identities; the app shows "Main face".
+    public var name: String
+    public var template: FaceTemplate
+    public var enabled: Bool
+    public init(id: UUID = UUID(), name: String, template: FaceTemplate, enabled: Bool = true) {
+        self.id = id; self.name = name; self.template = template; self.enabled = enabled
+    }
+}
+
+/// Guided enrollment: frames are sorted by head direction and each of the nine directions needs `perPose`
+/// of them, so the template covers the angles the challenge later asks for.
+public struct PoseCoverage: Equatable, Sendable {
+    public enum Pose: Int, CaseIterable, Sendable {
+        case center, left, right, up, down, upLeft, upRight, downLeft, downRight
+    }
+
+    public static let perPose = 2
+    public static var total: Int { Pose.allCases.count * perPose }
+    /// Degrees away from straight ahead that count as a direction. Looking down is harder to hold.
+    public static let side = 12.0
+    public static let down = 8.0
+    /// Farther than this the face print gets poor: the wizard says "come back a little".
+    public static let tooFar = 35.0
+
+    public private(set) var counts: [Pose: Int] = [:]
+    public init() {}
+
+    /// nil when the head is turned too far. Yaw + = the user's left, pitch + = up (as `LivenessChallenge`).
+    public static func pose(yaw: Double, pitch: Double) -> Pose? {
+        guard abs(yaw) <= tooFar, abs(pitch) <= tooFar else { return nil }
+        let h = yaw >= side ? -1 : yaw <= -side ? 1 : 0
+        let v = pitch >= side ? 1 : pitch <= -down ? -1 : 0
+        switch (h, v) {
+        case (0, 0): return .center
+        case (-1, 0): return .left
+        case (1, 0): return .right
+        case (0, 1): return .up
+        case (0, -1): return .down
+        case (-1, 1): return .upLeft
+        case (1, 1): return .upRight
+        case (-1, -1): return .downLeft
+        default: return .downRight
+        }
+    }
+
+    /// Keeps the frame only when its direction still needs one.
+    public mutating func add(_ p: Pose) -> Bool {
+        guard counts[p, default: 0] < Self.perPose else { return false }
+        counts[p, default: 0] += 1
+        return true
+    }
+
+    public func isFull(_ p: Pose) -> Bool { counts[p, default: 0] >= Self.perPose }
+    public var done: Int { counts.values.reduce(0) { $0 + min($1, Self.perPose) } }
+    public var complete: Bool { done == Self.total }
+    /// The direction to ask for next.
+    public var missing: Pose? { Pose.allCases.first { !isFull($0) } }
 }
 
 public enum FaceGeometry {
@@ -46,6 +123,16 @@ public enum FaceGeometry {
               let minY = points.map(\.y).min(), let maxY = points.map(\.y).max(), maxX > minX else { return 1 }
         let ratio = Double((maxY - minY) / (maxX - minX))
         return max(0, min(1, (ratio - 0.12) / (0.30 - 0.12)))
+    }
+
+    /// A phone or tablet held up to the camera (Glance's "device bezel" cue): a rectangle that frames the face
+    /// snugly. A door or monitor behind you is far larger than your face, so only close frames count.
+    public static func framedByDevice(face: CGRect, rects: [CGRect]) -> Bool {
+        let area = face.width * face.height
+        guard area > 0 else { return false }
+        return rects.contains { r in
+            r.insetBy(dx: -face.width * 0.05, dy: -face.height * 0.05).contains(face) && (1.3...6).contains(r.width * r.height / area)
+        }
     }
 
     /// Same face across frames when the boxes overlap enough; a new face gets a new id.
@@ -70,14 +157,45 @@ public enum FaceGeometry {
 /// The enrollment, settings and log on disk, sealed with AES-GCM under a key kept in the Keychain (FR-50:
 /// "embedding saja, terenkripsi"). No images are ever stored.
 public struct FaceVault: Codable, Equatable, Sendable {
-    public var template: FaceTemplate?
+    public static let maxIdentities = 5
+    public var identities: [FaceIdentity] = []
     public var settings = FaceUnlockPolicy.Settings()
     public var log = FaceUnlockLog()
     public var consecutiveFailures = 0
     /// Last unlock Dylan saw that was not by face (or a verified enrollment). Kept across Dylan restarts;
-    /// the policy only counts it when it is after the Mac's boot time. Optional, so older vaults still open.
+    /// the policy only counts it when it is after the Mac's boot time.
     public var lastPasswordUnlock: Date?
     public init() {}
+
+    /// At least one identity is switched on.
+    public var canMatch: Bool { identities.contains(where: \.enabled) }
+
+    private enum CodingKeys: String, CodingKey { case identities, template, settings, log, consecutiveFailures, lastPasswordUnlock }
+
+    /// Every key is optional, so a vault sealed by an older Dylan still opens: losing it would silently drop the
+    /// enrollment. Up to 0.2.x the vault held a single `template`.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        identities = try c.decodeIfPresent([FaceIdentity].self, forKey: .identities) ?? []
+        if identities.isEmpty, let t = try c.decodeIfPresent(FaceTemplate.self, forKey: .template) {
+            identities = [FaceIdentity(name: "", template: t)]
+        }
+        settings = try c.decodeIfPresent(FaceUnlockPolicy.Settings.self, forKey: .settings) ?? .init()
+        log = try c.decodeIfPresent(FaceUnlockLog.self, forKey: .log) ?? .init()
+        consecutiveFailures = try c.decodeIfPresent(Int.self, forKey: .consecutiveFailures) ?? 0
+        lastPasswordUnlock = try c.decodeIfPresent(Date.self, forKey: .lastPasswordUnlock)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(identities, forKey: .identities)
+        // 0.2.x reads only this; without it, going back would show no enrollment and overwrite the vault.
+        try c.encodeIfPresent(identities.first?.template, forKey: .template)
+        try c.encode(settings, forKey: .settings)
+        try c.encode(log, forKey: .log)
+        try c.encode(consecutiveFailures, forKey: .consecutiveFailures)
+        try c.encodeIfPresent(lastPasswordUnlock, forKey: .lastPasswordUnlock)
+    }
 
     public func sealed(with key: SymmetricKey) throws -> Data {
         try AES.GCM.seal(JSONEncoder().encode(self), using: key).combined!

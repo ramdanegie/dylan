@@ -5,15 +5,17 @@ import SwiftUI
 
 /// Face enrollment in four steps (design D19): the risks, the camera with a live preview, the login password,
 /// and "ready". Nothing is stored before step 3 succeeds; closing the window drops everything.
+/// `adding`: another identity (glasses, a mask…) for an enrolled Mac: camera, then a name.
 enum FaceEnrollWindow {
     private static var window: NSWindow?
 
-    static func show() {
-        if let window { window.makeKeyAndOrderFront(nil); NSApp.activate(); return }
+    static func show(adding: Bool = false) {
+        // An open wizard may be in the other flow (or finished): start over in the one asked for.
+        window?.close()
         let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 520, height: 470), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        w.title = L("faceUnlock.wizardTitle")
+        w.title = L(adding ? "faceUnlock.addTitle" : "faceUnlock.wizardTitle")
         w.isReleasedWhenClosed = false
-        w.contentView = NSHostingView(rootView: FaceEnrollView { close() })
+        w.contentView = NSHostingView(rootView: FaceEnrollView(done: { close() }, step: adding ? 1 : 0, adding: adding))
         w.center()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
             MainActor.assumeIsolated { FaceUnlockProvider.shared.cancelEnroll(); window = nil }
@@ -29,8 +31,10 @@ enum FaceEnrollWindow {
 struct FaceEnrollView: View {
     var done: () -> Void
     @StateBox var step = 0
+    var adding = false
     @StateBox private var understood = false
     @StateBox private var password = ""
+    @StateBox private var name = ""
     @StateBox private var error: String?
     private var face: FaceUnlockProvider { FaceUnlockProvider.shared }
 
@@ -40,7 +44,7 @@ struct FaceEnrollView: View {
                 switch step {
                 case 0: risks
                 case 1: camera
-                case 2: passwordStep
+                case 2: if adding { nameStep } else { passwordStep }
                 default: ready
                 }
             }
@@ -48,7 +52,7 @@ struct FaceEnrollView: View {
             Divider()
             HStack {
                 HStack(spacing: 4) {
-                    ForEach(0..<4, id: \.self) { i in
+                    ForEach(adding ? 1..<3 : 0..<4, id: \.self) { i in
                         Capsule().fill(i == step ? Color.primary : Color.secondary.opacity(0.35)).frame(width: i == step ? 16 : 5, height: 5)
                     }
                 }
@@ -95,7 +99,7 @@ struct FaceEnrollView: View {
     private var camera: some View {
         VStack(spacing: 14) {
             HStack {
-                SwiftUI.Text(L("faceUnlock.stepOf", 2, 4)).font(.caption).foregroundStyle(.secondary)
+                SwiftUI.Text(adding ? L("faceUnlock.stepOf", 1, 2) : L("faceUnlock.stepOf", 2, 4)).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 if face.enrollState == .capturing {
                     Label(L("faceUnlock.cameraOn"), systemImage: "circle.fill").font(.caption).foregroundStyle(.green).labelStyle(DotLabel())
@@ -107,11 +111,17 @@ struct FaceEnrollView: View {
                 } else {
                     Circle().fill(Color.secondary.opacity(0.15)).frame(width: 170, height: 170)
                 }
-                ProgressRing(done: face.enrollCount, total: FaceUnlockProvider.enrollTarget).frame(width: 200, height: 200)
+                PoseRing(coverage: face.coverage).frame(width: 200, height: 200)
+                if let h = face.enrollHead {
+                    Circle().fill(face.enrollTooFar ? Color.orange : Color.white).frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 1))
+                        .offset(x: h.x * 70, y: h.y * 70)
+                        .animation(.easeOut(duration: 0.12), value: h)
+                }
             }
             .frame(maxWidth: .infinity)
             .accessibilityLabel(L("faceUnlock.frames", face.enrollCount, FaceUnlockProvider.enrollTarget))
-            SwiftUI.Text(L("faceUnlock.turnHead")).font(.headline)
+            SwiftUI.Text(headline).font(.headline).foregroundStyle(face.enrollTooFar ? .orange : .primary)
             switch face.enrollState {
             case .failed(let why):
                 SwiftUI.Text(why).font(.caption).foregroundStyle(.red)
@@ -124,6 +134,36 @@ struct FaceEnrollView: View {
         .padding(22)
         .onAppear { face.beginEnrollCapture() }
         .onChange(of: face.enrollState) { _, s in if s == .captured { step = 2 } }
+    }
+
+    /// "Look up and to the left", "Come back a little", or the generic line before a face is seen.
+    private var headline: String {
+        if face.enrollTooFar { return L("faceUnlock.tooFar") }
+        guard face.enrollState == .capturing, face.enrollHead != nil, let p = face.coverage.missing else { return L("faceUnlock.turnHead") }
+        return L("faceUnlock.pose.\(p)")
+    }
+
+    // MARK: 3 (adding) — a name for this look
+
+    private var nameStep: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SwiftUI.Text(L("faceUnlock.stepOf", 2, 2)).font(.caption).foregroundStyle(.secondary)
+            SwiftUI.Text(L("faceUnlock.nameTitle")).font(.title2.bold())
+            SwiftUI.Text(L("faceUnlock.nameBody")).fixedSize(horizontal: false, vertical: true)
+            TextField(L("faceUnlock.nameField"), text: $name).textFieldStyle(.roundedBorder).onSubmit(saveIdentity)
+            HStack {
+                ForEach(["faceUnlock.preset.glasses", "faceUnlock.preset.mask", "faceUnlock.preset.dim"], id: \.self) { k in
+                    Button(L(k)) { name = L(k) }.buttonStyle(.bordered).controlSize(.small)
+                }
+            }
+            if let error { SwiftUI.Text(error).font(.caption).foregroundStyle(.red) }
+        }
+        .padding(22)
+    }
+
+    private func saveIdentity() {
+        error = face.addIdentity(name: name)
+        if error == nil { done() }
     }
 
     // MARK: 3 — password
@@ -183,6 +223,9 @@ struct FaceEnrollView: View {
             Button(L("faceUnlock.next")) { step = 1 }.keyboardShortcut(.defaultAction).disabled(!understood)
         case 1:
             Button(L("button.cancel")) { done() }.keyboardShortcut(.cancelAction)
+        case 2 where adding:
+            Button(L("button.cancel")) { done() }.keyboardShortcut(.cancelAction)
+            Button(L("faceUnlock.save")) { saveIdentity() }.keyboardShortcut(.defaultAction)
         case 2:
             Button(L("faceUnlock.back")) { password = ""; error = nil; step = 1 }
             Button(L("faceUnlock.save")) { save() }.keyboardShortcut(.defaultAction).disabled(password.isEmpty)
@@ -207,20 +250,25 @@ private struct DotLabel: LabelStyle {
     }
 }
 
-/// Dashed ring: one segment per frame, green once captured (D19).
-private struct ProgressRing: View {
-    var done: Int
-    var total: Int
+/// One arc per head direction around the preview, green once that direction has its frames (D19, after Glance's
+/// nine directions). Mirrored like the preview: "left" is the user's left, drawn on the left.
+private struct PoseRing: View {
+    var coverage: PoseCoverage
+    /// Screen angle of each direction (0° = right, clockwise, as SwiftUI draws).
+    private static let angles: [PoseCoverage.Pose: Double] = [
+        .right: 0, .downRight: 45, .down: 90, .downLeft: 135, .left: 180, .upLeft: 225, .up: 270, .upRight: 315,
+    ]
     var body: some View {
         ZStack {
-            ForEach(0..<total, id: \.self) { i in
+            ForEach(PoseCoverage.Pose.allCases.filter { $0 != .center }, id: \.self) { p in
                 Circle()
-                    .trim(from: CGFloat(i) / CGFloat(total) + 0.006, to: CGFloat(i + 1) / CGFloat(total) - 0.006)
-                    .stroke(i < done ? Color.green : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 6, lineCap: .butt))
-                    .rotationEffect(.degrees(-90))
+                    .trim(from: 0, to: 38.0 / 360)
+                    .stroke(coverage.isFull(p) ? Color.green : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(Self.angles[p]! - 19))
             }
+            Circle().stroke(coverage.isFull(.center) ? Color.green : Color.clear, lineWidth: 2).padding(14)
         }
-        .animation(.easeOut(duration: 0.2), value: done)
+        .animation(.easeOut(duration: 0.2), value: coverage)
     }
 }
 

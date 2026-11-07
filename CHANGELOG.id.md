@@ -2,6 +2,23 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Ditambahkan
+- Face Unlock, terinspirasi Glance:
+  - Identitas wajah: tambah hingga lima tampilan (kacamata, masker, cahaya redup, atau orang yang kamu percaya), masing-masing bisa dimatikan tanpa dihapus.
+  - Pendaftaran terpandu: satu busur untuk tiap sembilan arah kepala, titik yang mengikuti kepalamu, dan "kembali sedikit" saat menoleh terlalu jauh.
+  - Island scan di lock screen berisi gerakan yang harus dilakukan, lalu centang atau silang (eksperimental; bila macOS menolak, instruksi diucapkan).
+  - Tekan spasi di lock screen untuk coba lagi (butuh Input Monitoring; mati sampai kamu nyalakan).
+  - Uji wajah: kamera 10 detik dengan skor tiap identitas. Tidak membuka apa pun dan tidak menyimpan apa pun.
+  - Ganti password tersimpan tanpa mendaftar ulang.
+  - Ketukan trackpad saat berhasil atau gagal.
+
+### Diubah
+- Face Unlock memaafkan frame buram hingga total 1,5 detik alih-alih langsung gagal (kedipan tetap harus wajahmu), dan gagal bila layar HP atau tablet membingkai wajahmu.
+- Menyalakan Face Unlock, batas kunci lebih lama, menambah atau menyalakan identitas, password baru, dan spasi untuk coba lagi meminta Touch ID dulu. Mematikan tidak pernah meminta.
+- Pendaftaranmu yang sekarang menjadi identitas "Wajah utama"; tidak perlu mendaftar ulang.
+
 ## [0.2.1] - 2026-11-05
 
 ### Ditambahkan

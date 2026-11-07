@@ -55,7 +55,7 @@ Developers get a **Developer Mode** on top: watch AI coding agents, long-running
 
 ### Experimental (off by default)
 
-- **Face Unlock.** Unlock with your face using a random liveness challenge and Apple-style limits. It is not Face ID: a Mac camera is 2D. Read [docs/face-unlock.md](docs/face-unlock.md) before turning it on.
+- **Face Unlock.** Unlock with your face using a random liveness challenge and Apple-style limits, with several face identities (glasses, a mask), guided enrollment, and a scan island on the lock screen. It is not Face ID: a Mac camera is 2D. Read [docs/face-unlock.md](docs/face-unlock.md) before turning it on.
 - **Lock screen widget** with the time, battery, and what is playing.
 
 ## Install

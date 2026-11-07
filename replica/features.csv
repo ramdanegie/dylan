@@ -1,0 +1,24 @@
+feature,area,priority,original,clone,notes
+Multiple identities (glasses/mask/lighting) each with on/off toggle,identities,must,yes,yes,FaceVault.template -> identities; old vault must still open
+Tolerate brief non-match frames (Glance 1.2.0: 2 s),recognition,must,yes,yes,Dylan fails on one blurry frame; steps only count on matching frames; same face track still required
+Guided enrollment by head direction with live position indicator,enrollment,must,yes,yes,Dylan: free head turn 20 frames with no pose coverage
+Deny cues: phone/tablet bezel rectangle around face,liveness,should,yes,yes,documented in docs/face-unlock.md but not in code; VNDetectRectanglesRequest
+Deny cue: screen glare on face,liveness,could,yes,no,heuristic; risk of false rejects
+Change stored password without re-enrolling,security,should,yes,yes,verify via OpenDirectory as enrollment does
+Test recognition (Face Lab): live score per identity without locking,tools,should,yes,yes,also measures the unverified feature print scores
+Haptic tap on unlock success or failure,feedback,could,yes,yes,NSHapticFeedbackManager; only felt with a finger on the trackpad
+Scan island on the lock screen (scanning/success/fail),lock screen UI,should,yes,yes,reuse LockScreenProvider SkyLight panel; spoken challenge stays as fallback
+Retry trigger at the lock screen (space key),triggers,could,yes,yes,needs IOHIDManager + new Input Monitoring permission
+Trigger on lock (not only wake),triggers,could,yes,no,conflicts with the 10 s manual lock grace by design
+Expanded/Minimal display modes for the scan island,lock screen UI,could,yes,no,only if the lock-screen island is built
+Touch ID gate before changing Face Unlock settings,security,should,yes,yes,docs #7 claims it; Settings toggles today need nothing
+Encrypted embeddings + password (AES-GCM; key in Keychain),security,must,yes,yes,parity (FaceVault)
+On-device Vision only; no images stored,privacy,must,yes,yes,parity
+Types password via Accessibility after match,unlock,must,yes,yes,parity; Dylan also verifies the password first
+Notchless Macs get a pill,ui,must,yes,yes,parity
+Liveness Off/Light modes,liveness,skip,yes,skip,weaker than Dylan's random challenge
+Camera selection (external/Continuity),camera,skip,yes,skip,refused on purpose: virtual cameras can replay video
+ArcFace 512-d Core ML model,recognition,skip,yes,skip,model weights are usually non-commercial; Dylan uses Apple's feature print
+Session auto-lock of the password key (Never..30 days),security,skip,yes,skip,Dylan's 48 h password rule already forces a real unlock more often
+Swipe settings / show in menu bar / auto-update,app shell,skip,yes,skip,Dylan has its own
+Login after restart or FileVault,unlock,skip,no,skip,macOS limit for both

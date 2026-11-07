@@ -2,6 +2,23 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Added
+- Face Unlock, after Glance:
+  - Face identities: add up to five looks (glasses, a mask, dim light, or someone you trust) and switch each off without deleting it.
+  - Guided enrollment: an arc for each of nine head directions, a dot that follows your head, and "come back a little" when you turn too far.
+  - A scan island on the lock screen with the move to make, then a tick or a cross (experimental; if macOS refuses, the instructions are spoken).
+  - Press space at the lock screen to try again (needs Input Monitoring; off until you turn it on).
+  - Test your face: 10 seconds of camera with the score of each identity. Nothing unlocks and nothing is stored.
+  - Change the stored password without enrolling again.
+  - A trackpad tap when it unlocks or fails.
+
+### Changed
+- Face Unlock forgives blurred frames for up to 1.5 seconds in total instead of failing at once (a blink still has to be your face), and fails when a phone or tablet screen frames your face.
+- Turning Face Unlock on, a longer lock limit, adding or turning on an identity, a new password and space-to-retry ask for Touch ID first. Turning things off never does.
+- Your current enrollment becomes the "Main face" identity; nothing to redo.
+
 ## [0.2.1] - 2026-11-05
 
 ### Added

@@ -2,6 +2,8 @@ import AppKit
 import AVFoundation
 import CryptoKit
 import DylanCore
+import IOKit.hid
+import LocalAuthentication
 import OpenDirectory
 import Vision
 
@@ -9,7 +11,9 @@ import Vision
 /// started. See docs/face-unlock.md for the threat model. In short: built-in camera only, a random spoken
 /// challenge (look left, blink…) with identity checked on every frame, Apple-style limits (5 failures, 48 h,
 /// never after a restart, one password per lock), the password verified before it is stored, and a local
-/// audit log without images.
+/// audit log without images. From Glance (replica/recon.md): several identities, guided enrollment, a short grace
+/// for blurred frames, the phone-bezel cue, a scan island on the lock screen, space to retry, Touch ID before
+/// settings that make it open more easily, changing the stored password, and a test that only measures.
 @Observable
 final class FaceUnlockProvider {
     static let shared = FaceUnlockProvider()
@@ -28,10 +32,12 @@ final class FaceUnlockProvider {
     }
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var camera: FaceCamera?
+    @ObservationIgnored private var spaceKey: SpaceKey?
+    @ObservationIgnored private var lastAttemptEnd = Date.distantPast
 
     private static var vaultURL: URL { Bridge.socketURL.deletingLastPathComponent().appendingPathComponent("face.sealed") }
 
-    var enrolled: Bool { vault.template != nil && Keychain.exists("faceunlock.password") }
+    var enrolled: Bool { !vault.identities.isEmpty && Keychain.exists("faceunlock.password") }
     var enabled: Bool { vault.settings.enabled && enrolled }
 
     // MARK: Lifecycle
@@ -58,10 +64,21 @@ final class FaceUnlockProvider {
             .map { CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: $0) }.min() ?? .infinity < 2
         typedThisLock = false
         deniedLoggedThisLock = false
+        if enabled, vault.settings.spaceRetry, spaceKey == nil {
+            spaceKey = SpaceKey { FaceUnlockProvider.shared.spacePressed() }
+        }
     }
 
     private func didUnlock() {
-        guard vault.template != nil else { lockedAt = nil; return }   // never enrolled: nothing to record
+        spaceKey?.stop(); spaceKey = nil
+        // Unlocked by hand (Touch ID, password) while an attempt still ran: end it quietly, no failure, no island.
+        if challenge != nil {
+            watchdog?.cancel(); watchdog = nil
+            camera?.stop(); camera = nil
+            challenge = nil
+        }
+        FaceScanIsland.shared.hide()
+        guard !vault.identities.isEmpty else { lockedAt = nil; return }   // never enrolled: nothing to record
         let now = Date()
         unlockCheck?.cancel(); unlockCheck = nil
         let m = AppModel.shared
@@ -99,10 +116,19 @@ final class FaceUnlockProvider {
         attempt()
     }
 
+    /// Space at the lock screen (Glance): another try without sleeping the display. `SpaceKey` only calls this
+    /// while nothing else was typed since the lock, so the field holds just this space: it is erased.
+    private func spacePressed() {
+        guard enabled, camera == nil, Self.screenLocked, Date().timeIntervalSince(lastAttemptEnd) > 1 else { return }
+        Self.key(51)   // ⌫
+        attempt(manual: true)
+    }
+
     func disable() {
         vault.settings.enabled = false
         save()
         camera?.stop(); camera = nil
+        spaceKey?.stop(); spaceKey = nil
     }
 
     // MARK: One attempt (≤ 6 s of camera)
@@ -110,7 +136,8 @@ final class FaceUnlockProvider {
     private var facts: FaceUnlockPolicy.Facts {
         FaceUnlockPolicy.Facts(now: Date(), screenLocked: Self.screenLocked, lockedAt: lockedAt, lockWasManual: lockManual,
                                bootTime: Self.bootTime, lastPasswordUnlock: lastPasswordUnlock, consecutiveFailures: vault.consecutiveFailures,
-                               passwordTypedThisLock: typedThisLock, enrolled: enrolled, accessibilityTrusted: AXIsProcessTrusted(),
+                               passwordTypedThisLock: typedThisLock, enrolled: enrolled, identitiesOn: vault.canMatch,
+                               accessibilityTrusted: AXIsProcessTrusted(),
                                presentationMode: AppModel.shared.presentationMode, network: nil)
     }
 
@@ -126,11 +153,15 @@ final class FaceUnlockProvider {
     @ObservationIgnored private var lastIdentity: Double = 0
     /// Nothing Dylan shows is visible on the lock screen, so a "turned off" notice waits for the next unlock (D21).
     @ObservationIgnored private var pendingNotice: String?
+    /// Challenge step the island shows.
+    @ObservationIgnored private var shownStep = 0
 
-    private func attempt() {
-        guard camera == nil, vault.template != nil else { return }
+    /// `manual`: the user pressed space, so a refusal is shown on the island instead of staying silent.
+    private func attempt(manual: Bool = false) {
+        guard camera == nil, !vault.identities.isEmpty else { return }
         if let d = FaceUnlockPolicy(settings: vault.settings).denial(facts) {
             if !deniedLoggedThisLock { deniedLoggedThisLock = true; record(.init(at: Date(), result: .denied, reason: d.rawValue)) }
+            if manual, vault.settings.lockScreenIsland { FaceScanIsland.shared.show(.failed(L("faceUnlock.denial.\(d.rawValue)")), hideAfter: 3) }
             return
         }
         var g = SystemRandomNumberGenerator()
@@ -139,11 +170,19 @@ final class FaceUnlockProvider {
         tracker = FaceGeometry.Tracker()
         bestIdentity = 0
         startedAt = Date()
-        Speech.say(c.steps.map { L("faceUnlock.step.\($0.rawValue)") }.joined(separator: ", "))
-        camera = FaceCamera { frame in
+        shownStep = 0
+        let island = vault.settings.lockScreenIsland && FaceScanIsland.shared.show(Self.scanning(c, 0))
+        FaceScanIsland.shared.spaceHint = spaceKey != nil
+        if vault.settings.speak || !island { Speech.say(c.steps.map { L("faceUnlock.step.\($0.rawValue)") }.joined(separator: ", ")) }
+        camera = FaceCamera(detectDevices: true) { frame in
             DispatchQueue.main.async { MainActor.assumeIsolated { FaceUnlockProvider.shared.attemptFrame(frame) } }
         }
-        guard camera != nil else { challenge = nil; record(.init(at: Date(), result: .failed, reason: "noCamera", steps: c.steps)); return }
+        guard camera != nil else {
+            challenge = nil
+            record(.init(at: Date(), result: .failed, reason: "noCamera", steps: c.steps))
+            if vault.settings.lockScreenIsland { FaceScanIsland.shared.show(.failed(L("faceUnlock.reason.noCamera")), hideAfter: 3) }
+            return
+        }
         // No frames at all (camera busy or blocked) must not leave the attempt open forever.
         arm(after: LivenessChallenge.window + 2) { p in
             guard let c = p.challenge else { return }
@@ -151,17 +190,26 @@ final class FaceUnlockProvider {
         }
     }
 
+    private static func scanning(_ c: LivenessChallenge, _ step: Int) -> FaceScanIsland.Phase {
+        .scanning(step: L("faceUnlock.step.\(c.steps[step].rawValue)"), index: step + 1, count: c.steps.count)
+    }
+
     private func attemptFrame(_ frame: FaceCamera.Frame) {
-        guard camera != nil, var c = challenge, let template = vault.template else { return }
-        let identity = frame.print.map { FaceMatcher.identity($0, template) } ?? 0
+        guard camera != nil, var c = challenge else { return }
+        let identity = frame.print.map { FaceMatcher.identity($0, vault.identities) } ?? 0
         bestIdentity = max(bestIdentity, identity)
         let sample = LivenessChallenge.Sample(time: Date().timeIntervalSince(startedAt), faceCount: frame.faceCount,
                                               trackID: frame.box.map { tracker.track($0) }, yaw: frame.yaw, pitch: frame.pitch,
-                                              eyesOpen: frame.eyesOpen, identity: identity)
+                                              eyesOpen: frame.eyesOpen, identity: identity, device: frame.device)
         let outcome = c.feed(sample)
         challenge = c
         switch outcome {
-        case .inProgress: return
+        case .inProgress(let step):
+            if step != shownStep, step < c.steps.count {
+                shownStep = step
+                if vault.settings.lockScreenIsland { FaceScanIsland.shared.show(Self.scanning(c, step)) }
+            }
+            return
         case .passed: finish(passed: true, reason: nil, identity: bestIdentity, steps: c.steps)
         case .failed(let r): finish(passed: false, reason: r.rawValue, identity: bestIdentity, steps: c.steps)
         }
@@ -178,12 +226,16 @@ final class FaceUnlockProvider {
         watchdog?.cancel(); watchdog = nil
         camera?.stop(); camera = nil
         challenge = nil
+        lastAttemptEnd = Date()
+        Self.haptic(passed)
         guard passed else {
             vault.consecutiveFailures += 1
             record(.init(at: Date(), result: .failed, reason: reason, identity: identity, steps: steps))
             if vault.consecutiveFailures >= FaceUnlockPolicy.maxFailures { pendingNotice = L("faceUnlock.offTooMany") }
+            if vault.settings.lockScreenIsland { FaceScanIsland.shared.show(.failed(Self.reasonText(reason)), hideAfter: 4) }
             return
         }
+        if vault.settings.lockScreenIsland { FaceScanIsland.shared.show(.passed, hideAfter: 5) }
         lastIdentity = identity
         // Re-check right before typing: unlocked meanwhile, or the policy changed (e.g. Presentation Mode).
         guard Self.screenLocked, FaceUnlockPolicy(settings: vault.settings).denial(facts) == nil,
@@ -199,6 +251,7 @@ final class FaceUnlockProvider {
             p.record(.init(at: Date(), result: .failed, reason: "passwordRejected", identity: identity, steps: steps))
             p.disable()
             p.pendingNotice = L("faceUnlock.offPassword")
+            if p.vault.settings.lockScreenIsland { FaceScanIsland.shared.show(.failed(Self.reasonText("passwordRejected")), hideAfter: 4) }
         } }
         unlockCheck = w
         DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: w)
@@ -206,20 +259,40 @@ final class FaceUnlockProvider {
 
     private func record(_ e: FaceUnlockEvent) { vault.log.append(e); save() }
 
+    /// A policy denial, a liveness reason, or a camera/password problem, in words.
+    static func reasonText(_ r: String?) -> String {
+        guard let r else { return "" }
+        if let d = FaceUnlockPolicy.Denial(rawValue: r) { return L("faceUnlock.denial.\(d.rawValue)") }
+        let known: Set<String> = ["timeout", "multipleFaces", "faceChanged", "wrongPerson", "wrongOrder", "spoof", "noCamera", "passwordRejected"]
+        return known.contains(r) ? L("faceUnlock.reason.\(r)") : r
+    }
+
+    /// A tap on the trackpad (felt only with a finger on it), as Glance does.
+    private static func haptic(_ passed: Bool) {
+        NSHapticFeedbackManager.defaultPerformer.perform(passed ? .levelChange : .generic, performanceTime: .now)
+    }
+
     // MARK: Enrollment (FR-50, design D19: risks → camera → password → ready)
 
-    /// Frames kept for the template (design: "20/20 frame").
-    static let enrollTarget = 20
+    /// Frames kept for the template: two per head direction.
+    static var enrollTarget: Int { PoseCoverage.total }
     enum EnrollState: Equatable { case idle, capturing, captured, failed(String) }
     var enrollState: EnrollState = .idle
     var enrollCount = 0
     /// Faces in the latest frame, so the wizard can say "only one face".
     var enrollFaces = 0
+    /// Directions captured so far, the live head position (-1…1, mirrored like the preview; nil = no face), and
+    /// whether the head is turned too far (Glance 1.0.1/1.2.0).
+    var coverage = PoseCoverage()
+    var enrollHead: CGPoint?
+    var enrollTooFar = false
     /// The running camera, for the wizard's live preview (never stored).
     private(set) var enrollCamera: FaceCamera?
     @ObservationIgnored private var lastEnrollFrame = Date.distantPast
+    @ObservationIgnored private var enrollPoses: [Int] = []
 
-    /// Step 2: the camera runs with a preview while the user turns their head; one print every 0.25 s.
+    /// Step 2: the camera runs with a preview while the user turns their head; one print every 0.25 s, kept
+    /// only when its direction still needs one.
     func beginEnrollCapture() {
         cancelEnroll()
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -234,24 +307,34 @@ final class FaceUnlockProvider {
             return
         default: enrollState = .failed(L("faceUnlock.noCamera")); return
         }
+        stopLab()
         enrollPrints = []
+        enrollPoses = []
         enrollCount = 0
+        coverage = PoseCoverage()
+        enrollHead = nil
+        enrollTooFar = false
         enrollState = .capturing
-        enrollCamera = FaceCamera(duration: 30) { frame in
+        enrollCamera = FaceCamera(duration: 45) { frame in
             DispatchQueue.main.async { MainActor.assumeIsolated { FaceUnlockProvider.shared.enrollFrame(frame) } }
         }
         guard enrollCamera != nil else { enrollState = .failed(L("faceUnlock.noCamera")); return }
-        arm(after: 30) { $0.endEnrollCapture() }
+        arm(after: 45) { $0.endEnrollCapture() }
     }
 
     private func enrollFrame(_ frame: FaceCamera.Frame) {
         guard enrollState == .capturing else { return }
         enrollFaces = frame.faceCount
-        guard frame.faceCount == 1, let f = frame.print, Date().timeIntervalSince(lastEnrollFrame) >= 0.25 else { return }
+        guard frame.faceCount == 1 else { enrollHead = nil; return }
+        enrollHead = CGPoint(x: max(-1, min(1, -frame.yaw / PoseCoverage.tooFar)), y: max(-1, min(1, -frame.pitch / PoseCoverage.tooFar)))
+        let pose = PoseCoverage.pose(yaw: frame.yaw, pitch: frame.pitch)
+        enrollTooFar = pose == nil
+        guard let pose, let f = frame.print, Date().timeIntervalSince(lastEnrollFrame) >= 0.25, coverage.add(pose) else { return }
         lastEnrollFrame = Date()
         enrollPrints.append(f)
+        enrollPoses.append(pose.rawValue)
         enrollCount = enrollPrints.count
-        if enrollCount >= Self.enrollTarget { endEnrollCapture() }
+        if coverage.complete { endEnrollCapture() }
     }
 
     private func endEnrollCapture() {
@@ -266,7 +349,9 @@ final class FaceUnlockProvider {
         if enrollState == .capturing { watchdog?.cancel(); watchdog = nil }
         enrollCamera?.stop(); enrollCamera = nil
         enrollPrints = []
+        enrollPoses = []
         enrollCount = 0
+        enrollHead = nil
         enrollState = .idle
     }
 
@@ -274,16 +359,125 @@ final class FaceUnlockProvider {
     func completeEnrollment(password: String) -> String? {
         guard enrollState == .captured else { return L("faceUnlock.enrollFailed") }
         guard Self.verify(password: password) else { return L("faceUnlock.wrongPassword") }
-        guard let t = FaceMatcher.enroll(enrollPrints, now: Date()) else { return L("faceUnlock.enrollFailed") }
+        guard let t = FaceMatcher.enroll(enrollPrints, poses: enrollPoses, now: Date()) else { return L("faceUnlock.enrollFailed") }
         Keychain.set(password, "faceunlock.password")
-        vault.template = t
+        vault.identities = [FaceIdentity(name: "", template: t)]
         vault.settings.enabled = true
         lastPasswordUnlock = Date()   // the login password was just verified, in this boot
         save()
         status = L("faceUnlock.enrolled", enrollPrints.count)
-        enrollPrints = []
-        enrollState = .idle
+        cancelEnroll()
         return nil
+    }
+
+    // MARK: Identities (Glance: glasses, a mask, dim light, someone you trust)
+
+    /// Another look for the same Mac. The password is already stored; Settings asked for Touch ID first.
+    func addIdentity(name: String) -> String? {
+        guard enrollState == .captured, enrolled, vault.identities.count < FaceVault.maxIdentities,
+              let t = FaceMatcher.enroll(enrollPrints, poses: enrollPoses, now: Date()) else { return L("faceUnlock.enrollFailed") }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        vault.identities.append(FaceIdentity(name: trimmed.isEmpty ? L("faceUnlock.identity.other") : trimmed, template: t))
+        save()
+        status = L("faceUnlock.identityAdded", vault.identities.last!.name)
+        cancelEnroll()
+        return nil
+    }
+
+    func setIdentity(_ id: UUID, enabled: Bool) {
+        guard let i = vault.identities.firstIndex(where: { $0.id == id }) else { return }
+        vault.identities[i].enabled = enabled
+        save()
+    }
+
+    /// The last identity takes everything with it, as "Delete" does.
+    func deleteIdentity(_ id: UUID) {
+        guard vault.identities.count > 1 else { deleteEnrollment(); return }
+        vault.identities.removeAll { $0.id == id }
+        save()
+    }
+
+    static func displayName(_ i: FaceIdentity) -> String { i.name.isEmpty ? L("faceUnlock.identity.main") : i.name }
+
+    /// A new login password without enrolling again (Glance 1.2.0), verified like the first one.
+    func changePassword(_ password: String) -> String? {
+        guard Self.verify(password: password) else { return L("faceUnlock.wrongPassword") }
+        Keychain.set(password, "faceunlock.password")
+        lastPasswordUnlock = Date()
+        vault.consecutiveFailures = 0
+        save()
+        status = L("faceUnlock.passwordSaved")
+        return nil
+    }
+
+    // MARK: Touch ID before loosening (Glance keeps its settings behind Touch ID)
+
+    @ObservationIgnored private var authorizedUntil = Date.distantPast
+    /// The pending request; a second click while Touch ID is up is ignored.
+    @ObservationIgnored private var authContext: LAContext?
+
+    /// Touch ID (or the Mac password) before anything that lets Face Unlock open more easily: turning it on, a longer
+    /// lock limit, another identity, a new password, space to retry. Two minutes of grace so a stepper does not ask
+    /// on every click. Turning things off never asks.
+    func authorize(_ action: @escaping @MainActor @Sendable () -> Void) {
+        if Date() < authorizedUntil { action(); return }
+        guard authContext == nil else { return }
+        let ctx = LAContext()
+        authContext = ctx
+        ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: L("faceUnlock.authReason")) { ok, _ in
+            Task { @MainActor in
+                let p = FaceUnlockProvider.shared
+                p.authContext = nil
+                guard ok else { return }
+                p.authorizedUntil = Date().addingTimeInterval(120)
+                action()
+            }
+        }
+    }
+
+    // MARK: Space to retry (Input Monitoring)
+
+    static var inputMonitoringAllowed: Bool { IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted }
+    /// Shows the system prompt the first time; later it only answers.
+    @discardableResult static func requestInputMonitoring() -> Bool { IOHIDRequestAccess(kIOHIDRequestTypeListenEvent) }
+
+    // MARK: Test (Glance's Face Lab): live scores, nothing unlocks, nothing is stored
+
+    struct LabReading: Equatable {
+        var faces: Int
+        var scores: [UUID: Double]
+        var yaw: Double
+        var pitch: Double
+        var eyesOpen: Double
+        var device: Bool
+    }
+    var lab: LabReading?
+    private(set) var labCamera: FaceCamera?
+    @ObservationIgnored private var labStop: DispatchWorkItem?
+
+    func startLab() {
+        guard labCamera == nil, camera == nil, enrollCamera == nil else { return }
+        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else { status = L("faceUnlock.noCamera"); return }
+        lab = nil
+        labCamera = FaceCamera(duration: 10, detectDevices: true) { frame in
+            DispatchQueue.main.async { MainActor.assumeIsolated { FaceUnlockProvider.shared.labFrame(frame) } }
+        }
+        guard labCamera != nil else { status = L("faceUnlock.noCamera"); return }
+        let w = DispatchWorkItem { MainActor.assumeIsolated { FaceUnlockProvider.shared.stopLab() } }
+        labStop = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: w)
+    }
+
+    func stopLab() {
+        labStop?.cancel(); labStop = nil
+        labCamera?.stop(); labCamera = nil
+    }
+
+    private func labFrame(_ f: FaceCamera.Frame) {
+        guard labCamera != nil else { return }
+        var scores: [UUID: Double] = [:]
+        if let p = f.print { for i in vault.identities { scores[i.id] = FaceMatcher.identity(p, i.template) } }
+        lab = LabReading(faces: f.faceCount, scores: scores, yaw: f.yaw, pitch: f.pitch, eyesOpen: f.eyesOpen, device: f.device)
     }
 
     /// "Coba kunci sekarang" (D19 step 4): lock like ⌃⌘Q, then turn the display off. The camera only starts when the
@@ -307,12 +501,13 @@ final class FaceUnlockProvider {
         let f = FaceUnlockPolicy.Facts(now: Date(), screenLocked: true, lockedAt: Date(), lockWasManual: false,
                                        bootTime: Self.bootTime, lastPasswordUnlock: lastPasswordUnlock,
                                        consecutiveFailures: vault.consecutiveFailures, passwordTypedThisLock: false, enrolled: true,
-                                       accessibilityTrusted: AXIsProcessTrusted(), presentationMode: AppModel.shared.presentationMode, network: nil)
+                                       identitiesOn: vault.canMatch, accessibilityTrusted: AXIsProcessTrusted(), presentationMode: AppModel.shared.presentationMode, network: nil)
         return FaceUnlockPolicy(settings: vault.settings).denial(f)
     }
 
     /// Everything goes: password, template, settings, log, file and key.
     func deleteEnrollment() {
+        stopLab()
         Keychain.set(nil, "faceunlock.password")
         Keychain.set(nil, "faceunlock.key")
         try? FileManager.default.removeItem(at: Self.vaultURL)
@@ -337,7 +532,7 @@ final class FaceUnlockProvider {
     }
 
     func save() {
-        guard vault.template != nil || FileManager.default.fileExists(atPath: Self.vaultURL.path),
+        guard !vault.identities.isEmpty || FileManager.default.fileExists(atPath: Self.vaultURL.path),
               let d = try? vault.sealed(with: key()) else { return }
         try? FileManager.default.createDirectory(at: Self.vaultURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? d.write(to: Self.vaultURL, options: .atomic)
@@ -365,15 +560,17 @@ final class FaceUnlockProvider {
     }
 
     /// Types into the lock screen: modifiers released, field cleared, 20 UTF-16 units per event, then Return.
+    static func key(_ code: CGKeyCode, _ flags: CGEventFlags = []) {
+        let src = CGEventSource(stateID: .hidSystemState)
+        for down in [true, false] {
+            let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: down)
+            e?.flags = flags
+            e?.post(tap: .cghidEventTap)
+        }
+    }
+
     static func type(_ password: String) {
         let src = CGEventSource(stateID: .hidSystemState)
-        func key(_ code: CGKeyCode, _ flags: CGEventFlags = []) {
-            for down in [true, false] {
-                let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: down)
-                e?.flags = flags
-                e?.post(tap: .cghidEventTap)
-            }
-        }
         CGEvent(source: src)?.flags = []
         key(124, .maskCommand)   // ⌘→
         key(51, .maskCommand)    // ⌘⌫
@@ -413,6 +610,7 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
         var pitch: Double
         var eyesOpen: Double
         var print: [Float]?
+        var device = false
     }
 
     /// Read by the enrollment preview layer only; frames are never written anywhere.
@@ -420,9 +618,12 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
     private let queue = DispatchQueue(label: "dylan.facecamera")
     private let onFrame: @Sendable (Frame) -> Void
     private var lastFrame: CFTimeInterval = 0
+    /// Also look for a phone or tablet around the face (unlock and test only; enrollment needs speed).
+    private let detectDevices: Bool
 
-    init?(duration: TimeInterval = 8, onFrame: @escaping @Sendable (Frame) -> Void) {
+    init?(duration: TimeInterval = 8, detectDevices: Bool = false, onFrame: @escaping @Sendable (Frame) -> Void) {
         self.onFrame = onFrame
+        self.detectDevices = detectDevices
         super.init()
         guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized,
               let cam = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera], mediaType: .video, position: .unspecified)
@@ -447,16 +648,22 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
         guard now - lastFrame >= 0.1, let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         lastFrame = now
         let faces = VNDetectFaceLandmarksRequest()
+        let rects = VNDetectRectanglesRequest()
+        rects.minimumAspectRatio = 0.3
+        rects.minimumSize = 0.15
+        rects.minimumConfidence = 0.6
+        rects.maximumObservations = 4
         let handler = VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .upMirrored)
-        try? handler.perform([faces])
+        try? handler.perform(detectDevices ? [faces, rects] : [faces])
         let found = faces.results ?? []
         guard found.count == 1, let f = found.first else {
             onFrame(Frame(faceCount: found.count, box: nil, yaw: 0, pitch: 0, eyesOpen: 1, print: nil)); return
         }
         let eyes = [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap { $0?.normalizedPoints.map { CGPoint(x: $0.x, y: $0.y) } }
         let open = eyes.isEmpty ? 1 : eyes.map(FaceGeometry.eyeOpenness).reduce(0, +) / Double(eyes.count)
+        let device = detectDevices && FaceGeometry.framedByDevice(face: f.boundingBox, rects: (rects.results ?? []).map(\.boundingBox))
         onFrame(Frame(faceCount: 1, box: f.boundingBox, yaw: (f.yaw?.doubleValue ?? 0) * 180 / .pi, pitch: (f.pitch?.doubleValue ?? 0) * 180 / .pi,
-                      eyesOpen: open, print: Self.featurePrint(pixels, face: f.boundingBox)))
+                      eyesOpen: open, print: Self.featurePrint(pixels, face: f.boundingBox), device: device))
     }
 
     /// Feature print of the face crop (Vision; Float32 elements).
@@ -466,5 +673,48 @@ nonisolated final class FaceCamera: NSObject, AVCaptureVideoDataOutputSampleBuff
         try? VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .upMirrored).perform([req])
         guard let o = req.results?.first as? VNFeaturePrintObservation, o.elementType == .float else { return nil }
         return o.data.withUnsafeBytes { Array($0.bindMemory(to: Float.self).prefix(o.elementCount)) }
+    }
+}
+
+/// The space bar while the Mac is locked (Glance). The lock screen turns on Secure Event Input, which hides keys from
+/// event taps, so this reads the keyboard through IOHIDManager (Input Monitoring). It runs only between lock and
+/// unlock, looks only at whether a key is the space bar, and never keeps any key. Once any other key is pressed
+/// the user is typing their password, and space stops meaning "try again" until the next lock (a password that
+/// starts with a space cannot use this).
+final class SpaceKey {
+    private let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+    private let onSpace: @MainActor () -> Void
+    private var typing = false
+
+    init?(onSpace: @escaping @MainActor () -> Void) {
+        self.onSpace = onSpace
+        guard FaceUnlockProvider.inputMonitoringAllowed else { return nil }
+        IOHIDManagerSetDeviceMatching(manager, [kIOHIDDeviceUsagePageKey: kHIDPage_GenericDesktop, kIOHIDDeviceUsageKey: kHIDUsage_GD_Keyboard] as CFDictionary)
+        IOHIDManagerRegisterInputValueCallback(manager, { ctx, _, _, value in
+            let e = IOHIDValueGetElement(value)
+            let page = IOHIDElementGetUsagePage(e), usage = IOHIDElementGetUsage(e)
+            // Usages 4…231 are the real keys; the rest are reports for rollover and the like.
+            guard let ctx, page == UInt32(kHIDPage_KeyboardOrKeypad), (4...231).contains(usage), IOHIDValueGetIntegerValue(value) == 1 else { return }
+            MainActor.assumeIsolated { Unmanaged<SpaceKey>.fromOpaque(ctx).takeUnretainedValue().key(usage) }
+        }, Unmanaged.passUnretained(self).toOpaque())
+        IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        guard IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess else {
+            IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+            return nil
+        }
+    }
+
+    private func key(_ usage: UInt32) {
+        if usage == UInt32(kHIDUsage_KeyboardSpacebar) {
+            if !typing { onSpace() }
+        } else if usage < 224 {   // 224…231 are modifiers: tapping Shift to wake the screen is not typing
+            typing = true
+        }
+    }
+
+    func stop() {
+        IOHIDManagerRegisterInputValueCallback(manager, nil, nil)
+        IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
     }
 }

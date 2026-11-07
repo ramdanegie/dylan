@@ -8,7 +8,26 @@ public struct FaceUnlockPolicy: Equatable, Sendable {
         public var maxLockedMinutes = 60
         public var trustedNetworksOnly = false
         public var trustedNetworks: Set<String> = []
+        /// The scan island on the lock screen (private SkyLight; speech is the fallback).
+        public var lockScreenIsland = true
+        /// Say the challenge out loud as well.
+        public var speak = true
+        /// Space at the lock screen tries again (needs Input Monitoring).
+        public var spaceRetry = false
         public init() {}
+
+        // Keys added later must not make an older vault unreadable.
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let d = Settings()
+            enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? d.enabled
+            maxLockedMinutes = try c.decodeIfPresent(Int.self, forKey: .maxLockedMinutes) ?? d.maxLockedMinutes
+            trustedNetworksOnly = try c.decodeIfPresent(Bool.self, forKey: .trustedNetworksOnly) ?? d.trustedNetworksOnly
+            trustedNetworks = try c.decodeIfPresent(Set<String>.self, forKey: .trustedNetworks) ?? d.trustedNetworks
+            lockScreenIsland = try c.decodeIfPresent(Bool.self, forKey: .lockScreenIsland) ?? d.lockScreenIsland
+            speak = try c.decodeIfPresent(Bool.self, forKey: .speak) ?? d.speak
+            spaceRetry = try c.decodeIfPresent(Bool.self, forKey: .spaceRetry) ?? d.spaceRetry
+        }
     }
 
     /// Everything the app knows at the moment the screen wakes.
@@ -22,21 +41,24 @@ public struct FaceUnlockPolicy: Equatable, Sendable {
         public var consecutiveFailures: Int
         public var passwordTypedThisLock: Bool
         public var enrolled: Bool
+        /// At least one enrolled identity is switched on.
+        public var identitiesOn: Bool
         public var accessibilityTrusted: Bool
         public var presentationMode: Bool
         public var network: String?
         public init(now: Date, screenLocked: Bool, lockedAt: Date?, lockWasManual: Bool = false, bootTime: Date,
                     lastPasswordUnlock: Date?, consecutiveFailures: Int = 0, passwordTypedThisLock: Bool = false,
-                    enrolled: Bool = true, accessibilityTrusted: Bool = true, presentationMode: Bool = false, network: String? = nil) {
+                    enrolled: Bool = true, identitiesOn: Bool = true, accessibilityTrusted: Bool = true, presentationMode: Bool = false,
+                    network: String? = nil) {
             self.now = now; self.screenLocked = screenLocked; self.lockedAt = lockedAt; self.lockWasManual = lockWasManual
             self.bootTime = bootTime; self.lastPasswordUnlock = lastPasswordUnlock; self.consecutiveFailures = consecutiveFailures
-            self.passwordTypedThisLock = passwordTypedThisLock; self.enrolled = enrolled
+            self.passwordTypedThisLock = passwordTypedThisLock; self.enrolled = enrolled; self.identitiesOn = identitiesOn
             self.accessibilityTrusted = accessibilityTrusted; self.presentationMode = presentationMode; self.network = network
         }
     }
 
     public enum Denial: String, Sendable, Equatable {
-        case disabled, notEnrolled, notLocked, firstUnlockSinceBoot, passwordTooOld, lockedTooLong
+        case disabled, notEnrolled, allIdentitiesOff, notLocked, firstUnlockSinceBoot, passwordTooOld, lockedTooLong
         case tooManyFailures, alreadyTriedThisLock, justLockedManually, untrustedNetwork, presentationMode, noAccessibility
     }
 
@@ -53,6 +75,7 @@ public struct FaceUnlockPolicy: Equatable, Sendable {
     public func denial(_ f: Facts) -> Denial? {
         if !settings.enabled { return .disabled }
         if !f.enrolled { return .notEnrolled }
+        if !f.identitiesOn { return .allIdentitiesOff }
         if !f.screenLocked { return .notLocked }
         if !f.accessibilityTrusted { return .noAccessibility }
         if f.presentationMode { return .presentationMode }
@@ -83,10 +106,11 @@ public struct LivenessChallenge: Equatable, Sendable {
         public var pitch: Double             // degrees, + = up
         public var eyesOpen: Double          // 0 closed … 1 open
         public var identity: Double          // similarity to the enrolled face, 0…1
+        public var device: Bool              // a phone or tablet frames the face (`FaceGeometry.framedByDevice`)
         public init(time: TimeInterval, faceCount: Int = 1, trackID: Int? = 1, yaw: Double = 0, pitch: Double = 0,
-                    eyesOpen: Double = 1, identity: Double = 0.9) {
+                    eyesOpen: Double = 1, identity: Double = 0.9, device: Bool = false) {
             self.time = time; self.faceCount = faceCount; self.trackID = trackID; self.yaw = yaw; self.pitch = pitch
-            self.eyesOpen = eyesOpen; self.identity = identity
+            self.eyesOpen = eyesOpen; self.identity = identity; self.device = device
         }
     }
 
@@ -97,18 +121,27 @@ public struct LivenessChallenge: Equatable, Sendable {
     }
 
     public enum Reason: String, Sendable, Equatable {
-        case timeout, multipleFaces, faceChanged, wrongPerson, wrongOrder
+        case timeout, multipleFaces, faceChanged, wrongPerson, wrongOrder, spoof
     }
 
     public static let window: TimeInterval = 6
     public static let turnDegrees: Double = 15
     public static let blinkClosed: Double = 0.2
+    /// How long, in total over the whole challenge, the face may be below the bar (blurred or half-turned frames)
+    /// before it is someone else. Glance 1.2.0 allows 2 s. A total, not a run, so alternating frames cannot reset
+    /// it; every such frame costs at least 0.1 s. Steps, including either half of a blink, never count on them.
+    public static let mismatchGrace: TimeInterval = 1.5
+    /// Frames with a device around the face that fail the attempt; one can be a picture frame behind you.
+    public static let spoofFrames = 3
 
     public let steps: [Step]
     public let identityThreshold: Double
     private(set) var current = 0
     private(set) var track: Int?
     private(set) var eyesWereClosed = false
+    private(set) var mismatchSpent: TimeInterval = 0
+    private(set) var lastFaceTime: TimeInterval?
+    private(set) var deviceFrames = 0
     public private(set) var outcome: Outcome = .inProgress(step: 0)
 
     public init(steps: [Step], identityThreshold: Double = 0.66) {
@@ -130,8 +163,16 @@ public struct LivenessChallenge: Equatable, Sendable {
         guard s.faceCount == 1 else { return outcome }                    // face briefly lost: keep waiting
         if let t = track, s.trackID != t { return finish(.failed(.faceChanged)) }
         track = track ?? s.trackID
-        // Identity is checked on every frame, not once: a different person cannot finish someone else's challenge.
-        if s.identity < identityThreshold { return finish(.failed(.wrongPerson)) }
+        if s.device { deviceFrames += 1; if deviceFrames >= Self.spoofFrames { return finish(.failed(.spoof)) } }
+        // Identity is checked on every frame, not once: a step only counts on a frame that matches, so a different
+        // person cannot finish someone else's challenge, and the same face track is required throughout.
+        let previous = lastFaceTime
+        lastFaceTime = s.time
+        if s.identity < identityThreshold {
+            mismatchSpent += max(0.1, s.time - (previous ?? s.time))
+            if mismatchSpent >= Self.mismatchGrace { return finish(.failed(.wrongPerson)) }
+            return outcome
+        }
 
         let step = steps[current]
         if Self.satisfies(step, s, eyesWereClosed: &eyesWereClosed) {
