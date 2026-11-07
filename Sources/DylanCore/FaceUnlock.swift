@@ -131,11 +131,26 @@ public struct LivenessChallenge: Equatable, Sendable {
     /// before it is someone else. Glance 1.2.0 allows 2 s. A total, not a run, so alternating frames cannot reset
     /// it; every such frame costs at least 0.1 s. Steps, including either half of a blink, never count on them.
     public static let mismatchGrace: TimeInterval = 1.5
-    /// Frames with a device around the face that fail the attempt; one can be a picture frame behind you.
-    public static let spoofFrames = 3
+    /// Frames with a device around the face that fail the attempt; a few can be a picture frame behind you.
+    public static let spoofFrames = 5
+
+    /// What the camera saw during the challenge, for the log: why a real face did not pass (not enough turn,
+    /// a blink too shallow, frames below the bar). Relative degrees as `Sample`.
+    public struct Trace: Equatable, Sendable, Codable {
+        public var frames = 0
+        public var matched = 0
+        public var yaw: ClosedRange<Double> = 0...0
+        public var pitch: ClosedRange<Double> = 0...0
+        public var minEyes = 1.0
+        public var bestIdentity = 0.0
+        /// Best score while the eyes were closed (the blink must match too). Optional: added after the first traces.
+        public var closedIdentity: Double?
+        public init() {}
+    }
 
     public let steps: [Step]
     public let identityThreshold: Double
+    public private(set) var trace = Trace()
     private(set) var current = 0
     private(set) var track: Int?
     private(set) var eyesWereClosed = false
@@ -166,6 +181,13 @@ public struct LivenessChallenge: Equatable, Sendable {
         if s.device { deviceFrames += 1; if deviceFrames >= Self.spoofFrames { return finish(.failed(.spoof)) } }
         // Identity is checked on every frame, not once: a step only counts on a frame that matches, so a different
         // person cannot finish someone else's challenge, and the same face track is required throughout.
+        trace.frames += 1
+        trace.yaw = min(trace.yaw.lowerBound, s.yaw)...max(trace.yaw.upperBound, s.yaw)
+        trace.pitch = min(trace.pitch.lowerBound, s.pitch)...max(trace.pitch.upperBound, s.pitch)
+        trace.minEyes = min(trace.minEyes, s.eyesOpen)
+        trace.bestIdentity = max(trace.bestIdentity, s.identity)
+        if s.identity >= identityThreshold { trace.matched += 1 }
+        if s.eyesOpen <= Self.blinkClosed { trace.closedIdentity = max(trace.closedIdentity ?? 0, s.identity) }
         let previous = lastFaceTime
         lastFaceTime = s.time
         if s.identity < identityThreshold {
@@ -219,8 +241,11 @@ public struct FaceUnlockEvent: Codable, Equatable, Sendable {
     public var reason: String?
     public var identity: Double?
     public var steps: [LivenessChallenge.Step]
-    public init(at: Date, result: Result, reason: String? = nil, identity: Double? = nil, steps: [LivenessChallenge.Step] = []) {
-        self.at = at; self.result = result; self.reason = reason; self.identity = identity; self.steps = steps
+    /// Optional, so logs from before it still open.
+    public var trace: LivenessChallenge.Trace?
+    public init(at: Date, result: Result, reason: String? = nil, identity: Double? = nil, steps: [LivenessChallenge.Step] = [],
+                trace: LivenessChallenge.Trace? = nil) {
+        self.at = at; self.result = result; self.reason = reason; self.identity = identity; self.steps = steps; self.trace = trace
     }
 }
 

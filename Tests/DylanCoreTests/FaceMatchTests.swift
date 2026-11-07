@@ -44,23 +44,35 @@ import Testing
     }
 
     @Test func poseCoverage() {
-        #expect(PoseCoverage.pose(yaw: 0, pitch: 0) == .center)
-        #expect(PoseCoverage.pose(yaw: 20, pitch: 0) == .left)            // + yaw = the user's left
-        #expect(PoseCoverage.pose(yaw: -20, pitch: 15) == .upRight)
-        #expect(PoseCoverage.pose(yaw: 0, pitch: -9) == .down)            // looking down needs less
-        #expect(PoseCoverage.pose(yaw: 40, pitch: 0) == nil)              // too far
+        var signs = PoseSigns()
+        #expect(PoseCoverage.classify(yaw: 0, pitch: 0, signs: &signs, asking: .center) == .pose(.center))
+        #expect(PoseCoverage.classify(yaw: 6, pitch: -7, signs: &signs, asking: .center) == .pose(.center))
+        #expect(PoseCoverage.classify(yaw: -40, pitch: 0, signs: &signs, asking: .left) == .tooFar)
+        // A turn before the wizard asked for one cannot be named yet.
+        #expect(PoseCoverage.classify(yaw: -14, pitch: 0, signs: &signs, asking: .center) == .unknown)
+        // Asked for "left", the user turns and Vision says −14: that sign is "left" from now on.
+        #expect(PoseCoverage.classify(yaw: -14, pitch: 0, signs: &signs, asking: .left) == .pose(.left))
+        #expect(signs.yaw == -1)
+        #expect(PoseCoverage.classify(yaw: 18, pitch: 3, signs: &signs, asking: .right) == .pose(.right))
+        #expect(PoseCoverage.classify(yaw: 3, pitch: 12, signs: &signs, asking: .right) == .unknown)   // pitch not learned yet
+        #expect(PoseCoverage.classify(yaw: 3, pitch: 12, signs: &signs, asking: .up) == .pose(.up))
+        #expect(signs.pitch == 1)
+        #expect(PoseCoverage.classify(yaw: -12, pitch: -18, signs: &signs, asking: .down) == .pose(.down))   // diagonal: larger axis
+        #expect(signs.apply(yaw: -14, pitch: 12) == (14, 12))
+        #expect(PoseSigns().apply(yaw: 10, pitch: 10) == (-10, -10))
         var c = PoseCoverage()
-        #expect(c.add(.center) && c.add(.center) && !c.add(.center))
-        #expect(c.missing == .left && c.done == 2 && !c.complete)
-        for p in PoseCoverage.Pose.allCases { _ = c.add(p); _ = c.add(p) }
-        #expect(c.complete && c.missing == nil && c.done == PoseCoverage.total)
+        #expect(c.add(.center) && c.add(.center) && c.add(.center) && !c.add(.center))
+        #expect(c.missing == .left && c.done == 3 && !c.complete)
+        for p in PoseCoverage.Pose.allCases { for _ in 0..<3 { _ = c.add(p) } }
+        #expect(c.complete && c.missing == nil && c.done == PoseCoverage.total && PoseCoverage.total >= FaceMatcher.minimumFrames)
     }
 
     @Test func deviceAroundTheFace() {
         let face = CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2)
-        #expect(FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0.35, y: 0.3, width: 0.3, height: 0.45)]))
-        #expect(!FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0, y: 0, width: 1, height: 1)]))       // a door behind you
-        #expect(!FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0.5, y: 0.3, width: 0.3, height: 0.45)])) // beside the face
+        #expect(FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0.35, y: 0.32, width: 0.3, height: 0.42)]))   // a phone held up
+        #expect(!FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0, y: 0, width: 1, height: 1)]))            // a door behind you
+        #expect(!FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0.38, y: 0.1, width: 0.3, height: 0.55)]))  // off-centre frame
+        #expect(!FaceGeometry.framedByDevice(face: face, rects: [CGRect(x: 0.5, y: 0.3, width: 0.3, height: 0.45)]))   // beside the face
         #expect(!FaceGeometry.framedByDevice(face: face, rects: []))
     }
 

@@ -111,11 +111,28 @@ private func facts(_ change: (inout FaceUnlockPolicy.Facts) -> Void = { _ in }) 
         #expect(last == .failed(.wrongPerson))
     }
 
+    @Test func traceRecordsWhatTheCameraSaw() {
+        var c = LivenessChallenge(steps: [.lookUp, .blink])
+        _ = c.feed(S(time: 0.1))
+        _ = c.feed(S(time: 0.2, yaw: -4, pitch: 9))
+        _ = c.feed(S(time: 0.3, eyesOpen: 0.3, identity: 0.5))
+        _ = c.feed(S(time: 0.4, faceCount: 0))
+        let t = c.trace
+        #expect(t.frames == 3 && t.matched == 2 && t.pitch == 0...9 && t.yaw == -4...0 && t.minEyes == 0.3 && t.bestIdentity == 0.9)
+        #expect(t.closedIdentity == nil)
+        _ = c.feed(S(time: 0.5, eyesOpen: 0.1, identity: 0.6))
+        #expect(c.trace.closedIdentity == 0.6)
+        // A trace sealed before `closedIdentity` existed still decodes.
+        var old = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(t)) as! [String: Any]
+        old.removeValue(forKey: "closedIdentity")
+        #expect(try! JSONDecoder().decode(LivenessChallenge.Trace.self, from: JSONSerialization.data(withJSONObject: old)) == t)
+    }
+
     @Test func aPhoneAroundTheFaceFails() {
         var c = LivenessChallenge(steps: [.lookLeft, .lookUp])
         #expect(c.feed(S(time: 0.1, device: true)) == .inProgress(step: 0))   // a picture frame behind you once
-        _ = c.feed(S(time: 0.2, device: true))
-        #expect(c.feed(S(time: 0.3, device: true)) == .failed(.spoof))
+        for t in [0.2, 0.3, 0.4] { #expect(c.feed(S(time: t, device: true)) == .inProgress(step: 0)) }
+        #expect(c.feed(S(time: 0.5, device: true)) == .failed(.spoof))
     }
 
     @Test func faceSwapOrSecondFaceFails() {

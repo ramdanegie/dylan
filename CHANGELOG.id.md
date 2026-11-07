@@ -2,6 +2,22 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Diperbaiki
+- Face Unlock membaca gerak kepala dengan presisi. Sebelumnya kiri dan kanan melompat per 45° dan atas atau bawah tidak pernah terbaca, jadi pendaftaran lama dan "lihat ke atas" tidak pernah bisa lolos. Arah kiri dan atas kini dipelajari dari gerakanmu sendiri saat mendaftar atau menambah identitas.
+- Pengetikan password di lock screen: island ditutup dulu, password diketik satu karakter demi satu, dan Return ditekan setelah jeda singkat. Saat diuji, tantangan yang lolos tetap membuat Mac terkunci.
+- Membuka kunci manual setelah percobaan gagal tidak lagi tercatat sebagai dibuka dengan wajah.
+- Cek layar HP atau tablet tidak lagi salah menangkap wajah asli di depan pintu atau monitor.
+
+### Diubah
+- Pendaftaran cukup lima arah (lurus, kiri, kanan, atas, bawah), bukan sembilan. Cukup menoleh sekitar 10° dari posisi awal, dan titik kepala bergerak halus.
+- Tantangan mengucapkan "pejamkan mata sebentar", bukan "kedip": kedipan cepat bisa jatuh di antara frame kamera.
+
+### Ditambahkan
+- Latihan tantangan (Settings → Face Unlock → Uji wajah): tantangan yang sama saat Mac tidak terkunci, dengan hasil dan apa yang dilihat kamera. Tidak ada yang diketik atau dihitung.
+- Salin riwayat. Tiap percobaan juga menampilkan seberapa jauh kamu menoleh, seberapa rapat matamu terpejam, dan skornya.
+
 ## [0.3.0] - 2026-11-07
 
 ### Ditambahkan
