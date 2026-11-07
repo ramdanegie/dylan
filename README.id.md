@@ -55,7 +55,7 @@ Developer mendapat **Mode Developer**: pantau agent AI, perintah yang lama, CI, 
 
 ### Eksperimental (mati secara default)
 
-- **Face Unlock.** Buka kunci dengan wajah memakai tantangan liveness acak dan batasan ala Apple. Ini bukan Face ID: kamera Mac hanya 2D. Baca [docs/face-unlock.md](docs/face-unlock.md) sebelum menyalakannya.
+- **Face Unlock.** Buka kunci dengan wajah memakai tantangan liveness acak dan batasan ala Apple, dengan beberapa identitas wajah (kacamata, masker), pendaftaran terpandu, dan island scan di lock screen. Ini bukan Face ID: kamera Mac hanya 2D. Baca [docs/face-unlock.md](docs/face-unlock.md) sebelum menyalakannya.
 - **Widget lock screen** berisi jam, baterai, dan lagu yang sedang diputar.
 
 ## Instalasi

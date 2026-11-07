@@ -34,6 +34,25 @@ Proyek lain yang dipelajari: KINN-CH/FaceUnlock (kunci Secure Enclave, verifikas
 | 9 | Tanpa jejak | **Audit log lokal** (waktu, hasil, skor, cue liveness; tanpa gambar) + ringkasan di notch setelah unlock: "Dibuka dengan wajah 14.02 · 2 gagal" |
 | 10 | Signature ad-hoc mematikan izin Accessibility setelah rebuild (dilaporkan KINN-CH) | Deteksi `AXIsProcessTrusted() == false` dan pandu user memberi izin ulang; dokumentasikan sertifikat self-signed |
 
+## Diadopsi dari Glance (v0.3.0)
+
+Peta lengkap di [replica/recon.md](../replica/recon.md) dan [replica/features.csv](../replica/features.csv). Clean-room: hanya situs, README, dan catatan rilis Glance; kodenya tidak dibaca.
+
+| Dari Glance | Di Dylan |
+|---|---|
+| Identities + toggle | Hingga 5 identitas di vault (`FaceIdentity`); identitas lama jadi "Wajah utama". Skor = maksimum dari identitas yang menyala. Semua mati → `allIdentitiesOff` |
+| Enrollment 9 arah, indikator kepala, "terlalu jauh" | `PoseCoverage`: 2 frame per arah (18), titik kepala live, > 35° = terlalu jauh. Ambang = celah terbesar antara satu arah dan arah terdekat lain × 1,1 (lebih ketat dari kiri↔kanan) |
+| Toleransi 2 s non-match (1.2.0) | 1,5 s **total** per tantangan (tiap frame minimal 0,1 s, tidak reset oleh frame cocok); langkah, termasuk kedua sisi kedipan, tidak pernah dihitung di frame yang tidak cocok; track wajah tetap wajib sama |
+| Cue bezel perangkat | `VNDetectRectanglesRequest`: persegi yang membingkai wajah rapat (1,3–6× luas wajah) di 3 frame → `spoof` |
+| Island scan di notch | Panel SkyLight yang sama dengan widget lock screen (FR-80); gagal → suara |
+| Spasi di lock screen | IOHIDManager (Input Monitoring), hanya saat terkunci, hanya cek spasi; begitu tombol lain (bukan modifier) ditekan, spasi tidak lagi berarti coba lagi sampai kunci berikutnya; spasinya dihapus dari field. Password yang diawali spasi tidak bisa memakai ini |
+| Settings di balik Touch ID | `LAContext.deviceOwnerAuthentication` sebelum melonggarkan; masa tenggang 2 menit; mematikan tidak pernah meminta |
+| Ganti password (1.2.0) | Diverifikasi OpenDirectory seperti saat daftar |
+| Face Lab | "Uji wajah" di Settings (di balik Touch ID: skor live juga membantu menyetel foto/masker): kamera 10 s, skor per identitas, arah kepala, mata, cue bezel |
+| Haptic | `NSHapticFeedbackManager` saat berhasil/gagal |
+
+Tidak diadopsi: model ArcFace (bobot umumnya lisensi non-komersial), liveness Off/Light (lebih lemah), kamera eksternal/Continuity (bisa memutar video), sesi Touch ID 30 hari (aturan 48 jam Dylan lebih ketat).
+
 ## Alur
 
 1. **Pemicu:** `com.apple.screenIsLocked` dicatat sebagai waktu kunci. Saat layar menyala lagi (wake, lid, input), cek `CGSessionCopyCurrentDictionary` → benar-benar terkunci?
@@ -54,4 +73,4 @@ Proyek lain yang dipelajari: KINN-CH/FaceUnlock (kunci Secure Enclave, verifikas
 | Pemicu & pengetikan | Kunci dicatat dari `com.apple.screenIsLocked`; percobaan saat layar menyala (`screensDidWake`) bila `CGSSessionScreenIsLocked`. Lolos → cek ulang kebijakan → ⌘→ ⌘⌫ → password per 20 unit UTF-16 (`.cghidEventTap`) → Return; buffer di-nol-kan |
 | Instruksi tantangan | Diucapkan (AVSpeechSynthesizer, id/en), karena lock screen tidak bisa digambari tanpa panel SkyLight eksperimental |
 | Transparansi | P1 "Dibuka dengan wajah · n gagal sebelumnya" setelah unlock; riwayat 50 kejadian di Settings (tanpa foto); "Matikan Face Unlock" di menu bar; ditolak saat Mode Presentasi |
-| Belum diverifikasi | Arah tanda `yaw` dari Vision (kiri/kanan), skor feature print pada wajah asli vs orang lain, dan pengetikan ke lock screen. **Spike T5.0 bersama kamu di akun macOS uji**, bukan di akun utama |
+| Belum diverifikasi | Arah tanda `yaw` dari Vision (kiri/kanan; "Uji wajah" menampilkan angkanya: menoleh ke kiri harus positif), skor feature print pada wajah asli vs orang lain, ambang terpandu di wajah asli, island di lock screen, spasi lewat IOHIDManager saat terkunci, dan pengetikan ke lock screen. **Spike T5.0 bersama kamu di akun macOS uji**, bukan di akun utama |

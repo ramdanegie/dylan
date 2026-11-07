@@ -10,6 +10,7 @@ enum Snapshot {
     static var rendering = false
     nonisolated(unsafe) static var studioSample = false
     nonisolated(unsafe) static var enrollStep: Int?
+    nonisolated(unsafe) static var enrollAdding = false
 
     static func render(to dir: URL) {
         rendering = true
@@ -122,6 +123,7 @@ enum Snapshot {
             ("D19-enroll-1", { Snapshot.enrollStep = 0 }),
             ("D19-enroll-3", { Snapshot.enrollStep = 2 }),
             ("D19-enroll-4", { Snapshot.enrollStep = 3 }),
+            ("D19-add-name", { Snapshot.enrollStep = 2; Snapshot.enrollAdding = true }),
             ("D45-thermal", {
                 let f = FanProvider.shared
                 f.fans = [SMC.Fan(index: 0, rpm: 3240, min: 1200, max: 5779, manual: false, target: 3240),
@@ -243,7 +245,9 @@ enum Snapshot {
             }
             if let step = Snapshot.enrollStep {
                 Snapshot.enrollStep = nil
-                let r = ImageRenderer(content: FaceEnrollView(done: {}, step: step).background(Color(nsColor: .windowBackgroundColor)))
+                let adding = Snapshot.enrollAdding
+                Snapshot.enrollAdding = false
+                let r = ImageRenderer(content: FaceEnrollView(done: {}, step: step, adding: adding).background(Color(nsColor: .windowBackgroundColor)))
                 r.scale = 2
                 if let cg = r.cgImage, let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
                     try? png.write(to: dir.appendingPathComponent("\(name)-\(lang).png"))
@@ -302,6 +306,24 @@ enum Snapshot {
         NSGraphicsContext.restoreGraphicsState()
         try? rep.representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent("menubar-icons.png"))
         print("✓ menubar-icons.png")
+        // FR-118: the lock-screen scan island, with a notch and as a pill, on a lock-screen-like backdrop.
+        let phases: [FaceScanIsland.Phase] = [.scanning(step: L("faceUnlock.step.lookLeft"), index: 1, count: 2), .passed,
+                                              .failed(FaceUnlockProvider.reasonText("wrongPerson"))]
+        let scan = VStack(spacing: 14) {
+            ForEach(Array(phases.enumerated()), id: \.offset) { _, p in
+                FaceScanCard(phase: p, spaceHint: true, notch: 32).frame(height: FaceScanCard.height(notch: 32))
+            }
+            FaceScanCard(phase: phases[0], spaceHint: true, notch: 0).frame(height: FaceScanCard.height(notch: 0))
+        }
+        .padding(20)
+        .background(LinearGradient(colors: [Color(red: 0.2, green: 0.25, blue: 0.4), Color(red: 0.45, green: 0.3, blue: 0.45)], startPoint: .top, endPoint: .bottom))
+        .environment(\.colorScheme, .dark)
+        let sr = ImageRenderer(content: scan)
+        sr.scale = 2
+        if let cg = sr.cgImage, let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
+            try? png.write(to: dir.appendingPathComponent("face-scan-\(lang).png"))
+            print("✓ face-scan-\(lang).png")
+        }
     }
 
     /// `Dylan --settings-snapshot <dir> [--dark] [--lang id|en]`: every Settings page (D50) to PNG, from throwaway

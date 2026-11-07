@@ -1058,20 +1058,31 @@ enum App {
     }
 }
 
-/// FR-50–55 (experimental): the warning comes first, then enrollment with the verified password.
+/// FR-50–55, 116–119 (experimental): the warning comes first, then enrollment with the verified password.
+/// Anything that lets Face Unlock open more easily asks for Touch ID first; turning things off never does.
 struct FaceUnlockSettings: View {
     private var face: FaceUnlockProvider { FaceUnlockProvider.shared }
+    @StateBox private var newPassword: String?
+    @StateBox private var passwordError: String?
+
+    /// Off is free; on goes through Touch ID.
+    private func guarded(_ get: @escaping @MainActor @Sendable () -> Bool, _ set: @escaping @MainActor @Sendable (Bool) -> Void) -> Binding<Bool> {
+        Binding(get: get, set: { on in on ? face.authorize { set(true) } : set(false) })
+    }
 
     var body: some View {
         Section {
             if face.enrolled {
-                Toggle(isOn: Binding(get: { face.vault.settings.enabled }, set: { face.vault.settings.enabled = $0; face.save() })) {
+                Toggle(isOn: guarded({ face.vault.settings.enabled }, { FaceUnlockProvider.shared.vault.settings.enabled = $0; FaceUnlockProvider.shared.save() })) {
                     SwiftUI.Text(L("faceUnlock.enable"))
                     SwiftUI.Text(L("faceUnlock.enableHint")).font(.caption).foregroundStyle(.secondary)
                 }
                 LabeledContent(L("faceUnlock.maxLockedLabel")) {
                     Stepper(L("faceUnlock.minutes", face.vault.settings.maxLockedMinutes),
-                            value: Binding(get: { face.vault.settings.maxLockedMinutes }, set: { face.vault.settings.maxLockedMinutes = $0; face.save() }), in: 5...240, step: 5)
+                            value: Binding(get: { face.vault.settings.maxLockedMinutes }, set: { v in
+                                let apply: @MainActor @Sendable () -> Void = { FaceUnlockProvider.shared.vault.settings.maxLockedMinutes = v; FaceUnlockProvider.shared.save() }
+                                v > face.vault.settings.maxLockedMinutes ? face.authorize(apply) : apply()
+                            }), in: 5...240, step: 5)
                 }
                 // Why it would not try on the next wake (the most common: no Accessibility, no password unlock yet).
                 if let issue = face.readinessIssue {
@@ -1087,11 +1098,6 @@ struct FaceUnlockSettings: View {
                 } else {
                     Label(L("faceUnlock.readyNow"), systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
                 }
-                HStack {
-                    Button(L("faceUnlock.reenroll")) { FaceEnrollWindow.show() }
-                    Spacer()
-                    Button(L("faceUnlock.delete"), role: .destructive) { face.deleteEnrollment() }
-                }
             } else {
                 SwiftUI.Text(L("faceUnlock.warning")).font(.caption).foregroundStyle(.orange)
                 Button(L("faceUnlock.enroll")) { FaceEnrollWindow.show() }
@@ -1100,15 +1106,37 @@ struct FaceUnlockSettings: View {
         } header: {
             HStack { SwiftUI.Text(L("faceUnlock.title")); Badge() }
         }
+        if face.enrolled {
+            identities
+            lockScreen
+            lab
+            Section {
+                if let pw = newPassword {
+                    HStack {
+                        SecureField(L("faceUnlock.passwordField"), text: Binding(get: { pw }, set: { newPassword = $0 })).textFieldStyle(.roundedBorder)
+                            .onSubmit(savePassword)
+                        Button(L("button.cancel")) { newPassword = nil; passwordError = nil }
+                        Button(L("faceUnlock.save")) { savePassword() }.disabled(pw.isEmpty)
+                    }
+                    if let passwordError { SwiftUI.Text(passwordError).font(.caption).foregroundStyle(.red) }
+                }
+                HStack {
+                    if newPassword == nil {
+                        Button(L("faceUnlock.changePassword")) { face.authorize { FaceUnlockSettings.beginPassword() } }
+                    }
+                    Spacer()
+                    Button(L("faceUnlock.delete"), role: .destructive) { face.deleteEnrollment() }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: FaceUnlockSettings.passwordRequest)) { _ in newPassword = ""; passwordError = nil }
+        }
         if !face.vault.log.events.isEmpty {
             Section(L("faceUnlock.log")) {
                 ForEach(Array(face.vault.log.events.prefix(10).enumerated()), id: \.offset) { _, e in
                     HStack {
                         SwiftUI.Text(e.at.formatted(date: .abbreviated, time: .shortened))
                         SwiftUI.Text(L("faceUnlock.result.\(e.result.rawValue)"))
-                        if let r = e.reason {
-                            SwiftUI.Text(FaceUnlockPolicy.Denial(rawValue: r).map { L("faceUnlock.denial.\($0.rawValue)") } ?? r).foregroundStyle(.secondary)
-                        }
+                        if let r = e.reason { SwiftUI.Text(FaceUnlockProvider.reasonText(r)).foregroundStyle(.secondary) }
                         Spacer()
                         if let i = e.identity { SwiftUI.Text(String(format: "%.2f", i)).monospacedDigit().foregroundStyle(.secondary) }
                     }
@@ -1116,5 +1144,101 @@ struct FaceUnlockSettings: View {
                 }
             }
         }
+    }
+}
+
+extension FaceUnlockSettings {
+    /// Touch ID answered on another task; the field opens through a notification so no view state is captured.
+    static let passwordRequest = Notification.Name("dylan.faceUnlock.passwordRequest")
+    static func beginPassword() { NotificationCenter.default.post(name: passwordRequest, object: nil) }
+
+    private func savePassword() {
+        guard let pw = newPassword, !pw.isEmpty else { return }
+        passwordError = face.changePassword(pw)
+        if passwordError == nil { newPassword = nil }
+    }
+
+    /// Glance's identities: plain, glasses, a mask, dim light; each can be off without being deleted.
+    private var identities: some View {
+        Section {
+            ForEach(face.vault.identities) { i in
+                HStack {
+                    Image(systemName: "faceid").foregroundStyle(.secondary)
+                    SwiftUI.Text(FaceUnlockProvider.displayName(i))
+                    Spacer()
+                    Toggle("", isOn: guarded({ i.enabled }, { FaceUnlockProvider.shared.setIdentity(i.id, enabled: $0) })).labelsHidden()
+                    // The last one goes only with "Delete face data & password" below.
+                    Button(role: .destructive) { face.deleteIdentity(i.id) } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless)
+                        .disabled(face.vault.identities.count < 2)
+                        .help(L("faceUnlock.identity.delete"))
+                        .accessibilityLabel(L("faceUnlock.identity.delete"))
+                }
+            }
+            HStack {
+                SwiftUI.Text(L("faceUnlock.identitiesHint")).font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button(L("faceUnlock.addIdentity")) { face.authorize { FaceEnrollWindow.show(adding: true) } }
+                    .disabled(face.vault.identities.count >= FaceVault.maxIdentities)
+            }
+        } header: { SwiftUI.Text(L("faceUnlock.identities")) }
+    }
+
+    private var lockScreen: some View {
+        Section {
+            Toggle(isOn: Binding(get: { face.vault.settings.lockScreenIsland }, set: { face.vault.settings.lockScreenIsland = $0; face.save() })) {
+                SwiftUI.Text(L("faceUnlock.island"))
+                SwiftUI.Text(L("faceUnlock.islandHint")).font(.caption).foregroundStyle(.secondary)
+            }
+            Toggle(L("faceUnlock.speak"), isOn: Binding(get: { face.vault.settings.speak }, set: { face.vault.settings.speak = $0; face.save() }))
+            Toggle(isOn: guarded({ face.vault.settings.spaceRetry }, { on in
+                if on { FaceUnlockProvider.requestInputMonitoring() }
+                FaceUnlockProvider.shared.vault.settings.spaceRetry = on
+                FaceUnlockProvider.shared.save()
+            })) {
+                SwiftUI.Text(L("faceUnlock.spaceRetry"))
+                SwiftUI.Text(L("faceUnlock.spaceRetryHint")).font(.caption).foregroundStyle(.secondary)
+            }
+            if face.vault.settings.spaceRetry, !FaceUnlockProvider.inputMonitoringAllowed {
+                HStack {
+                    Label(L("faceUnlock.needsInputMonitoring"), systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
+                    Spacer()
+                    Button(L("faceUnlock.openInputMonitoring")) {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
+                    }
+                }
+            }
+        } header: { SwiftUI.Text(L("faceUnlock.lockScreen")) }
+    }
+
+    /// Glance's Face Lab: the camera for 10 s with the live score per identity; nothing unlocks, nothing is stored.
+    private var lab: some View {
+        Section {
+            HStack {
+                SwiftUI.Text(L("faceUnlock.labHint")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                if face.labCamera != nil {
+                    Button(L("faceUnlock.labStop")) { face.stopLab() }
+                } else {
+                    // The live score helps tune a photo or a mask too, so it is behind Touch ID like the rest.
+                    Button(L("faceUnlock.labStart")) { face.authorize { FaceUnlockProvider.shared.startLab() } }
+                }
+            }
+            if let r = face.lab {
+                let fmt: (Double) -> String = { $0.formatted(.number.precision(.fractionLength(2)).locale(L10n.locale)) }
+                ForEach(face.vault.identities) { i in
+                    let score = r.scores[i.id]
+                    LabeledContent(FaceUnlockProvider.displayName(i)) {
+                        SwiftUI.Text(score.map(fmt) ?? "—").monospacedDigit()
+                            .foregroundStyle((score ?? 0) >= 0.66 ? .green : .secondary)
+                    }
+                }
+                LabeledContent(L("faceUnlock.labFaces"), value: "\(r.faces)")
+                LabeledContent(L("faceUnlock.labHead"), value: "\(Int(r.yaw.rounded()))° · \(Int(r.pitch.rounded()))°")
+                LabeledContent(L("faceUnlock.labEyes"), value: fmt(r.eyesOpen))
+                if r.device { Label(L("faceUnlock.labDevice"), systemImage: "iphone.gen3").font(.caption).foregroundStyle(.orange) }
+            }
+        } header: { SwiftUI.Text(L("faceUnlock.lab")) }
+        .font(.callout)
     }
 }
