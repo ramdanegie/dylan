@@ -2,6 +2,11 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Diperbaiki
+- Dylan tidak lagi menutup sendiri saat perangkat Bluetooth (AirPods, mouse, keyboard) tersambung atau terputus. Di macOS 27.2 sistem mengirim kabar ini dari thread latar belakang, dan itu menghentikan app.
+
 ## [0.3.1] - 2026-11-07
 
 ### Diperbaiki
