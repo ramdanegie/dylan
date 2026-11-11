@@ -137,15 +137,26 @@ final class BluetoothProvider: NSObject {
         connectNote = nil
     }
 
-    @objc private func connected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) {
+    // IOBluetooth calls these on its own queue on macOS 27.2; main-actor code there traps (crash), so hop to main.
+    @objc nonisolated private func connected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) {
         device.register(forDisconnectNotification: self, selector: #selector(disconnected(_:device:)))
-        guard Date().timeIntervalSince(startedAt) > 2 else { return }
-        post(device, connected: true)
+        onMain(device, connected: true)
     }
 
-    @objc private func disconnected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) {
+    @objc nonisolated private func disconnected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) {
         note.unregister()
-        post(device, connected: false)
+        onMain(device, connected: false)
+    }
+
+    nonisolated private func onMain(_ device: IOBluetoothDevice, connected: Bool) {
+        nonisolated(unsafe) let d = device
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                let me = BluetoothProvider.shared
+                if connected, Date().timeIntervalSince(me.startedAt) <= 2 { return }
+                me.post(d, connected: connected)
+            }
+        }
     }
 
     private func post(_ device: IOBluetoothDevice, connected: Bool) {
