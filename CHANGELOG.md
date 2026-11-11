@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.3.2] - 2026-11-11
 
 ### Fixed
 - Dylan no longer quits by itself when a Bluetooth device (AirPods, a mouse, a keyboard) connects or disconnects. On macOS 27.2 the system reports these from a background thread, which stopped the app.
