@@ -2,7 +2,7 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
-## [Unreleased]
+## [0.3.3] - 2026-11-13
 
 ### Diperbaiki
 - Dylan tidak lagi membeku. Pertanyaan ke macOS apakah Dylan boleh mengontrol Spotify (atau Apple Music, browser, VLC) bisa menunggu selamanya saat app itu tidak menjawab, dan menunggunya di thread utama: ikon menu bar, notch, dan Quit berhenti merespons. Pengecekan itu kini berjalan di latar belakang.

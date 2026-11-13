@@ -2,7 +2,7 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
-## [Unreleased]
+## [0.3.3] - 2026-11-13
 
 ### Fixed
 - Dylan no longer freezes. Asking macOS whether Dylan may control Spotify (or Apple Music, a browser, VLC) could wait forever when that app did not answer, and it waited on the main thread: the menu bar icon, the notch and Quit stopped responding. The check now runs in the background.
