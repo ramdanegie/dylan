@@ -2,6 +2,13 @@
 
 Semua perubahan penting di Dylan. Dylan menampilkan bagian untuk versimu sekali setelah update (Settings → Tentang → Yang baru).
 
+## [Unreleased]
+
+### Diperbaiki
+- Dylan tidak lagi membeku. Pertanyaan ke macOS apakah Dylan boleh mengontrol Spotify (atau Apple Music, browser, VLC) bisa menunggu selamanya saat app itu tidak menjawab, dan menunggunya di thread utama: ikon menu bar, notch, dan Quit berhenti merespons. Pengecekan itu kini berjalan di latar belakang.
+- Klik pada island kembali sampai ke Dylan. Panel notch berada di bawah menu bar, bukan di atasnya.
+- Settings dan jendela Dylan lainnya muncul di depan app yang sedang dipakai (misalnya VS Code), bukan di belakangnya. Selama ada yang terbuka, Dylan tampil di Dock dan ⌘-Tab.
+
 ## [0.3.2] - 2026-11-11
 
 ### Diperbaiki

@@ -172,7 +172,7 @@ enum HelperSheetWindow {
     private static var window: NSWindow?
 
     static func show() {
-        if let window { window.makeKeyAndOrderFront(nil); NSApp.activate(); return }
+        if let window { window.showInFront(); return }
         let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 440, height: 420), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = L("fan.sheetTitle")
         w.isReleasedWhenClosed = false
@@ -180,8 +180,7 @@ enum HelperSheetWindow {
         Art.style(w)
         w.center()
         window = w
-        w.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        w.showInFront()
     }
 
     static func close() { window?.close(); window = nil }

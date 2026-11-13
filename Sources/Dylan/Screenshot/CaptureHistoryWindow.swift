@@ -7,15 +7,14 @@ enum CaptureHistoryWindow {
     private static var window: NSWindow?
 
     static func show() {
-        if let window { window.makeKeyAndOrderFront(nil); NSApp.activate(); return }
+        if let window { window.showInFront(); return }
         let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 760, height: 520), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         w.title = L("shot.history")
         w.isReleasedWhenClosed = false
         w.contentView = NSHostingView(rootView: CaptureHistoryView().artWindow())
         Art.style(w)
         w.center()
-        NSApp.activate()
-        w.makeKeyAndOrderFront(nil)
+        w.showInFront()
         window = w
     }
 }

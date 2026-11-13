@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.terminate(nil)
             return
         }
+        NSWindow.dropDockIconWithLastWindow()
         NotchController.shared.show()
         SocketServer.shared.start()
         Hotkeys.registerDefaults()

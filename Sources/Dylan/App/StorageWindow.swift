@@ -18,8 +18,7 @@ enum StorageWindow {
             w.center()
             window = w
         }
-        NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window?.showInFront()
         let p = StorageProvider.shared
         if p.items.isEmpty && !p.scanning { p.scan() }
     }

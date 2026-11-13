@@ -266,7 +266,7 @@ final class ScreenshotService {
             let alert = NSAlert()
             alert.messageText = L("shot.text")
             alert.informativeText = arg
-            NSApp.activate()
+            NSApp.activateInFront()
             alert.runModal()
         default: break
         }

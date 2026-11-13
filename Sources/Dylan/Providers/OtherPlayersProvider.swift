@@ -107,10 +107,7 @@ final class OtherPlayersProvider {
         }
     }
 
-    private func canAutomate(_ app: String) -> Bool {
-        let target = NSAppleEventDescriptor(bundleIdentifier: app)
-        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
-    }
+    private func canAutomate(_ app: String) -> Bool { Automation.allowed(app) }
 
     private func clearIfOurs() {
         if let s = AppModel.shared.media?.source, s == .browser || s == .vlc { AppModel.shared.mediaChanged(nil) }
@@ -122,10 +119,7 @@ final class OtherPlayersProvider {
         let ids = Set(BrowserMedia.browsers.keys).union([Self.vlcID])
         let apps = NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier).filter { ids.contains($0) }
         Task.detached {
-            for id in apps {
-                let target = NSAppleEventDescriptor(bundleIdentifier: id)
-                _ = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, true)
-            }
+            for id in apps { _ = Automation.ask(id, prompt: true) }
             await MainActor.run { OtherPlayersProvider.shared.poll() }
         }
     }
