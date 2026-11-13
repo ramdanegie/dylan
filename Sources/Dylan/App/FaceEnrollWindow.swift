@@ -21,8 +21,7 @@ enum FaceEnrollWindow {
             MainActor.assumeIsolated { FaceUnlockProvider.shared.cancelEnroll(); window = nil }
         }
         window = w
-        w.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        w.showInFront()
     }
 
     static func close() { window?.close() }

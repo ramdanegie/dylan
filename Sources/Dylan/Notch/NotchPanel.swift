@@ -75,7 +75,7 @@ final class NotchController {
         p.hasShadow = false
         p.isMovable = false
         p.hidesOnDeactivate = false
-        p.isFloatingPanel = true
+        // No `isFloatingPanel`: it resets the level to .floating, under the menu bar, where clicks on the island are lost.
         p.becomesKeyOnlyIfNeeded = true
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]

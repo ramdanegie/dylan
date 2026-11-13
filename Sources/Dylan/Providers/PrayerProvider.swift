@@ -243,7 +243,7 @@ final class PrayerProvider {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.audio]
         panel.allowsMultipleSelection = false
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activateInFront()
         if panel.runModal() == .OK, let url = panel.url { adhanFile = url.path }
     }
 }

@@ -16,8 +16,7 @@ enum OnboardingWindow {
         w.contentView = NSHostingView(rootView: OnboardingView { OnboardingWindow.close() })
         w.center()
         window = w
-        NSApp.activate()
-        w.makeKeyAndOrderFront(nil)
+        w.showInFront()
     }
 
     static func close() {

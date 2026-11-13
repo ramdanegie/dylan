@@ -133,7 +133,7 @@ final class FlashcardStore {
     func importFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.commaSeparatedText, .tabSeparatedText, .plainText]
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activateInFront()
         guard panel.runModal() == .OK, let url = panel.url, let text = try? String(contentsOf: url, encoding: .utf8) else { return }
         let cards = FlashcardDeck.parse(text)
         guard !cards.isEmpty else { AppModel.shared.lastError = L("flash.importEmpty"); return }

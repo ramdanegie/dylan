@@ -2,6 +2,13 @@
 
 All notable changes to Dylan. Dylan shows the section for your version once after an update (Settings → About → What's New).
 
+## [Unreleased]
+
+### Fixed
+- Dylan no longer freezes. Asking macOS whether Dylan may control Spotify (or Apple Music, a browser, VLC) could wait forever when that app did not answer, and it waited on the main thread: the menu bar icon, the notch and Quit stopped responding. The check now runs in the background.
+- Clicks on the island reach Dylan again. The notch panel sat under the menu bar instead of above it.
+- Settings and Dylan's other windows open in front of the app you are using (VS Code, for example) instead of behind it. While one is open, Dylan shows in the Dock and ⌘-Tab.
+
 ## [0.3.2] - 2026-11-11
 
 ### Fixed

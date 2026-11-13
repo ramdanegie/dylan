@@ -21,8 +21,7 @@ enum SettingsWindow {
             window = w
         }
         window?.contentView = NSHostingView(rootView: SettingsView(selection: section))
-        NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window?.showInFront()
     }
 }
 
@@ -1002,7 +1001,7 @@ enum About {
         credits.append(NSAttributedString(string: "github.com/ramdanegie", attributes: base.merging([.link: profile]) { $1 }))
         credits.append(NSAttributedString(string: "  ·  ", attributes: base))
         credits.append(NSAttributedString(string: "Source code", attributes: base.merging([.link: repository]) { $1 }))
-        NSApp.activate()
+        NSApp.activateInFront()
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }
 }

@@ -31,8 +31,7 @@ final class StudioWindow: NSWindow {
         actions.view = host
         w.addTitlebarAccessoryViewController(actions)
         w.center()
-        NSApp.activate()
-        w.makeKeyAndOrderFront(nil)
+        w.showInFront()
         windows.append(w)
         model.close = { [weak w] in DispatchQueue.main.async { w?.close() } }   // not inside the button action
         if ShotPrefs.autoBlur { model.autoBlurSensitive() }

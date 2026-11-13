@@ -165,6 +165,36 @@ extension Art {
     }
 }
 
+extension NSWindow {
+    /// In front of the app in use (VS Code, …). macOS 14+ may decline a plain `activate()` from a menu bar app,
+    /// leaving the window behind; a regular app (Dock icon, ⌘-Tab) while a window is open is let to the front, and
+    /// can still be reached if something covers it.
+    func showInFront() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activateInFront()
+        makeKeyAndOrderFront(nil)
+        orderFrontRegardless()
+    }
+
+    /// Back to a menu bar app (no Dock icon) once the last titled window closes. Installed once at launch.
+    static func dropDockIconWithLastWindow() {
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
+            let closing = (n.object as AnyObject?).map(ObjectIdentifier.init)
+            MainActor.assumeIsolated {
+                let open = NSApp.windows.contains {
+                    ObjectIdentifier($0) != closing && $0.styleMask.contains(.titled) && ($0.isVisible || $0.isMiniaturized)
+                }
+                if !open { NSApp.setActivationPolicy(.accessory) }
+            }
+        }
+    }
+}
+
+extension NSApplication {
+    /// For alerts and open panels, which need the app active (see `NSWindow.showInFront`).
+    func activateInFront() { activate(ignoringOtherApps: true) }
+}
+
 /// D50 groups: white cards (radius 16) on the warm page, rows of about 52 pt split by 0.5 pt lines at 7 %.
 /// The native grouped Form always tints its cards grey, so Settings lays sections out itself (macOS 15
 /// `ForEach(sections:)`); the row styles below give controls the label-left, control-right form layout.

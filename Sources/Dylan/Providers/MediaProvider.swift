@@ -1,6 +1,37 @@
 import AppKit
 import DylanCore
 
+/// Whether Dylan may send Apple events to an app. Asking macOS can block for good when the target does not answer
+/// (seen on macOS 27.2: Dylan froze for hours inside the check on a Spotify event), so the main thread only reads the
+/// last answer and every check runs in the background.
+enum Automation {
+    private static var answers: [String: Bool] = [:]
+    private static var pending: Set<String> = []
+
+    /// The last answer (false until the first arrives), plus a fresh check in the background, one at a time per app.
+    /// `onGrant` runs when the answer turns to allowed, e.g. to load what is already playing.
+    static func allowed(_ id: String, onGrant: @escaping @MainActor () -> Void = {}) -> Bool {
+        if pending.insert(id).inserted {
+            Task.detached {
+                let ok = ask(id, prompt: false)
+                await MainActor.run {
+                    pending.remove(id)
+                    let was = answers[id] == true
+                    answers[id] = ok
+                    if ok && !was { onGrant() }
+                }
+            }
+        }
+        return answers[id] == true
+    }
+
+    /// Blocking: never call on the main thread. `prompt` shows the macOS dialog when the user has not decided yet.
+    nonisolated static func ask(_ id: String, prompt: Bool) -> Bool {
+        let target = NSAppleEventDescriptor(bundleIdentifier: id)
+        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, prompt) == noErr
+    }
+}
+
 /// Spotify & Apple Music through distributed notifications + AppleScript. PRD §F5, spike T0.3.
 /// No polling: position is extrapolated from the last event while playing.
 final class MediaProvider {
@@ -42,8 +73,13 @@ final class MediaProvider {
     /// so they can neither launch Spotify/Music nor pop a permission prompt.
     private func canQuery(_ id: String) -> Bool {
         guard isRunning(id) else { return false }
-        let target = NSAppleEventDescriptor(bundleIdentifier: id)
-        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
+        return Automation.allowed(id) {
+            // First answer (at launch, or just granted): pick up what is already playing.
+            let p = MediaProvider.shared, source = AppModel.shared.media?.source
+            guard p.active else { return }
+            if id == Self.spotifyID, source == nil || source == .spotify { p.refreshSpotify() }
+            if id == Self.musicID, source == nil || source == .music { p.refreshMusic() }
+        }
     }
 
     /// Onboarding: ask for Automation now. macOS can only ask while the target app is running.
@@ -51,8 +87,7 @@ final class MediaProvider {
     func requestAutomation() -> Bool {
         guard let id = [Self.spotifyID, Self.musicID].first(where: isRunning) else { return false }
         Task.detached {
-            let target = NSAppleEventDescriptor(bundleIdentifier: id)
-            _ = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, true)
+            _ = Automation.ask(id, prompt: true)
             await MainActor.run { MediaProvider.shared.start(); if id == Self.spotifyID { MediaProvider.shared.refreshSpotify() } }
         }
         return true

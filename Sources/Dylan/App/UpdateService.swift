@@ -121,8 +121,7 @@ private func present<V: View>(_ existing: NSWindow?, title: String, size: CGSize
     w.contentView = NSHostingView(rootView: view.artWindow())
     Art.style(w)
     if existing == nil { w.center() }
-    NSApp.activate()
-    w.makeKeyAndOrderFront(nil)
+    w.showInFront()
     return w
 }
 
